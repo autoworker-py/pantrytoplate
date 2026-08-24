@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+.env
+.DS_Store
+
+# local databases
+server/prisma/*.db
+server/prisma/*.db-journal
+
+# generated from schema.prisma by scripts/pg-schema.mjs
+server/prisma/schema.postgres.prisma

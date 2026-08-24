@@ -1,0 +1,339 @@
+/**
+ * The food catalog.
+ *
+ * Nutrition figures are rounded from USDA FoodData Central entries. Weight-based
+ * foods are declared per 100 g (how USDA publishes them) and stored per gram;
+ * countable foods are declared per item with a gram weight, which doubles as the
+ * bridge that lets a recipe ask for them by weight.
+ *
+ * Densities: one `cup -> g` edge per food is enough. The conversion engine
+ * reaches tsp, tbsp, and every other volume unit through the universal volume
+ * table, so only the cup weight has to be stated.
+ */
+
+export interface SeedFood {
+  key: string;
+  name: string;
+  category: string;
+  defaultUnit: string;
+  kcal: number | null;
+  protein: number | null;
+  fat: number | null;
+  carbs: number | null;
+  /** grams in one defaultUnit */
+  gramsPerUnit: number | null;
+  shelfLifeDays?: number;
+  synonyms?: string[];
+  conversions?: Array<[from: string, to: string, multiplier: number]>;
+}
+
+/** A food sold and cooked by weight. Values are per 100 g. */
+function byWeight(
+  key: string,
+  name: string,
+  category: string,
+  per100: [kcal: number, protein: number, fat: number, carbs: number],
+  extra: Partial<SeedFood> = {},
+): SeedFood {
+  const [kcal, protein, fat, carbs] = per100;
+  return {
+    key,
+    name,
+    category,
+    defaultUnit: 'g',
+    kcal: kcal / 100,
+    protein: protein / 100,
+    fat: fat / 100,
+    carbs: carbs / 100,
+    gramsPerUnit: 1,
+    ...extra,
+  };
+}
+
+/** A food people count rather than weigh. Values are per item. */
+function byCount(
+  key: string,
+  name: string,
+  category: string,
+  per: [kcal: number, protein: number, fat: number, carbs: number],
+  grams: number,
+  extra: Partial<SeedFood> = {},
+): SeedFood {
+  const [kcal, protein, fat, carbs] = per;
+  return {
+    key,
+    name,
+    category,
+    defaultUnit: 'count',
+    kcal,
+    protein,
+    fat,
+    carbs,
+    gramsPerUnit: grams,
+    ...extra,
+  };
+}
+
+/**
+ * Fallback cup weights by category, applied to any weight-based food that does
+ * not state its own. Without a density a recipe asking for "1 cup" of something
+ * stored in grams cannot be costed or deducted, and the app would have to stop
+ * and ask — so every food gets one.
+ */
+export const CATEGORY_CUP_GRAMS: Record<string, number> = {
+  Produce: 150,
+  Fruit: 150,
+  'Meat & Seafood': 225,
+  'Dairy & Eggs': 240,
+  Cheese: 113,
+  Grains: 190,
+  Pasta: 190,
+  Bakery: 60,
+  Legumes: 180,
+  'Canned Goods': 240,
+  'Nuts & Seeds': 140,
+  Baking: 200,
+  Spices: 100,
+  Herbs: 30,
+  Condiments: 240,
+  Sauces: 240,
+  'Oils & Vinegars': 218,
+  Snacks: 100,
+  Beverages: 240,
+  Frozen: 150,
+};
+
+export const FOODS: SeedFood[] = [
+  // ---------------------------------------------------------------- produce
+  byCount('egg', 'Egg', 'Dairy & Eggs', [72, 6.3, 4.8, 0.4], 50, { shelfLifeDays: 28, synonyms: ['eggs', 'large egg', 'chicken egg', 'whole egg'], conversions: [['dozen', 'count', 12]] }),
+  byCount('onion', 'Yellow Onion', 'Produce', [44, 1.2, 0.1, 10.3], 110, { shelfLifeDays: 30, synonyms: ['onion', 'brown onion'] }),
+  byCount('redonion', 'Red Onion', 'Produce', [44, 1.2, 0.1, 10.3], 110, { shelfLifeDays: 30 }),
+  byCount('shallot', 'Shallot', 'Produce', [20, 0.7, 0, 4.7], 28, { shelfLifeDays: 30 }),
+  byCount('garlic', 'Garlic Clove', 'Produce', [4, 0.2, 0, 1], 3, { shelfLifeDays: 60, synonyms: ['garlic'], conversions: [['clove', 'count', 1], ['head', 'count', 10]] }),
+  byCount('springonion', 'Spring Onion', 'Produce', [5, 0.3, 0, 1.1], 15, { shelfLifeDays: 10, synonyms: ['scallion', 'green onion'] }),
+  byCount('carrot', 'Carrot', 'Produce', [25, 0.6, 0.1, 5.8], 61, { shelfLifeDays: 21 }),
+  byCount('celery', 'Celery Stalk', 'Produce', [6, 0.3, 0.1, 1.2], 40, { shelfLifeDays: 14, conversions: [['stalk', 'count', 1]] }),
+  byCount('tomato', 'Roma Tomato', 'Produce', [22, 1.1, 0.2, 4.8], 123, { shelfLifeDays: 7, synonyms: ['tomato'] }),
+  byCount('bellpepper', 'Green Bell Pepper', 'Produce', [24, 1, 0.2, 5.5], 119, { shelfLifeDays: 10, synonyms: ['bell pepper', 'capsicum'] }),
+  byCount('redpepper', 'Red Bell Pepper', 'Produce', [31, 1.2, 0.3, 7.2], 119, { shelfLifeDays: 10 }),
+  byCount('chilli', 'Red Chilli', 'Produce', [4, 0.2, 0.1, 0.9], 10, { shelfLifeDays: 12, synonyms: ['chili', 'red chili pepper', 'chilli pepper'] }),
+  byCount('jalapeno', 'Jalapeño', 'Produce', [4, 0.1, 0.1, 0.9], 14, { shelfLifeDays: 12 }),
+  byCount('potato', 'Russet Potato', 'Produce', [168, 4.6, 0.2, 37.9], 213, { shelfLifeDays: 21, synonyms: ['potato'] }),
+  byCount('sweetpotato', 'Sweet Potato', 'Produce', [112, 2, 0.1, 26], 130, { shelfLifeDays: 21 }),
+  byCount('cucumber', 'Cucumber', 'Produce', [45, 2, 0.3, 11], 300, { shelfLifeDays: 8 }),
+  byCount('courgette', 'Courgette', 'Produce', [33, 2.4, 0.6, 6.1], 200, { shelfLifeDays: 8, synonyms: ['zucchini'] }),
+  byCount('aubergine', 'Aubergine', 'Produce', [115, 4.8, 0.8, 27], 460, { shelfLifeDays: 8, synonyms: ['eggplant'] }),
+  byCount('avocado', 'Avocado', 'Produce', [240, 3, 22, 12.8], 150, { shelfLifeDays: 5 }),
+  byCount('corncob', 'Corn on the Cob', 'Produce', [123, 4.6, 1.9, 27], 145, { shelfLifeDays: 5, conversions: [['ear', 'count', 1]] }),
+  byWeight('spinach', 'Baby Spinach', 'Produce', [23, 2.9, 0.4, 3.6], { shelfLifeDays: 5, synonyms: ['spinach'], conversions: [['cup', 'g', 30], ['bag', 'g', 142]] }),
+  byWeight('kale', 'Kale', 'Produce', [35, 2.9, 1.5, 4.4], { shelfLifeDays: 6, conversions: [['cup', 'g', 67], ['bunch', 'g', 200]] }),
+  byWeight('lettuce', 'Romaine Lettuce', 'Produce', [17, 1.2, 0.3, 3.3], { shelfLifeDays: 7, synonyms: ['lettuce'], conversions: [['cup', 'g', 47], ['head', 'g', 300]] }),
+  byWeight('rocket', 'Rocket', 'Produce', [25, 2.6, 0.7, 3.7], { shelfLifeDays: 5, synonyms: ['arugula'], conversions: [['cup', 'g', 20], ['bag', 'g', 125]] }),
+  byWeight('broccoli', 'Broccoli', 'Produce', [34, 2.8, 0.4, 6.6], { shelfLifeDays: 7, conversions: [['cup', 'g', 91], ['head', 'g', 550]] }),
+  byWeight('cauliflower', 'Cauliflower', 'Produce', [25, 1.9, 0.3, 5], { shelfLifeDays: 8, conversions: [['cup', 'g', 107], ['head', 'g', 600]] }),
+  byWeight('greenbeans', 'Green Beans', 'Produce', [31, 1.8, 0.2, 7], { shelfLifeDays: 7, conversions: [['cup', 'g', 100]] }),
+  byWeight('peas', 'Garden Peas', 'Frozen', [81, 5.4, 0.4, 14.5], { shelfLifeDays: 180, synonyms: ['frozen peas'], conversions: [['cup', 'g', 145], ['bag', 'g', 450]] }),
+  byWeight('sweetcorn', 'Sweetcorn', 'Canned Goods', [86, 3.3, 1.4, 19], { shelfLifeDays: 730, conversions: [['cup', 'g', 165], ['can', 'g', 340]] }),
+  byWeight('mushroom', 'Chestnut Mushrooms', 'Produce', [22, 3.1, 0.3, 3.3], { shelfLifeDays: 7, synonyms: ['mushrooms', 'button mushrooms'], conversions: [['cup', 'g', 70], ['punnet', 'g', 250]] }),
+  byWeight('cabbage', 'White Cabbage', 'Produce', [25, 1.3, 0.1, 5.8], { shelfLifeDays: 21, conversions: [['cup', 'g', 89], ['head', 'g', 900]] }),
+  byWeight('beetroot', 'Beetroot', 'Produce', [43, 1.6, 0.2, 9.6], { shelfLifeDays: 21, synonyms: ['beets'], conversions: [['cup', 'g', 136]] }),
+  byWeight('butternut', 'Butternut Squash', 'Produce', [45, 1, 0.1, 12], { shelfLifeDays: 30, conversions: [['cup', 'g', 140]] }),
+  byWeight('asparagus', 'Asparagus', 'Produce', [20, 2.2, 0.1, 3.9], { shelfLifeDays: 5, conversions: [['cup', 'g', 134], ['bunch', 'g', 340]] }),
+  byWeight('leek', 'Leek', 'Produce', [61, 1.5, 0.3, 14], { shelfLifeDays: 14, conversions: [['cup', 'g', 89]] }),
+  byWeight('babypotato', 'Baby Potatoes', 'Produce', [77, 2, 0.1, 17], { shelfLifeDays: 21, conversions: [['cup', 'g', 150], ['bag', 'g', 750]] }),
+  byWeight('ginger', 'Fresh Ginger', 'Produce', [80, 1.8, 0.8, 18], { shelfLifeDays: 21, conversions: [['cup', 'g', 96], ['tbsp', 'g', 6]] }),
+  byWeight('coriander', 'Fresh Coriander', 'Herbs', [23, 2.1, 0.5, 3.7], { shelfLifeDays: 6, synonyms: ['cilantro', 'fresh cilantro'], conversions: [['cup', 'g', 16], ['bunch', 'g', 30]] }),
+  byWeight('parsley', 'Fresh Parsley', 'Herbs', [36, 3, 0.8, 6.3], { shelfLifeDays: 7, conversions: [['cup', 'g', 60], ['bunch', 'g', 30]] }),
+  byWeight('basil', 'Fresh Basil', 'Herbs', [23, 3.2, 0.6, 2.7], { shelfLifeDays: 5, conversions: [['cup', 'g', 24], ['bunch', 'g', 25]] }),
+  byWeight('mint', 'Fresh Mint', 'Herbs', [70, 3.8, 0.9, 15], { shelfLifeDays: 6, conversions: [['cup', 'g', 32], ['bunch', 'g', 25]] }),
+  byWeight('dill', 'Fresh Dill', 'Herbs', [43, 3.5, 1.1, 7], { shelfLifeDays: 5, conversions: [['cup', 'g', 9], ['bunch', 'g', 25]] }),
+  byWeight('rosemary', 'Fresh Rosemary', 'Herbs', [131, 3.3, 5.9, 21], { shelfLifeDays: 10, conversions: [['sprig', 'g', 2]] }),
+  byWeight('thyme', 'Fresh Thyme', 'Herbs', [101, 5.6, 1.7, 24], { shelfLifeDays: 10, conversions: [['sprig', 'g', 1]] }),
+
+  // ------------------------------------------------------------------ fruit
+  byCount('banana', 'Banana', 'Fruit', [105, 1.3, 0.4, 27], 118, { shelfLifeDays: 5 }),
+  byCount('apple', 'Apple', 'Fruit', [95, 0.5, 0.3, 25], 182, { shelfLifeDays: 21 }),
+  byCount('lemon', 'Lemon', 'Fruit', [17, 0.6, 0.2, 5.4], 58, { shelfLifeDays: 21 }),
+  byCount('lime', 'Lime', 'Fruit', [20, 0.5, 0.1, 7], 67, { shelfLifeDays: 21 }),
+  byCount('orange', 'Orange', 'Fruit', [62, 1.2, 0.2, 15.4], 131, { shelfLifeDays: 21 }),
+  byCount('pear', 'Pear', 'Fruit', [101, 0.6, 0.2, 27], 178, { shelfLifeDays: 10 }),
+  byCount('peach', 'Peach', 'Fruit', [59, 1.4, 0.4, 14], 150, { shelfLifeDays: 6 }),
+  byCount('mango', 'Mango', 'Fruit', [202, 2.8, 1.3, 50], 336, { shelfLifeDays: 7 }),
+  byWeight('strawberry', 'Strawberries', 'Fruit', [32, 0.7, 0.3, 7.7], { shelfLifeDays: 5, synonyms: ['strawberries'], conversions: [['cup', 'g', 152], ['punnet', 'g', 400]] }),
+  byWeight('blueberry', 'Blueberries', 'Fruit', [57, 0.7, 0.3, 14.5], { shelfLifeDays: 8, synonyms: ['blueberries'], conversions: [['cup', 'g', 148], ['punnet', 'g', 200]] }),
+  byWeight('raspberry', 'Raspberries', 'Fruit', [52, 1.2, 0.7, 12], { shelfLifeDays: 4, conversions: [['cup', 'g', 123], ['punnet', 'g', 170]] }),
+  byWeight('grape', 'Grapes', 'Fruit', [69, 0.7, 0.2, 18], { shelfLifeDays: 10, conversions: [['cup', 'g', 151]] }),
+  byWeight('pineapple', 'Pineapple', 'Fruit', [50, 0.5, 0.1, 13], { shelfLifeDays: 6, conversions: [['cup', 'g', 165]] }),
+  byWeight('raisin', 'Raisins', 'Fruit', [299, 3.1, 0.5, 79], { shelfLifeDays: 365, conversions: [['cup', 'g', 145]] }),
+  byWeight('date', 'Medjool Dates', 'Fruit', [277, 1.8, 0.2, 75], { shelfLifeDays: 180, conversions: [['cup', 'g', 178], ['count', 'g', 24]] }),
+  byWeight('driedapricot', 'Dried Apricots', 'Fruit', [241, 3.4, 0.5, 63], { shelfLifeDays: 270, conversions: [['cup', 'g', 130]] }),
+  byWeight('frozenberries', 'Frozen Mixed Berries', 'Frozen', [51, 0.9, 0.4, 12], { shelfLifeDays: 300, conversions: [['cup', 'g', 140], ['bag', 'g', 500]] }),
+
+  // -------------------------------------------------------- meat & seafood
+  byCount('chicken', 'Chicken Breast', 'Meat & Seafood', [284, 53.4, 6.2, 0], 174, { shelfLifeDays: 3, synonyms: ['chicken', 'boneless skinless chicken breast'], conversions: [['breast', 'count', 1]] }),
+  byWeight('chickenthigh', 'Chicken Thigh', 'Meat & Seafood', [209, 26, 10.9, 0], { shelfLifeDays: 3, conversions: [['count', 'g', 90]] }),
+  byWeight('chickenmince', 'Chicken Mince', 'Meat & Seafood', [143, 17.4, 8.1, 0], { shelfLifeDays: 2, synonyms: ['ground chicken'] }),
+  byWeight('beef', 'Ground Beef 85/15', 'Meat & Seafood', [250, 17.6, 15, 0], { shelfLifeDays: 3, synonyms: ['ground beef', 'beef mince', 'hamburger meat'] }),
+  byWeight('steak', 'Sirloin Steak', 'Meat & Seafood', [206, 30, 9, 0], { shelfLifeDays: 3, synonyms: ['steak'], conversions: [['count', 'g', 225]] }),
+  byWeight('stewingbeef', 'Stewing Beef', 'Meat & Seafood', [201, 30, 8, 0], { shelfLifeDays: 3, synonyms: ['beef chuck'] }),
+  byWeight('porkchop', 'Pork Chop', 'Meat & Seafood', [231, 26, 14, 0], { shelfLifeDays: 3, conversions: [['count', 'g', 170]] }),
+  byWeight('porkmince', 'Pork Mince', 'Meat & Seafood', [263, 17, 21, 0], { shelfLifeDays: 2, synonyms: ['ground pork'] }),
+  byWeight('bacon', 'Streaky Bacon', 'Meat & Seafood', [541, 37, 42, 1.4], { shelfLifeDays: 7, synonyms: ['bacon'], conversions: [['slice', 'g', 28], ['rasher', 'g', 28]] }),
+  byWeight('sausage', 'Pork Sausages', 'Meat & Seafood', [301, 12, 27, 2.5], { shelfLifeDays: 4, synonyms: ['sausages'], conversions: [['count', 'g', 75]] }),
+  byWeight('chorizo', 'Chorizo', 'Meat & Seafood', [455, 24, 38, 2], { shelfLifeDays: 21 }),
+  byWeight('ham', 'Sliced Ham', 'Meat & Seafood', [145, 21, 5.5, 1.5], { shelfLifeDays: 7, conversions: [['slice', 'g', 28]] }),
+  byWeight('salmon', 'Salmon Fillet', 'Meat & Seafood', [208, 20, 13, 0], { shelfLifeDays: 2, synonyms: ['salmon'], conversions: [['fillet', 'g', 170], ['count', 'g', 170]] }),
+  byWeight('whitefish', 'Cod Fillet', 'Meat & Seafood', [82, 18, 0.7, 0], { shelfLifeDays: 2, synonyms: ['cod', 'white fish'], conversions: [['fillet', 'g', 150], ['count', 'g', 150]] }),
+  byWeight('prawn', 'Prawns', 'Meat & Seafood', [99, 24, 0.3, 0.2], { shelfLifeDays: 2, synonyms: ['shrimp'], conversions: [['cup', 'g', 145]] }),
+  byWeight('tunacan', 'Tinned Tuna', 'Canned Goods', [116, 26, 0.8, 0], { shelfLifeDays: 730, synonyms: ['canned tuna', 'tuna'], conversions: [['can', 'g', 145]] }),
+  byWeight('anchovy', 'Anchovy Fillets', 'Canned Goods', [210, 29, 9.7, 0], { shelfLifeDays: 730, conversions: [['fillet', 'g', 4], ['can', 'g', 50]] }),
+
+  // ----------------------------------------------------------- dairy & eggs
+  byWeight('milk', 'Whole Milk', 'Dairy & Eggs', [61, 3.2, 3.3, 4.8], { shelfLifeDays: 7, synonyms: ['whole milk', 'low fat milk', 'skim milk', 'semi skimmed milk', 'milk'], conversions: [['cup', 'g', 244], ['ml', 'g', 1.03], ['gallon', 'g', 3900], ['l', 'g', 1030]] }),
+  byWeight('semiskimmed', 'Semi-Skimmed Milk', 'Dairy & Eggs', [50, 3.4, 1.8, 4.9], { shelfLifeDays: 7, conversions: [['cup', 'g', 244], ['ml', 'g', 1.03], ['l', 'g', 1030]] }),
+  byWeight('butter', 'Unsalted Butter', 'Dairy & Eggs', [717, 0.85, 81.1, 0.06], { shelfLifeDays: 60, synonyms: ['unsalted butter', 'sweet cream butter', 'butter'], conversions: [['cup', 'g', 227], ['stick', 'g', 113.4], ['tbsp', 'g', 14.2]] }),
+  byWeight('cheddar', 'Cheddar Cheese', 'Cheese', [403, 24.9, 33.1, 1.3], { shelfLifeDays: 21, synonyms: ['cheddar cheese', 'cheddar', 'cheese', 'shredded cheddar'], conversions: [['cup', 'g', 113], ['slice', 'g', 28]] }),
+  byWeight('mozzarella', 'Mozzarella', 'Cheese', [280, 22, 21, 2.2], { synonyms: ['mozzarella cheese'], shelfLifeDays: 14, conversions: [['cup', 'g', 113], ['ball', 'g', 125]] }),
+  byWeight('parmesan', 'Parmesan Cheese', 'Cheese', [420, 38.3, 27.9, 4.1], { shelfLifeDays: 45, synonyms: ['parmesan cheese', 'grated parmesan', 'parmesan', 'parmigiano'], conversions: [['cup', 'g', 100]] }),
+  byWeight('feta', 'Feta', 'Cheese', [264, 14.2, 21.3, 4.1], { synonyms: ['feta cheese'], shelfLifeDays: 21, conversions: [['cup', 'g', 150], ['block', 'g', 200]] }),
+  byWeight('creamcheese', 'Cream Cheese', 'Cheese', [342, 6, 34, 4.1], { shelfLifeDays: 21, conversions: [['cup', 'g', 232], ['tbsp', 'g', 14.5]] }),
+  byWeight('yogurt', 'Plain Greek Yogurt', 'Dairy & Eggs', [59, 10.2, 0.4, 3.6], { shelfLifeDays: 14, synonyms: ['greek yogurt', 'yogurt'], conversions: [['cup', 'g', 245], ['tub', 'g', 500]] }),
+  byWeight('sourcream', 'Soured Cream', 'Dairy & Eggs', [193, 2.4, 19.7, 4.6], { shelfLifeDays: 14, synonyms: ['sour cream'], conversions: [['cup', 'g', 230], ['tbsp', 'g', 14]] }),
+  byWeight('doublecream', 'Double Cream', 'Dairy & Eggs', [340, 2.1, 36, 2.8], { shelfLifeDays: 10, synonyms: ['heavy cream'], conversions: [['cup', 'g', 238], ['ml', 'g', 0.99]] }),
+  byWeight('coconutmilk', 'Coconut Milk', 'Canned Goods', [197, 2, 21, 2.8], { shelfLifeDays: 730, conversions: [['cup', 'g', 240], ['can', 'g', 400]] }),
+  byWeight('halloumi', 'Halloumi', 'Cheese', [321, 22, 25, 2.2], { shelfLifeDays: 21, conversions: [['block', 'g', 225]] }),
+
+  // -------------------------------------------------------- grains & bakery
+  byWeight('flour', 'All-Purpose Flour', 'Baking', [364, 10.3, 0.98, 76.2], { shelfLifeDays: 365, synonyms: ['all purpose flour', 'flour', 'ap flour', 'plain flour', 'white flour'], conversions: [['cup', 'g', 120], ['bag', 'g', 907]] }),
+  byWeight('breadflour', 'Bread Flour', 'Baking', [361, 12, 1.7, 72.5], { shelfLifeDays: 365, synonyms: ['strong white flour'], conversions: [['cup', 'g', 127]] }),
+  byWeight('wholewheatflour', 'Wholemeal Flour', 'Baking', [340, 13.2, 2.5, 72], { shelfLifeDays: 180, synonyms: ['whole wheat flour'], conversions: [['cup', 'g', 120]] }),
+  byWeight('rice', 'White Rice', 'Grains', [365, 7.1, 0.66, 80], { shelfLifeDays: 730, synonyms: ['white rice', 'long grain rice', 'rice', 'long grain rice'], conversions: [['cup', 'g', 185], ['bag', 'g', 907]] }),
+  byWeight('brownrice', 'Brown Rice', 'Grains', [370, 7.9, 2.9, 77], { shelfLifeDays: 365, conversions: [['cup', 'g', 190]] }),
+  byWeight('basmati', 'Basmati Rice', 'Grains', [356, 8.5, 0.8, 78], { shelfLifeDays: 730, conversions: [['cup', 'g', 185]] }),
+  byWeight('arborio', 'Arborio Rice', 'Grains', [349, 7, 0.6, 77], { shelfLifeDays: 730, synonyms: ['risotto rice'], conversions: [['cup', 'g', 200]] }),
+  byWeight('oats', 'Rolled Oats', 'Grains', [379, 13.5, 6.9, 67.3], { shelfLifeDays: 365, synonyms: ['rolled oats', 'porridge oats', 'quick oats', 'oats', 'oatmeal', 'old fashioned oats'], conversions: [['cup', 'g', 90]] }),
+  byWeight('quinoa', 'Quinoa', 'Grains', [368, 14.1, 6.1, 64], { shelfLifeDays: 730, conversions: [['cup', 'g', 170]] }),
+  byWeight('couscous', 'Couscous', 'Grains', [376, 12.8, 0.6, 77.4], { shelfLifeDays: 730, conversions: [['cup', 'g', 173]] }),
+  byWeight('spaghetti', 'Spaghetti', 'Pasta', [371, 13.1, 1.5, 74.6], { shelfLifeDays: 730, synonyms: ['spaghetti', 'pasta', 'dry pasta'], conversions: [['cup', 'g', 100], ['box', 'g', 454]] }),
+  byWeight('penne', 'Penne', 'Pasta', [371, 13, 1.5, 75], { shelfLifeDays: 730, conversions: [['cup', 'g', 100], ['box', 'g', 454]] }),
+  byWeight('lasagnesheet', 'Lasagne Sheets', 'Pasta', [368, 12.5, 1.5, 74], { shelfLifeDays: 730, conversions: [['sheet', 'g', 18], ['box', 'g', 375]] }),
+  byWeight('noodles', 'Egg Noodles', 'Pasta', [384, 14.2, 4.4, 71], { shelfLifeDays: 540, conversions: [['nest', 'g', 62], ['count', 'g', 62]] }),
+  byWeight('ricenoodles', 'Rice Noodles', 'Pasta', [364, 6, 0.6, 83], { shelfLifeDays: 540, conversions: [['cup', 'g', 100]] }),
+  byCount('bread', 'Whole Wheat Bread', 'Bakery', [81, 4, 1.1, 13.8], 28, { shelfLifeDays: 5, synonyms: ['bread', 'sliced bread'], defaultUnit: 'slice', conversions: [['slice', 'count', 1], ['loaf', 'slice', 20]] }),
+  byCount('whitebread', 'White Bread', 'Bakery', [79, 2.7, 1, 14.6], 28, { synonyms: ['white loaf'], shelfLifeDays: 5, defaultUnit: 'slice', conversions: [['slice', 'count', 1], ['loaf', 'slice', 20]] }),
+  byCount('tortilla', 'Flour Tortilla', 'Bakery', [140, 4, 3.5, 24], 45, { shelfLifeDays: 30, synonyms: ['tortilla', 'wrap'] }),
+  byCount('cornTortilla', 'Corn Tortilla', 'Bakery', [52, 1.4, 0.7, 11], 26, { shelfLifeDays: 21 }),
+  byCount('pittabread', 'Pitta Bread', 'Bakery', [165, 5.5, 0.7, 33], 60, { shelfLifeDays: 7, synonyms: ['pita', 'pita bread'] }),
+  byCount('burgerbun', 'Burger Bun', 'Bakery', [140, 5, 2.5, 25], 55, { synonyms: ['roll', 'bun', 'bread roll', 'hamburger bun'], shelfLifeDays: 6 }),
+  byCount('baguette', 'Baguette', 'Bakery', [640, 22, 4, 130], 250, { shelfLifeDays: 2 }),
+  byWeight('breadcrumbs', 'Breadcrumbs', 'Bakery', [395, 13.4, 5.3, 71.9], { shelfLifeDays: 180, conversions: [['cup', 'g', 108]] }),
+  byWeight('naan', 'Naan Bread', 'Bakery', [310, 8.7, 6.2, 53], { shelfLifeDays: 7, conversions: [['count', 'g', 90]] }),
+
+  // ----------------------------------------------------------- legumes etc.
+  byWeight('blackbeans', 'Black Beans', 'Canned Goods', [91, 6, 0.3, 16], { shelfLifeDays: 730, synonyms: ['black beans', 'canned black beans'], conversions: [['can', 'g', 425], ['cup', 'g', 172]] }),
+  byWeight('kidneybeans', 'Kidney Beans', 'Canned Goods', [94, 6.3, 0.4, 17], { shelfLifeDays: 730, conversions: [['can', 'g', 400], ['cup', 'g', 177]] }),
+  byWeight('chickpeas', 'Chickpeas', 'Canned Goods', [139, 7.4, 2.6, 22], { shelfLifeDays: 730, synonyms: ['garbanzo beans'], conversions: [['can', 'g', 400], ['cup', 'g', 164]] }),
+  byWeight('cannellini', 'Cannellini Beans', 'Canned Goods', [114, 8, 0.5, 20], { shelfLifeDays: 730, synonyms: ['white beans'], conversions: [['can', 'g', 400], ['cup', 'g', 180]] }),
+  byWeight('redlentil', 'Red Lentils', 'Legumes', [358, 24, 1.1, 63], { shelfLifeDays: 730, synonyms: ['lentils'], conversions: [['cup', 'g', 192]] }),
+  byWeight('greenlentil', 'Green Lentils', 'Legumes', [352, 25, 1.1, 63], { shelfLifeDays: 730, conversions: [['cup', 'g', 192]] }),
+  byWeight('tofu', 'Firm Tofu', 'Legumes', [144, 17, 8.7, 2.8], { shelfLifeDays: 10, conversions: [['block', 'g', 400], ['cup', 'g', 252]] }),
+  byWeight('tinnedtomato', 'Chopped Tomatoes', 'Canned Goods', [32, 1.6, 0.3, 7], { shelfLifeDays: 730, synonyms: ['tinned tomatoes', 'canned tomatoes', 'diced tomatoes'], conversions: [['can', 'g', 400], ['cup', 'g', 240]] }),
+  byWeight('passata', 'Passata', 'Sauces', [35, 1.5, 0.2, 7], { shelfLifeDays: 540, synonyms: ['tomato puree', 'strained tomatoes'], conversions: [['jar', 'g', 690], ['cup', 'g', 245]] }),
+  byWeight('tomatopaste', 'Tomato Paste', 'Canned Goods', [82, 4.3, 0.5, 19], { shelfLifeDays: 540, conversions: [['tbsp', 'g', 16], ['can', 'g', 170], ['cup', 'g', 262]] }),
+
+  // --------------------------------------------------------- nuts and seeds
+  byWeight('almond', 'Almonds', 'Nuts & Seeds', [579, 21.2, 49.9, 21.6], { shelfLifeDays: 365, conversions: [['cup', 'g', 143]] }),
+  byWeight('walnut', 'Walnuts', 'Nuts & Seeds', [654, 15.2, 65.2, 13.7], { shelfLifeDays: 270, conversions: [['cup', 'g', 117]] }),
+  byWeight('cashew', 'Cashews', 'Nuts & Seeds', [553, 18.2, 43.9, 30.2], { shelfLifeDays: 270, conversions: [['cup', 'g', 137]] }),
+  byWeight('peanut', 'Peanuts', 'Nuts & Seeds', [567, 25.8, 49.2, 16.1], { shelfLifeDays: 365, conversions: [['cup', 'g', 146]] }),
+  byWeight('pinenut', 'Pine Nuts', 'Nuts & Seeds', [673, 13.7, 68.4, 13.1], { shelfLifeDays: 180, conversions: [['cup', 'g', 135]] }),
+  byWeight('peanutbutter', 'Peanut Butter', 'Condiments', [588, 25, 50, 20], { synonyms: ['peanut butter'], shelfLifeDays: 270, conversions: [['cup', 'g', 258], ['tbsp', 'g', 16], ['jar', 'g', 454]] }),
+  byWeight('sesame', 'Sesame Seeds', 'Nuts & Seeds', [573, 17.7, 49.7, 23.4], { shelfLifeDays: 365, conversions: [['cup', 'g', 144], ['tbsp', 'g', 9]] }),
+  byWeight('sunflowerseed', 'Sunflower Seeds', 'Nuts & Seeds', [584, 20.8, 51.5, 20], { shelfLifeDays: 270, conversions: [['cup', 'g', 140]] }),
+  byWeight('chia', 'Chia Seeds', 'Nuts & Seeds', [486, 16.5, 30.7, 42.1], { shelfLifeDays: 540, conversions: [['cup', 'g', 170], ['tbsp', 'g', 12]] }),
+  byWeight('tahini', 'Tahini', 'Condiments', [595, 17, 53.8, 21.2], { shelfLifeDays: 365, conversions: [['cup', 'g', 240], ['tbsp', 'g', 15]] }),
+
+  // ----------------------------------------------------------------- baking
+  byWeight('sugar', 'Granulated Sugar', 'Baking', [387, 0, 0, 100], { shelfLifeDays: 1095, synonyms: ['granulated sugar', 'cane sugar', 'sugar', 'white sugar', 'caster sugar'], conversions: [['cup', 'g', 200]] }),
+  byWeight('brownsugar', 'Brown Sugar', 'Baking', [380, 0, 0, 98], { synonyms: ['brown sugar', 'light brown sugar', 'dark brown sugar'], shelfLifeDays: 1095, conversions: [['cup', 'g', 213]] }),
+  byWeight('icingsugar', 'Icing Sugar', 'Baking', [389, 0, 0, 100], { shelfLifeDays: 1095, synonyms: ['powdered sugar', 'confectioners sugar'], conversions: [['cup', 'g', 120]] }),
+  byWeight('honey', 'Honey', 'Baking', [304, 0.3, 0, 82.4], { synonyms: ['honey'], shelfLifeDays: 1095, conversions: [['cup', 'g', 340], ['tbsp', 'g', 21]] }),
+  byWeight('maple', 'Maple Syrup', 'Baking', [260, 0, 0.1, 67], { synonyms: ['maple syrup'], shelfLifeDays: 365, conversions: [['cup', 'g', 322], ['tbsp', 'g', 20]] }),
+  byWeight('cocoa', 'Cocoa Powder', 'Baking', [228, 19.6, 13.7, 57.9], { shelfLifeDays: 730, conversions: [['cup', 'g', 85]] }),
+  byWeight('chocchips', 'Semisweet Chocolate Chips', 'Baking', [480, 4.5, 30, 63], { shelfLifeDays: 365, synonyms: ['chocolate chips', 'chocolate morsels', 'choc chips', 'baking chips', 'chocolate chips'], conversions: [['cup', 'g', 170], ['bag', 'g', 340]] }),
+  byWeight('darkchocolate', 'Dark Chocolate', 'Baking', [546, 4.9, 31, 61], { shelfLifeDays: 365, conversions: [['bar', 'g', 100], ['cup', 'g', 170]] }),
+  byWeight('bakingpowder', 'Baking Powder', 'Baking', [53, 0, 0, 27.8], { shelfLifeDays: 540, conversions: [['tsp', 'g', 4.6], ['cup', 'g', 220]] }),
+  byWeight('bakingsoda', 'Bicarbonate of Soda', 'Baking', [0, 0, 0, 0], { shelfLifeDays: 1095, synonyms: ['baking soda'], conversions: [['tsp', 'g', 4.8], ['cup', 'g', 230]] }),
+  byWeight('yeast', 'Dried Yeast', 'Baking', [325, 40.4, 7.6, 41.2], { shelfLifeDays: 365, conversions: [['tsp', 'g', 3], ['packet', 'g', 7], ['sachet', 'g', 7]] }),
+  byWeight('vanilla', 'Vanilla Extract', 'Baking', [288, 0.1, 0.1, 12.7], { shelfLifeDays: 1095, conversions: [['tsp', 'g', 4.2], ['ml', 'g', 0.88], ['cup', 'g', 208]] }),
+  byWeight('cornflour', 'Cornflour', 'Baking', [381, 0.3, 0.1, 91], { shelfLifeDays: 730, synonyms: ['cornstarch'], conversions: [['cup', 'g', 128], ['tbsp', 'g', 8]] }),
+  byWeight('gelatin', 'Gelatine', 'Baking', [335, 85.6, 0.1, 0], { shelfLifeDays: 1095, conversions: [['sachet', 'g', 7]] }),
+  byWeight('desiccatedcoconut', 'Desiccated Coconut', 'Baking', [660, 6.9, 64.5, 23.7], { shelfLifeDays: 365, conversions: [['cup', 'g', 80]] }),
+
+  // ------------------------------------------------------------ oils, acids
+  byWeight('oliveoil', 'Olive Oil', 'Oils & Vinegars', [884, 0, 100, 0], { shelfLifeDays: 540, synonyms: ['extra virgin olive oil', 'olive oil', 'evoo'], conversions: [['cup', 'g', 216], ['tbsp', 'g', 13.5], ['ml', 'g', 0.91]] }),
+  byWeight('vegoil', 'Vegetable Oil', 'Oils & Vinegars', [884, 0, 100, 0], { shelfLifeDays: 540, synonyms: ['vegetable oil', 'canola oil', 'sunflower oil', 'sunflower oil', 'canola oil'], conversions: [['cup', 'g', 218], ['tbsp', 'g', 13.6], ['ml', 'g', 0.92]] }),
+  byWeight('sesameoil', 'Sesame Oil', 'Oils & Vinegars', [884, 0, 100, 0], { shelfLifeDays: 365, conversions: [['cup', 'g', 218], ['tbsp', 'g', 13.6]] }),
+  byWeight('coconutoil', 'Coconut Oil', 'Oils & Vinegars', [862, 0, 100, 0], { shelfLifeDays: 730, conversions: [['cup', 'g', 218], ['tbsp', 'g', 13.6]] }),
+  byWeight('vinegar', 'White Wine Vinegar', 'Oils & Vinegars', [18, 0, 0, 0.6], { shelfLifeDays: 1095, conversions: [['cup', 'g', 239], ['tbsp', 'g', 15], ['ml', 'g', 1.01]] }),
+  byWeight('balsamic', 'Balsamic Vinegar', 'Oils & Vinegars', [88, 0.5, 0, 17], { shelfLifeDays: 1095, conversions: [['cup', 'g', 255], ['tbsp', 'g', 16]] }),
+  byWeight('ricevinegar', 'Rice Vinegar', 'Oils & Vinegars', [18, 0, 0, 0.5], { shelfLifeDays: 1095, conversions: [['cup', 'g', 239], ['tbsp', 'g', 15]] }),
+
+  // ------------------------------------------------------------- condiments
+  byWeight('soysauce', 'Soy Sauce', 'Condiments', [53, 8.1, 0.1, 4.9], { shelfLifeDays: 730, conversions: [['cup', 'g', 255], ['tbsp', 'g', 16]] }),
+  byWeight('fishsauce', 'Fish Sauce', 'Condiments', [35, 5.1, 0, 3.6], { shelfLifeDays: 730, conversions: [['tbsp', 'g', 18], ['cup', 'g', 270]] }),
+  byWeight('worcestershire', 'Worcestershire Sauce', 'Condiments', [78, 0, 0, 19.5], { shelfLifeDays: 1095, conversions: [['tbsp', 'g', 17], ['cup', 'g', 272]] }),
+  byWeight('ketchup', 'Tomato Ketchup', 'Condiments', [101, 1.3, 0.1, 25.8], { shelfLifeDays: 365, synonyms: ['tomato ketchup', 'ketchup'], conversions: [['tbsp', 'g', 17], ['cup', 'g', 272]] }),
+  byWeight('mayo', 'Mayonnaise', 'Condiments', [680, 1, 75, 0.6], { shelfLifeDays: 180, synonyms: ['mayonnaise', 'mayonnaise'], conversions: [['tbsp', 'g', 14], ['cup', 'g', 220]] }),
+  byWeight('mustard', 'Dijon Mustard', 'Condiments', [66, 4.4, 3.3, 5.8], { shelfLifeDays: 365, synonyms: ['mustard'], conversions: [['tbsp', 'g', 15], ['tsp', 'g', 5], ['cup', 'g', 249]] }),
+  byWeight('sriracha', 'Sriracha', 'Condiments', [93, 1.9, 0.9, 19], { shelfLifeDays: 540, synonyms: ['hot sauce', 'chilli sauce'], conversions: [['tbsp', 'g', 17], ['tsp', 'g', 6]] }),
+  byWeight('hoisin', 'Hoisin Sauce', 'Condiments', [220, 3.3, 3.4, 44], { shelfLifeDays: 540, conversions: [['tbsp', 'g', 16]] }),
+  byWeight('pesto', 'Basil Pesto', 'Sauces', [458, 5.4, 45.6, 5.6], { shelfLifeDays: 30, conversions: [['tbsp', 'g', 16], ['jar', 'g', 190], ['cup', 'g', 240]] }),
+  byWeight('currypaste', 'Red Curry Paste', 'Sauces', [110, 3, 5, 14], { shelfLifeDays: 365, conversions: [['tbsp', 'g', 16], ['jar', 'g', 200]] }),
+  byWeight('stockcube', 'Stock Cube', 'Condiments', [230, 12, 12, 20], { shelfLifeDays: 730, synonyms: ['bouillon', 'bouillon cube'], conversions: [['cube', 'g', 10], ['count', 'g', 10]] }),
+  byWeight('stock', 'Chicken Stock', 'Condiments', [4, 0.5, 0.1, 0.4], { shelfLifeDays: 14, synonyms: ['chicken broth', 'stock', 'broth'], conversions: [['cup', 'g', 240], ['ml', 'g', 1], ['l', 'g', 1000], ['carton', 'g', 1000]] }),
+  byWeight('vegstock', 'Vegetable Stock', 'Condiments', [4, 0.3, 0.1, 0.5], { shelfLifeDays: 14, synonyms: ['vegetable broth'], conversions: [['cup', 'g', 240], ['ml', 'g', 1], ['l', 'g', 1000], ['carton', 'g', 1000]] }),
+  byWeight('salsa', 'Tomato Salsa', 'Sauces', [36, 1.5, 0.2, 7], { synonyms: ['salsa'], shelfLifeDays: 14, conversions: [['cup', 'g', 260], ['tbsp', 'g', 16], ['jar', 'g', 300]] }),
+  byWeight('jam', 'Strawberry Jam', 'Condiments', [278, 0.4, 0.1, 69], { shelfLifeDays: 365, conversions: [['tbsp', 'g', 20], ['jar', 'g', 340]] }),
+  byWeight('wine', 'Dry White Wine', 'Beverages', [82, 0.1, 0, 2.6], { shelfLifeDays: 5, conversions: [['cup', 'g', 240], ['ml', 'g', 0.99], ['bottle', 'g', 750]] }),
+
+  // ---------------------------------------------------------------- spices
+  byWeight('salt', 'Table Salt', 'Spices', [0, 0, 0, 0], { shelfLifeDays: 1095, synonyms: ['salt'], conversions: [['tsp', 'g', 6], ['cup', 'g', 273]] }),
+  byWeight('pepper', 'Black Pepper', 'Spices', [251, 10.4, 3.3, 63.9], { shelfLifeDays: 1095, synonyms: ['pepper', 'ground black pepper'], conversions: [['tsp', 'g', 2.3], ['cup', 'g', 110]] }),
+  byWeight('cumin', 'Ground Cumin', 'Spices', [375, 17.8, 22.3, 44.2], { shelfLifeDays: 1095, conversions: [['tsp', 'g', 2.1], ['cup', 'g', 100]] }),
+  byWeight('coriandergr', 'Ground Coriander', 'Spices', [298, 12.4, 17.8, 55], { shelfLifeDays: 1095, conversions: [['tsp', 'g', 1.8], ['cup', 'g', 86]] }),
+  byWeight('paprika', 'Smoked Paprika', 'Spices', [282, 14.1, 12.9, 54], { shelfLifeDays: 1095, synonyms: ['paprika'], conversions: [['tsp', 'g', 2.3], ['cup', 'g', 110]] }),
+  byWeight('turmeric', 'Ground Turmeric', 'Spices', [312, 9.7, 3.3, 67], { shelfLifeDays: 1095, conversions: [['tsp', 'g', 3], ['cup', 'g', 144]] }),
+  byWeight('cinnamon', 'Ground Cinnamon', 'Spices', [247, 4, 1.2, 81], { shelfLifeDays: 1095, synonyms: ['cinnamon'], conversions: [['tsp', 'g', 2.6], ['cup', 'g', 125]] }),
+  byWeight('chillipowder', 'Chilli Powder', 'Spices', [282, 13.5, 14.3, 49.7], { shelfLifeDays: 1095, synonyms: ['chili powder'], conversions: [['tsp', 'g', 2.7], ['cup', 'g', 130]] }),
+  byWeight('chilliflakes', 'Chilli Flakes', 'Spices', [318, 12, 17.3, 56.6], { shelfLifeDays: 1095, synonyms: ['red pepper flakes', 'crushed red pepper'], conversions: [['tsp', 'g', 1.8], ['cup', 'g', 86]] }),
+  byWeight('currypowder', 'Curry Powder', 'Spices', [325, 14.3, 14, 55.8], { shelfLifeDays: 1095, conversions: [['tsp', 'g', 2], ['cup', 'g', 96], ['tbsp', 'g', 6]] }),
+  byWeight('garammasala', 'Garam Masala', 'Spices', [379, 15, 15, 45], { shelfLifeDays: 1095, conversions: [['tsp', 'g', 2], ['cup', 'g', 96]] }),
+  byWeight('oregano', 'Dried Oregano', 'Herbs', [265, 9, 4.3, 68.9], { shelfLifeDays: 1095, conversions: [['tsp', 'g', 1], ['cup', 'g', 48]] }),
+  byWeight('driedthyme', 'Dried Thyme', 'Herbs', [276, 9.1, 7.4, 63.9], { shelfLifeDays: 1095, conversions: [['tsp', 'g', 1], ['cup', 'g', 48]] }),
+  byWeight('driedbasil', 'Dried Basil', 'Herbs', [233, 23, 4, 48], { shelfLifeDays: 1095, conversions: [['tsp', 'g', 0.7], ['cup', 'g', 34]] }),
+  byWeight('bayleaf', 'Bay Leaves', 'Herbs', [313, 7.6, 8.4, 75], { shelfLifeDays: 1095, conversions: [['leaf', 'g', 0.2], ['count', 'g', 0.2]] }),
+  byWeight('mixedherbs', 'Mixed Dried Herbs', 'Herbs', [259, 10, 6, 60], { shelfLifeDays: 1095, synonyms: ['italian seasoning'], conversions: [['tsp', 'g', 1], ['cup', 'g', 48]] }),
+  byWeight('nutmeg', 'Ground Nutmeg', 'Spices', [525, 5.8, 36.3, 49.3], { shelfLifeDays: 1095, conversions: [['tsp', 'g', 2.2], ['cup', 'g', 106]] }),
+  byWeight('cardamom', 'Ground Cardamom', 'Spices', [311, 10.8, 6.7, 68.5], { shelfLifeDays: 1095, conversions: [['tsp', 'g', 2], ['cup', 'g', 96]] }),
+  byWeight('mustardseed', 'Mustard Seeds', 'Spices', [508, 26, 36, 28], { shelfLifeDays: 1095, conversions: [['tsp', 'g', 3.3], ['cup', 'g', 158]] }),
+  byWeight('fivespice', 'Chinese Five Spice', 'Spices', [350, 10, 12, 55], { shelfLifeDays: 1095, conversions: [['tsp', 'g', 2], ['cup', 'g', 96]] }),
+  byWeight('garlicpowder', 'Garlic Powder', 'Spices', [331, 16.6, 0.7, 72.7], { shelfLifeDays: 1095, conversions: [['tsp', 'g', 3.1], ['cup', 'g', 149]] }),
+  byWeight('onionpowder', 'Onion Powder', 'Spices', [341, 10.4, 1, 79], { shelfLifeDays: 1095, conversions: [['tsp', 'g', 2.4], ['cup', 'g', 115]] }),
+
+  // ---------------------------------------------------------------- snacks
+  byCount('poptarts', 'Frosted Strawberry Toaster Pastries', 'Snacks', [200, 2, 5, 38], 48, { shelfLifeDays: 240, synonyms: ['pop tart', 'poptart', 'toaster pastry'], conversions: [['box', 'count', 10]] }),
+  byWeight('tortillachips', 'Tortilla Chips', 'Snacks', [489, 6.7, 23.4, 63], { synonyms: ['tortilla chips', 'corn chips'], shelfLifeDays: 120, conversions: [['cup', 'g', 30], ['bag', 'g', 280]] }),
+  byWeight('crisps', 'Salted Crisps', 'Snacks', [536, 7, 34.6, 53], { shelfLifeDays: 90, synonyms: ['potato chips'], conversions: [['bag', 'g', 150]] }),
+  byWeight('popcornkernel', 'Popcorn Kernels', 'Snacks', [387, 13, 5, 78], { shelfLifeDays: 365, conversions: [['cup', 'g', 200]] }),
+  byWeight('granolabar', 'Granola Bar', 'Snacks', [471, 10, 20, 64], { shelfLifeDays: 180, conversions: [['bar', 'g', 40], ['count', 'g', 40]] }),
+
+  // ------------------------------------------------------------- beverages
+  byWeight('bakedbeans', 'Baked Beans', 'Canned Goods', [94, 4.8, 0.4, 17], { shelfLifeDays: 730, synonyms: ['baked beans'], conversions: [['can', 'g', 415], ['cup', 'g', 250]] }),
+  byWeight('artichoke', 'Artichoke Hearts', 'Canned Goods', [50, 2.9, 0.3, 9], { shelfLifeDays: 730, synonyms: ['artichoke', 'artichoke hearts'], conversions: [['can', 'g', 400], ['jar', 'g', 340]] }),
+  byWeight('almondmilk', 'Almond Milk', 'Dairy & Eggs', [15, 0.5, 1.2, 0.3], { shelfLifeDays: 10, synonyms: ['almondmilk', 'almond milk'], conversions: [['cup', 'g', 240], ['ml', 'g', 1], ['l', 'g', 1000]] }),
+  byWeight('marshmallow', 'Marshmallows', 'Snacks', [318, 1.8, 0.2, 81], { shelfLifeDays: 240, synonyms: ['marshmallow', 'marshmallows'], conversions: [['cup', 'g', 50], ['bag', 'g', 280]] }),
+  byWeight('coffee', 'Ground Coffee', 'Beverages', [0, 0, 0, 0], { shelfLifeDays: 180, synonyms: ['coffee', 'coffee beans'], conversions: [['tbsp', 'g', 5], ['cup', 'g', 82], ['bag', 'g', 340]] }),
+  byWeight('tea', 'Tea Bags', 'Beverages', [0, 0, 0, 0], { shelfLifeDays: 540, conversions: [['bag', 'g', 2], ['count', 'g', 2]] }),
+  byWeight('orangejuice', 'Orange Juice', 'Beverages', [45, 0.7, 0.2, 10.4], { shelfLifeDays: 7, conversions: [['cup', 'g', 248], ['ml', 'g', 1.04], ['l', 'g', 1040]] }),
+];

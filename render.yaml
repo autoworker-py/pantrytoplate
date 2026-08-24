@@ -1,0 +1,68 @@
+# Render Blueprint for Pantry-to-Plate.
+#
+# One web service. Fastify serves the API *and* the built frontend, so there is
+# a single origin — no CORS to misconfigure, and one certificate, which matters
+# because the barcode scanner needs a secure origin to exist at all.
+#
+# The database is Neon, not Render's own: a free Render Postgres is deleted
+# after 30 days, which is a bad way to find out how your backups are doing.
+services:
+  - type: web
+    name: pantry-to-plate
+    runtime: node
+    plan: free
+    region: oregon
+
+    # Build both halves, then bring the schema up to date. `db push` rather than
+    # `migrate deploy` because the migration history is SQLite SQL and will not
+    # replay on Postgres — the schema itself is the single source of truth, and
+    # scripts/pg-schema.mjs generates the Postgres copy from it.
+    buildCommand: >-
+      cd server && npm ci && npm run build:pg && npm run db:push:pg &&
+      SEED_ONLY_IF_EMPTY=true npm run seed &&
+      cd ../web && npm ci && npm run build
+
+    startCommand: cd server && node dist/index.js
+
+    healthCheckPath: /api/health
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Postgres matches LIKE case-sensitively and SQLite does not. Without
+      # this, searching "Omelette" silently returns nothing — verified, not
+      # theoretical.
+      - key: DATABASE_PROVIDER
+        value: postgresql
+
+      # Paste the Neon connection string here in the Render dashboard.
+      # Keep `?sslmode=require`, and prefer the pooled host: a free instance
+      # restarts often and unpooled connections accumulate.
+      - key: DATABASE_URL
+        sync: false
+
+      # Render generates this once and keeps it. Changing it signs out every
+      # device, so let it be generated and then leave it alone.
+      - key: JWT_SECRET
+        generateValue: true
+
+      # Fastify serves the built frontend from here.
+      - key: WEB_ROOT
+        value: /opt/render/project/src/web/dist
+
+      # Never reset an account's pantry when the shipped recipes are refreshed.
+      - key: SEED_DEMO_USER
+        value: "false"
+
+      # Free key at https://fdc.nal.usda.gov/api-key-signup.html
+      # DEMO_KEY works but is limited to ~30 lookups an hour per IP.
+      - key: USDA_API_KEY
+        value: DEMO_KEY
+
+      - key: OFF_USER_AGENT
+        value: PantryToPlate/1.0
+      - key: OFFLINE_MODE
+        value: "false"
+      - key: EXPIRY_WARNING_DAYS
+        value: "3"

@@ -1,0 +1,44 @@
+# systemd unit for the Pantry-to-Plate server.
+#
+# Install to /etc/systemd/system/pantry.service. The point of this file is that
+# the app comes back on its own: after a crash, after an out-of-memory kill, and
+# after the VM reboots — which is the whole reason for moving off a laptop.
+
+[Unit]
+Description=Pantry to Plate
+Documentation=https://github.com/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pantry
+Group=pantry
+WorkingDirectory=/opt/pantry/server
+
+# Secrets and configuration live outside the deploy directory, so pulling a new
+# version never touches them and never risks committing them.
+EnvironmentFile=/etc/pantry.env
+
+ExecStart=/usr/bin/node dist/index.js
+
+Restart=always
+RestartSec=3
+# Don't give up after the default 5 attempts: a reboot can race the network,
+# and an app that stays down until someone notices is the failure we are here
+# to avoid.
+StartLimitIntervalSec=0
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pantry
+
+# The database is the only thing this process needs to write.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/pantry
+
+[Install]
+WantedBy=multi-user.target

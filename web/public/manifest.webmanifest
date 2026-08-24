@@ -1,0 +1,13 @@
+{
+  "name": "Pantry to Plate",
+  "short_name": "Pantry",
+  "description": "Enter your food once. After that, eating it is a tap.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f8f7",
+  "theme_color": "#1f6f4a",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
