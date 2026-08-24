@@ -83,9 +83,11 @@ The first build takes 3-5 minutes: it installs both halves, generates the
 Postgres schema, pushes it to Neon, seeds 226 recipes and 207 foods, and builds
 the frontend.
 
-Seeding only happens **once** — the build passes `SEED_ONLY_IF_EMPTY=true`, so
-later deploys leave your data alone. Without that, every deploy would delete and
-recreate all 226 shipped recipes, taking your ratings and meal plans with them.
+Seeding runs on **every** deploy, and that is safe: shipped recipes are updated
+in place rather than deleted and recreated, so the row keeps its id and the
+ratings and meal-plan entries pointing at it survive. Recipes you imported are
+never touched. This is what lets a recipe added on a laptop reach the live site
+just by pushing.
 
 Your app is at `https://pantry-to-plate.onrender.com`. That URL is permanent.
 
@@ -107,7 +109,30 @@ free hours. It also emails you when the app actually breaks.
 
 ## Afterwards
 
-**Deploying a change:** `git push`. Render rebuilds automatically.
+## Updating the site afterwards
+
+```bash
+git push
+```
+
+That is the whole workflow. Render watches `main`, rebuilds, and swaps the new
+version in — usually 3-5 minutes. It covers code, frontend and recipes alike:
+the build re-seeds, so recipes added or edited in `server/prisma/data/recipes/`
+appear on the live site without touching the database by hand.
+
+**Nothing you have on the site is lost in a deploy.** Verified against a real
+Postgres: after a redeploy, ratings, meal plans, imported recipes, pantry and
+diary were all still there.
+
+**A schema change that would drop data fails the build on purpose.** `db push`
+runs without `--accept-data-loss`, so if a change would delete a column, the
+deploy stops rather than quietly destroying the column on your live database.
+Render keeps the previous version serving when a build fails, so the site stays
+up while it is sorted out.
+
+**Watch the first minute of a deploy** in Render's Logs tab. A failed build
+leaves the old version running, so a broken push is an inconvenience rather than
+an outage.
 
 **Logs:** the Logs tab in the Render dashboard.
 

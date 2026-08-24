@@ -19,8 +19,16 @@ services:
     # scripts/pg-schema.mjs generates the Postgres copy from it.
     # Both scripts live in the root package.json, so this file stays short and
     # the same command works when run by hand.
+    #
+    # The build seeds on every deploy, which is safe: shipped recipes are
+    # updated in place rather than replaced, so ratings and meal plans survive,
+    # and nothing scoped to a person is touched. That is what lets a recipe
+    # added on a laptop reach the live site by pushing.
     buildCommand: npm run build
     startCommand: npm start
+
+    # Push to main, Render rebuilds. Explicit because it is the whole workflow.
+    autoDeploy: true
 
     healthCheckPath: /api/health
 

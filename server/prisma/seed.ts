@@ -256,44 +256,74 @@ async function main() {
 
   console.log('Seeding recipes...');
   const seen = new Set<string>();
+  let added = 0;
+  let updated = 0;
   for (const recipe of RECIPES) {
     if (seen.has(recipe.name)) throw new Error(`Duplicate recipe name: ${recipe.name}`);
     seen.add(recipe.name);
 
-    /**
-     * Replace the shipped copy only.
-     *
-     * `ownerId: null` is load-bearing, not tidiness. Without it this matches by
-     * name alone, and a person who imported their own "Chicken Alfredo" — a
-     * name this book already uses — loses it the next time anyone re-seeds to
-     * add recipes. deleteMany rather than delete so a stray duplicate in the
-     * shipped set cannot leave one behind.
-     */
-    await prisma.recipe.deleteMany({ where: { name: recipe.name, ownerId: null } });
-
-    await prisma.recipe.create({
-      data: {
-        name: recipe.name,
-        description: recipe.description,
-        instructions: recipe.steps.map((step, i) => `${i + 1}. ${step}`).join('\n'),
-        servings: recipe.servings,
-        source: 'seeded',
-        prepMinutes: recipe.prep,
-        cookMinutes: recipe.cook,
-        difficulty: recipe.difficulty,
-        cuisine: recipe.cuisine,
-        tags: recipe.tags.join(','),
-        ingredients: {
-          create: recipe.ingredients.map(([key, quantity, unit, note]) => {
-            const foodReferenceId = foodIds.get(key);
-            if (!foodReferenceId) throw new Error(`Recipe "${recipe.name}" references unknown food "${key}"`);
-            return { foodReferenceId, quantityRequired: quantity, unitRequired: unit, note: note ?? null };
-          }),
-        },
-      },
+    const fields = {
+      description: recipe.description,
+      instructions: recipe.steps.map((step, i) => `${i + 1}. ${step}`).join('\n'),
+      servings: recipe.servings,
+      source: 'seeded',
+      prepMinutes: recipe.prep,
+      cookMinutes: recipe.cook,
+      difficulty: recipe.difficulty,
+      cuisine: recipe.cuisine,
+      tags: recipe.tags.join(','),
+    };
+    const ingredients = recipe.ingredients.map(([key, quantity, unit, note]) => {
+      const foodReferenceId = foodIds.get(key);
+      if (!foodReferenceId) throw new Error(`Recipe "${recipe.name}" references unknown food "${key}"`);
+      return { foodReferenceId, quantityRequired: quantity, unitRequired: unit, note: note ?? null };
     });
+
+    /**
+     * Update the shipped copy in place; never delete and recreate it.
+     *
+     * Two separate reasons, both learned the hard way:
+     *
+     * `ownerId: null` keeps this away from people's own recipes. Without it
+     * this matches by name alone, and someone who imported their own "Chicken
+     * Alfredo" — a name this book already uses — loses it whenever anyone
+     * re-seeds.
+     *
+     * Updating rather than replacing keeps the row's id, and the id is what
+     * ratings and meal-plan entries point at. Delete-and-recreate silently took
+     * every star anyone had given a shipped recipe with it, which is why
+     * seeding used to be too dangerous to run on a live server — and that in
+     * turn meant new recipes could never reach one.
+     */
+    const existing = await prisma.recipe.findFirst({
+      where: { name: recipe.name, ownerId: null },
+      select: { id: true },
+    });
+
+    if (existing) {
+      await prisma.recipe.update({
+        where: { id: existing.id },
+        // ingredients are ours to own, so replacing them wholesale is right
+        data: { ...fields, deletedAt: null, ingredients: { deleteMany: {}, create: ingredients } },
+      });
+      updated += 1;
+    } else {
+      await prisma.recipe.create({
+        data: { name: recipe.name, ownerId: null, ...fields, ingredients: { create: ingredients } },
+      });
+      added += 1;
+    }
   }
-  console.log(`  ${RECIPES.length} recipes`);
+
+  /**
+   * Recipes dropped from the book since last time. Scoped to shipped ones, so
+   * nobody's own recipe can be caught by a change to our corpus.
+   */
+  const removed = await prisma.recipe.deleteMany({
+    where: { ownerId: null, source: 'seeded', name: { notIn: [...seen] } },
+  });
+
+  console.log(`  ${RECIPES.length} recipes (${added} new, ${updated} updated, ${removed.count} retired)`);
 
   /**
    * The demo account exists to make the walkthrough in the spec work, and

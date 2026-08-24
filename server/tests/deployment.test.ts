@@ -128,6 +128,88 @@ describe('changing your own password', () => {
 
 describe('re-seeding a live server', () => {
   /**
+   * The claim the deploy workflow rests on: pushing a recipe change rebuilds
+   * and re-seeds the live server, and nobody loses anything they did.
+   */
+  it('updates a shipped recipe in place, keeping ratings and meal plans', async () => {
+    const user = await register('reseed');
+    const shipped = await prisma.recipe.findFirstOrThrow({
+      where: { ownerId: null, deletedAt: null },
+      include: { ingredients: true },
+    });
+
+    await prisma.recipeRating.create({
+      data: { userId: user.id, recipeId: shipped.id, rating: 5 },
+    });
+    await prisma.mealPlanEntry.create({
+      data: { userId: user.id, recipeId: shipped.id, plannedFor: new Date(), servings: 2 },
+    });
+
+    // exactly what the seed now does: update in place, replace ingredients
+    await prisma.recipe.update({
+      where: { id: shipped.id },
+      data: {
+        description: 'Rewritten by a later seed.',
+        deletedAt: null,
+        ingredients: {
+          deleteMany: {},
+          create: shipped.ingredients.map((i) => ({
+            foodReferenceId: i.foodReferenceId,
+            quantityRequired: i.quantityRequired,
+            unitRequired: i.unitRequired,
+            note: i.note,
+          })),
+        },
+      },
+    });
+
+    // the id survived, so everything pointing at it did too
+    const after = await prisma.recipe.findUniqueOrThrow({
+      where: { id: shipped.id },
+      include: { ingredients: true, ratings: true, planEntries: true },
+    });
+    expect(after.description).toBe('Rewritten by a later seed.');
+    expect(after.ingredients).toHaveLength(shipped.ingredients.length);
+    expect(after.ratings.map((r) => r.rating)).toContain(5);
+    expect(after.planEntries).toHaveLength(1);
+
+    await prisma.recipeRating.deleteMany({ where: { userId: user.id } });
+    await prisma.mealPlanEntry.deleteMany({ where: { userId: user.id } });
+    await prisma.recipe.update({
+      where: { id: shipped.id },
+      data: { description: shipped.description },
+    });
+  });
+
+  it('retires a shipped recipe dropped from the book, but never a user one', async () => {
+    const user = await register('retire');
+    const mine = await prisma.recipe.create({
+      data: { name: `Kept ${stamp}`, instructions: 'Mine.', servings: 1, source: 'imported', ownerId: user.id },
+    });
+    const stale = await prisma.recipe.create({
+      data: { name: `Retired ${stamp}`, instructions: 'Was shipped once.', servings: 1, source: 'seeded' },
+    });
+
+    // What the seed does at the end, with the book's real names standing in for
+    // RECIPES — every shipped recipe except the stale one is still in the book.
+    const stillShipped = (
+      await prisma.recipe.findMany({
+        where: { ownerId: null, source: 'seeded' },
+        select: { name: true },
+      })
+    )
+      .map((row) => row.name)
+      .filter((name) => name !== stale.name);
+
+    await prisma.recipe.deleteMany({
+      where: { ownerId: null, source: 'seeded', name: { notIn: stillShipped } },
+    });
+
+    expect(await prisma.recipe.findUnique({ where: { id: stale.id } })).toBeNull();
+    expect(await prisma.recipe.findUnique({ where: { id: mine.id } })).not.toBeNull();
+  });
+
+  /**
    * The seed replaces the shipped recipe book by name. A person who imported a
    * recipe whose name the book already uses — "Chicken Alfredo" is both a
    * seeded recipe and a very likely import — must not lose it when someone

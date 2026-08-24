@@ -16,7 +16,7 @@
     "test": "vitest run",
     "schema:pg": "node scripts/pg-schema.mjs",
     "build:pg": "npm run schema:pg && prisma generate --schema prisma/schema.postgres.prisma && tsc -p tsconfig.build.json",
-    "db:push:pg": "npm run schema:pg && prisma db push --schema prisma/schema.postgres.prisma --accept-data-loss",
+    "db:push:pg": "npm run schema:pg && prisma db push --schema prisma/schema.postgres.prisma",
     "seed:pg": "prisma generate --schema prisma/schema.postgres.prisma && tsx prisma/seed.ts"
   },
   "prisma": {
