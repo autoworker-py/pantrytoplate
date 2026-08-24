@@ -1,0 +1,16 @@
+{
+  "name": "pantry-to-plate",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Inventory-first recipe app: enter a food once, then consuming it is a lookup and a decrement.",
+  "scripts": {
+    "build": "npm run build:server && npm run build:web",
+    "build:server": "cd server && npm ci && npm run build:pg && npm run db:push:pg && SEED_ONLY_IF_EMPTY=true npm run seed",
+    "build:web": "cd web && npm ci && npm run build",
+    "start": "cd server && node dist/index.js",
+    "test": "cd server && npm test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -17,12 +17,10 @@ services:
     # `migrate deploy` because the migration history is SQLite SQL and will not
     # replay on Postgres — the schema itself is the single source of truth, and
     # scripts/pg-schema.mjs generates the Postgres copy from it.
-    buildCommand: >-
-      cd server && npm ci && npm run build:pg && npm run db:push:pg &&
-      SEED_ONLY_IF_EMPTY=true npm run seed &&
-      cd ../web && npm ci && npm run build
-
-    startCommand: cd server && node dist/index.js
+    # Both scripts live in the root package.json, so this file stays short and
+    # the same command works when run by hand.
+    buildCommand: npm run build
+    startCommand: npm start
 
     healthCheckPath: /api/health
 
