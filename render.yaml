@@ -53,9 +53,10 @@ services:
       - key: JWT_SECRET
         generateValue: true
 
-      # Fastify serves the built frontend from here.
-      - key: WEB_ROOT
-        value: /opt/render/project/src/web/dist
+      # Fastify serves the built frontend. The path is worked out from the
+      # server's own location, so nothing here has to guess at the host's
+      # directory layout — a wrong absolute path comes up "healthy" and serves
+      # a blank page, which is a miserable thing to debug.
 
       # Never reset an account's pantry when the shipped recipes are refreshed.
       - key: SEED_DEMO_USER

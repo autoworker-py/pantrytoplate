@@ -3,7 +3,8 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import fastifyStatic from '@fastify/static';
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ZodError } from 'zod';
 import { env } from './env.js';
 import { HttpError } from './errors.js';
@@ -100,11 +101,13 @@ export async function buildApp(): Promise<FastifyInstance> {
  * the frontend and proxies here, and this stays out of the way.
  */
 async function registerWebApp(app: FastifyInstance) {
-  if (!env.webRoot) return;
+  // In development Vite serves the frontend and proxies here; this must stay
+  // out of the way, or a stale build would shadow the one being edited.
+  if (!env.webRoot && env.nodeEnv !== 'production') return;
 
-  const root = resolve(env.webRoot);
-  if (!existsSync(root)) {
-    app.log.warn(`WEB_ROOT is set to ${root} but nothing is there — serving the API only.`);
+  const root = findWebRoot();
+  if (!root) {
+    app.log.warn('No built frontend found — serving the API only.');
     return;
   }
 
@@ -126,4 +129,24 @@ async function registerWebApp(app: FastifyInstance) {
   });
 
   app.log.info(`Serving the web app from ${root}`);
+}
+
+/**
+ * Locate the built frontend.
+ *
+ * WEB_ROOT wins when it points somewhere real. Otherwise fall back to where the
+ * build actually puts things, worked out from this file's own location rather
+ * than from an absolute path in a host's config — that path is a guess about
+ * someone else's directory layout, and when it is wrong the app comes up
+ * healthy and serves a blank page, which is a miserable thing to debug.
+ */
+function findWebRoot(): string | null {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    ...(env.webRoot ? [resolve(env.webRoot)] : []),
+    // dist/ -> server/ -> repo root -> web/dist
+    resolve(here, '..', '..', 'web', 'dist'),
+    resolve(process.cwd(), '..', 'web', 'dist'),
+  ];
+  return candidates.find((path) => existsSync(join(path, 'index.html'))) ?? null;
 }
