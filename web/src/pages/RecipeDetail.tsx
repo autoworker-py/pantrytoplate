@@ -73,6 +73,11 @@ export default function RecipeDetail() {
   const [choices, setChoices] = useState<Record<string, string>>({});
   /** ingredients the user does not want in this cook */
   const [excluded, setExcluded] = useState<string[]>([]);
+  /**
+   * Stand-ins chosen for tonight only. Deliberately not remembered: using oil
+   * because the butter ran out says nothing about the recipe.
+   */
+  const [swaps, setSwaps] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -83,6 +88,8 @@ export default function RecipeDetail() {
       const picked = Object.entries(choices).map(([food, lot]) => `${food}:${lot}`).join(',');
       if (picked) params.set('choices', picked);
       if (excluded.length > 0) params.set('exclude', excluded.join(','));
+      const swapped = Object.entries(swaps).map(([from, to]) => `${from}:${to}`).join(',');
+      if (swapped) params.set('swap', swapped);
 
       const data = await api.get<{ preview: CookPreview }>(
         `/api/recipes/${id}/cook-preview${params.toString() ? `?${params}` : ''}`,
@@ -92,7 +99,7 @@ export default function RecipeDetail() {
     } catch {
       setError('Could not load this recipe.');
     }
-  }, [id, servings, choices, excluded]);
+  }, [id, servings, choices, excluded, swaps]);
 
   useEffect(() => {
     void load();
@@ -117,6 +124,12 @@ export default function RecipeDetail() {
   if (!preview) return <div className="empty">Loading…</div>;
 
   const gaps = preview.ingredients.filter((ingredient) => ingredient.status !== 'ok');
+
+  // after a swap the row *is* the stand-in, so a row is "swapped" when its food
+  // is one we asked for in place of something else
+  const swappedNames: Record<string, string> = {};
+  for (const substituteId of Object.values(swaps)) swappedNames[substituteId] = substituteId;
+  const activeSwaps = Object.entries(swaps);
 
   return (
     <>
@@ -154,6 +167,21 @@ export default function RecipeDetail() {
         ) : null}
       </div>
 
+      {activeSwaps.length > 0 ? (
+        <div className="banner info">
+          <strong>Swapped for tonight.</strong> The recipe is unchanged — next time it will ask for the
+          original again.
+          <button
+            type="button"
+            className="btn-ghost btn-sm"
+            style={{ marginTop: 8 }}
+            onClick={() => setSwaps({})}
+          >
+            Put {activeSwaps.length === 1 ? 'it' : 'them'} back
+          </button>
+        </div>
+      ) : null}
+
       {preview.usesExpiring.length > 0 ? (
         <div className="banner success">
           Good choice — this uses {preview.usesExpiring.join(', ')} before it goes off.
@@ -189,7 +217,12 @@ export default function RecipeDetail() {
             <li key={ingredient.recipeIngredientId}>
               <div className="row">
                 <div className="grow">
-                  <div className="truncate">{ingredient.name}</div>
+                  <div className="truncate">
+                    {ingredient.name}
+                    {swappedNames[ingredient.foodReferenceId] ? (
+                      <span className="pill mine" style={{ marginLeft: 6 }}>swapped</span>
+                    ) : null}
+                  </div>
                   <div className="muted">
                     needs {formatAmount(ingredient.requiredQuantity, ingredient.requiredUnit)}
                     {ingredient.status === 'short'
@@ -220,17 +253,26 @@ export default function RecipeDetail() {
                 */}
               {ingredient.substitutes.length > 0 ? (
                 <div className="substitutes">
-                  <span className="muted">Or use what you have:</span>
+                  <span className="muted">Or use what you have — just for tonight:</span>
                   {ingredient.substitutes.map((option) => (
-                    <div key={option.substituteId} className="substitute">
-                      <div>
+                    <button
+                      key={option.substituteId}
+                      type="button"
+                      className="substitute tappable"
+                      aria-pressed={false}
+                      onClick={() =>
+                        setSwaps((current) => ({ ...current, [ingredient.foodReferenceId]: option.substituteId }))
+                      }
+                    >
+                      <div className="grow">
                         <strong>
                           {formatAmount(option.quantity, option.unit)} {option.substituteName}
                         </strong>
                         {option.enough ? null : <span className="pill warn">not quite enough</span>}
+                        {option.note ? <div className="muted">{option.note}</div> : null}
                       </div>
-                      {option.note ? <div className="muted">{option.note}</div> : null}
-                    </div>
+                      <span className="swap-cta">Use this</span>
+                    </button>
                   ))}
                 </div>
               ) : null}
@@ -358,6 +400,7 @@ export default function RecipeDetail() {
           servings={servings}
           choices={choices}
           excluded={excluded}
+          swaps={swaps}
           onClose={() => setConfirming(false)}
           onCooked={(message) => {
             setConfirming(false);
@@ -380,6 +423,7 @@ function CookConfirmation({
   servings,
   choices,
   excluded,
+  swaps,
   onClose,
   onCooked,
 }: {
@@ -387,6 +431,7 @@ function CookConfirmation({
   servings: number | null;
   choices: Record<string, string>;
   excluded: string[];
+  swaps: Record<string, string>;
   onClose: () => void;
   onCooked: (message: string) => void;
 }) {
@@ -413,7 +458,7 @@ function CookConfirmation({
         };
       }>(
         `/api/recipes/${preview.id}/cook`,
-        { servings, mealSlot, choices, exclude: excluded, keepServings: keep },
+        { servings, mealSlot, choices, exclude: excluded, keepServings: keep, swaps },
       );
       const ranOut = data.result.ranOut ?? [];
       const restock = ranOut.length > 0

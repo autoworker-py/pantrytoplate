@@ -18,6 +18,17 @@ function parseExcluded(raw: string | undefined): Set<string> {
   return new Set((raw ?? '').split(',').map((id) => id.trim()).filter(Boolean));
 }
 
+/** "ingredientFoodId:substituteFoodId,..." — stand-ins chosen for this cook. */
+function parseSwaps(raw: string | undefined): Record<string, string> {
+  if (!raw) return {};
+  const out: Record<string, string> = {};
+  for (const pair of raw.split(',')) {
+    const [from, to] = pair.split(':');
+    if (from && to) out[from] = to;
+  }
+  return out;
+}
+
 /** "foodId:lotId,foodId:lotId" from the query string. */
 function parseChoices(raw: string | undefined): Record<string, string> {
   if (!raw) return {};
@@ -150,10 +161,11 @@ const routes: FastifyPluginAsync = async (app) => {
 
   app.get('/:id', async (request) => {
     const { id } = request.params as { id: string };
-    const { servings, choices, exclude } = request.query as {
+    const { servings, choices, exclude, swap } = request.query as {
       servings?: string;
       choices?: string;
       exclude?: string;
+      swap?: string;
     };
     const recipe = await getRecipeForUser(
       request.userId,
@@ -162,6 +174,7 @@ const routes: FastifyPluginAsync = async (app) => {
       undefined,
       parseChoices(choices),
       parseExcluded(exclude),
+      parseSwaps(swap),
     );
     if (!recipe) throw notFound('Recipe not found.');
     return { recipe };
@@ -173,10 +186,11 @@ const routes: FastifyPluginAsync = async (app) => {
    */
   app.get('/:id/cook-preview', async (request) => {
     const { id } = request.params as { id: string };
-    const { servings, choices, exclude } = request.query as {
+    const { servings, choices, exclude, swap } = request.query as {
       servings?: string;
       choices?: string;
       exclude?: string;
+      swap?: string;
     };
     return {
       preview: await previewCook(
@@ -186,6 +200,7 @@ const routes: FastifyPluginAsync = async (app) => {
         undefined,
         parseChoices(choices),
         parseExcluded(exclude),
+        parseSwaps(swap),
       ),
     };
   });
@@ -203,6 +218,8 @@ const routes: FastifyPluginAsync = async (app) => {
         exclude: z.array(z.string()).optional(),
         /** servings going in the fridge rather than onto a plate */
         keepServings: z.number().min(0).optional(),
+        /** ingredient food id -> stand-in, for this cook only */
+        swaps: z.record(z.string()).optional(),
       })
       .parse(request.body ?? {});
     return {
@@ -214,6 +231,7 @@ const routes: FastifyPluginAsync = async (app) => {
         body.choices ?? {},
         new Set(body.exclude ?? []),
         body.keepServings ?? 0,
+        body.swaps ?? {},
       ),
     };
   });

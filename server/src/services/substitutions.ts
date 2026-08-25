@@ -94,3 +94,58 @@ export async function substitutionsFor(
   // ones you have enough of are the only ones worth acting on
   return options.sort((a, b) => Number(b.enough) - Number(a.enough));
 }
+
+/**
+ * Rewrite a recipe's ingredients to use stand-ins the cook picked.
+ *
+ * A swap is deliberately per-cook and nothing more: the recipe is not edited,
+ * no preference is remembered, and next time it asks for butter again. Someone
+ * using oil tonight because the butter ran out has not decided anything about
+ * the recipe — they have decided about tonight.
+ *
+ * The ratio is applied here, so everything downstream — the deduction plan, the
+ * calorie total, the diary — sees the real ingredient in the real amount.
+ */
+export async function applySwaps<
+  T extends {
+    foodReferenceId: string;
+    quantityRequired: number;
+    unitRequired: string;
+    note: string | null;
+    foodReference: { id: string; name: string };
+  },
+>(
+  ingredients: T[],
+  swaps: Record<string, string>,
+  db: Tx = prisma,
+): Promise<T[]> {
+  const wanted = Object.entries(swaps).filter(([from, to]) => from && to);
+  if (wanted.length === 0) return ingredients;
+
+  const rules = await db.substitution.findMany({
+    where: {
+      OR: wanted.map(([foodReferenceId, substituteId]) => ({ foodReferenceId, substituteId })),
+    },
+    include: { substitute: true },
+  });
+
+  return ingredients.map((ingredient) => {
+    const substituteId = swaps[ingredient.foodReferenceId];
+    if (!substituteId) return ingredient;
+
+    const rule = rules.find(
+      (candidate) =>
+        candidate.foodReferenceId === ingredient.foodReferenceId && candidate.substituteId === substituteId,
+    );
+    // an unknown pairing is not a licence to guess a ratio
+    if (!rule) return ingredient;
+
+    return {
+      ...ingredient,
+      foodReferenceId: rule.substituteId,
+      quantityRequired: ingredient.quantityRequired * rule.ratio,
+      foodReference: { ...ingredient.foodReference, id: rule.substituteId, name: rule.substitute.name },
+      note: [`instead of ${ingredient.foodReference.name}`, ingredient.note].filter(Boolean).join(' · '),
+    };
+  });
+}

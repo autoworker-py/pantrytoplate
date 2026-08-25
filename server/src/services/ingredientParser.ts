@@ -61,22 +61,90 @@ function parseNumberToken(token: string): number | null {
   return Number.isFinite(plain) ? plain : null;
 }
 
+/**
+ * Everything in brackets, however badly the page closed them.
+ *
+ * Order matters here: parentheses come out *before* the comma is used to split
+ * off a prep note, because recipe sites put commas inside brackets constantly
+ * ("(or 1.2 lb sirloin, trimmed)"). Splitting on the comma first cuts the
+ * bracket in half, and the half that survives becomes the ingredient's name —
+ * which is how a real import ended up with a chicken breast called
+ * "/ 1.2 lb scotch fillet steak / boneless rib eye )".
+ */
+function extractBrackets(line: string): { line: string; notes: string[] } {
+  const notes: string[] = [];
+  let out = '';
+  let depth = 0;
+  let current = '';
+
+  for (const char of line) {
+    if (char === '(' || char === '[') {
+      depth += 1;
+      if (depth === 1) continue;
+    }
+    if (char === ')' || char === ']') {
+      depth -= 1;
+      if (depth === 0) {
+        const trimmed = current.trim();
+        if (trimmed) notes.push(trimmed);
+        current = '';
+        continue;
+      }
+      // a stray closer with nothing open is the page's mistake, not content
+      if (depth < 0) {
+        depth = 0;
+        continue;
+      }
+    }
+    if (depth > 0) current += char;
+    else out += char;
+  }
+
+  // an opener that never closed: keep what followed it as a note, not a name
+  const dangling = current.trim();
+  if (dangling) notes.push(dangling);
+
+  return { line: out.replace(/\s+/g, ' ').trim(), notes };
+}
+
+/**
+ * "cooking salt / kosher salt" is one ingredient offered two ways, not an
+ * ingredient called "cooking salt / kosher salt". Take the first — it is the
+ * author's own first choice — and keep the rest as a note.
+ */
+function splitAlternatives(name: string): { name: string; alternative: string | null } {
+  // guard against fractions and units written with a slash: "1/2", "g/ml"
+  const parts = name.split(/\s+(?:\/|or)\s+/i);
+  if (parts.length < 2) return { name: name.trim(), alternative: null };
+  const [first, ...rest] = parts;
+  return { name: first!.trim(), alternative: rest.join(' or ').trim() || null };
+}
+
+/** Punctuation left behind by splitting is never part of a food's name. */
+function tidyName(name: string): string {
+  return name
+    .replace(/^[\s,;:/\-–—.)\]]+/, '')
+    .replace(/[\s,;:/\-–—(\[]+$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function parseIngredientLine(raw: string): ParsedIngredient {
   let line = String(raw ?? '').trim().replace(/\s+/g, ' ');
 
-  // pull a trailing prep note off first: "diced tomatoes, drained"
-  let note: string | null = null;
+  const notes: string[] = [];
+
+  // brackets first — see extractBrackets
+  const bracketed = extractBrackets(line);
+  line = bracketed.line;
+  notes.push(...bracketed.notes);
+
+  // then the trailing prep note: "diced tomatoes, drained"
   const noteMatch = line.match(TRAILING_NOTE);
   if (noteMatch) {
-    note = noteMatch[1]!.trim() || null;
+    const trailing = noteMatch[1]!.trim();
+    if (trailing) notes.push(trailing);
     line = line.slice(0, noteMatch.index).trim();
-  }
-
-  // "1 (14.5 oz) can diced tomatoes" — the parenthetical is packaging detail
-  const parenthetical = line.match(/\(([^)]*)\)/);
-  if (parenthetical) {
-    note = note ? `${parenthetical[1]!.trim()}, ${note}` : parenthetical[1]!.trim();
-    line = line.replace(parenthetical[0], ' ').replace(/\s+/g, ' ').trim();
   }
 
   // "2-3 cloves garlic" — take the lower bound rather than guessing an average
@@ -113,13 +181,17 @@ export function parseIngredientLine(raw: string): ParsedIngredient {
     if (tokens[index]?.toLowerCase() === 'of') index += 1;
   }
 
-  const name = tokens.slice(index).join(' ').replace(/^of\s+/i, '').trim();
+  const rawName = tokens.slice(index).join(' ').replace(/^of\s+/i, '').trim();
+  const { name: chosen, alternative } = splitAlternatives(rawName);
+  if (alternative) notes.push(alternative);
+
+  const name = tidyName(chosen) || tidyName(rawName) || tidyName(line);
 
   return {
     quantity: quantity > 0 ? quantity : 1,
     unit,
-    name: name || line,
-    note,
+    name,
+    note: notes.length > 0 ? notes.join(', ') : null,
     quantityFound,
   };
 }

@@ -142,7 +142,7 @@ export interface BarcodeResolution {
  * The package size for a product: what we were told, or failing that a typical
  * size for its category. Estimates are flagged so the UI can say so.
  */
-async function packageGramsFor(
+export async function packageGramsFor(
   food: { id: string; category: string | null; servingSizeGrams: number | null },
   db: Tx = prisma,
 ): Promise<{ grams: number | null; estimated: boolean }> {
@@ -243,8 +243,24 @@ export async function searchLocalFoods(query: string, limit = 10, db: Tx = prism
 }
 
 /** Best single match for a free-text name, with the method used. */
-export async function matchLocalFood(name: string, db: Tx = prisma): Promise<MatchResult<FoodReference>> {
-  const candidates = await db.foodReference.findMany({ take: 1000 });
+export async function matchLocalFood(
+  name: string,
+  db: Tx = prisma,
+  /**
+   * Match only generic catalog ingredients, skipping scanned products.
+   *
+   * A recipe asks for "olive oil", not for the particular bottle someone
+   * scanned last week. Letting an import bind to a branded row means the recipe
+   * is satisfied only by that exact product — and a real import did exactly
+   * this, ending up with a Chicken Alfredo that called for
+   * "ORGANIC EXTRA VIRGIN OLIVE OIL".
+   */
+  genericOnly = false,
+): Promise<MatchResult<FoodReference>> {
+  const candidates = await db.foodReference.findMany({
+    where: genericOnly ? { barcode: null, canonicalId: null } : {},
+    take: 1000,
+  });
   const synonyms = await loadSynonymIndex(db);
   return matchFood(name, candidates, synonyms) as MatchResult<FoodReference>;
 }

@@ -131,6 +131,7 @@ async function loadInventoryByFood(userId: string, db: Tx) {
 
 export async function evaluateRecipes(
   userId: string,
+  // eslint-disable-next-line prefer-const -- reassigned when swaps are applied
   recipes: RecipeWithIngredients[],
   servingsOverride: number | null,
   db: Tx = prisma,
@@ -138,7 +139,16 @@ export async function evaluateRecipes(
   choices: Record<string, string> = {},
   /** ingredient food ids the user left out — no carrots, thanks */
   excluded: Set<string> = new Set(),
+  /** ingredient food id -> the stand-in to use, for this cook only */
+  swaps: Record<string, string> = {},
 ): Promise<RecipeMatch[]> {
+  if (Object.keys(swaps).length > 0) {
+    const { applySwaps } = await import('./substitutions.js');
+    recipes = await Promise.all(
+      recipes.map(async (recipe) => ({ ...recipe, ingredients: await applySwaps(recipe.ingredients, swaps, db) })),
+    );
+  }
+
   const { byFood: inventory, expiring } = await loadInventoryByFood(userId, db);
 
   // Contexts are needed for the recipe's ingredients *and* for whatever the
@@ -641,6 +651,7 @@ export async function getRecipeForUser(
   db: Tx = prisma,
   choices: Record<string, string> = {},
   excluded: Set<string> = new Set(),
+  swaps: Record<string, string> = {},
 ): Promise<(RecipeMatch & { instructions: string; source: string; sourceUrl: string | null }) | null> {
   const recipe = await db.recipe.findUnique({
     where: { id: recipeId },
@@ -651,7 +662,7 @@ export async function getRecipeForUser(
   if (!recipe || recipe.deletedAt !== null) return null;
   if (recipe.ownerId !== null && recipe.ownerId !== userId) return null;
 
-  const [match] = await evaluateRecipes(userId, [recipe], servings, db, choices, excluded);
+  const [match] = await evaluateRecipes(userId, [recipe], servings, db, choices, excluded, swaps);
   if (!match) return null;
 
   await attachSubstitutes(userId, match, db);

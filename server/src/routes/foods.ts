@@ -6,6 +6,7 @@ import {
   findOrCreateFoodByName,
   importUsdaFood,
   linkCanonical,
+  packageGramsFor,
   resolveBarcode,
   searchLocalFoods,
   searchUsda,
@@ -121,6 +122,30 @@ const routes: FastifyPluginAsync = async (app) => {
   app.post('/:id/counts-as/suggest', async (request) => {
     const { id } = request.params as { id: string };
     return { suggestion: await linkCanonical(id) };
+  });
+
+  /**
+   * How big is one pack of this?
+   *
+   * `known` is the part that matters to the UI: an estimate from the category
+   * is a starting point to correct, not an answer. Asking once, the first time
+   * something is added, is the difference between "1 pack of rice" meaning
+   * something and meaning nothing.
+   */
+  app.get('/:id/pack', async (request) => {
+    const { id } = request.params as { id: string };
+    const food = await prisma.foodReference.findUnique({ where: { id } });
+    if (!food) throw notFound('Food not found.');
+
+    const pack = await packageGramsFor(food);
+    return {
+      foodReferenceId: food.id,
+      name: food.name,
+      defaultUnit: food.defaultUnit,
+      grams: pack.grams,
+      estimated: pack.estimated,
+      known: pack.grams !== null && !pack.estimated,
+    };
   });
 
   /**

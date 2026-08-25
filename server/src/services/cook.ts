@@ -17,6 +17,7 @@ import { clampZero, roundQuantity } from './units.js';
 import { attachSubstitutes, evaluateRecipes, type RecipeMatch } from './recipeMatch.js';
 import { checkLowStock } from './lowStock.js';
 import { storeLeftovers, type StoredLeftovers } from './leftovers.js';
+import { applySwaps } from './substitutions.js';
 import { createId } from '../ids.js';
 
 export interface CookPreview extends RecipeMatch {
@@ -51,8 +52,15 @@ export async function previewCook(
   db: Tx = prisma,
   choices: Record<string, string> = {},
   excluded: Set<string> = new Set(),
+  swaps: Record<string, string> = {},
 ): Promise<CookPreview> {
-  const recipe = await loadRecipe(recipeId, db, userId);
+  const loadedRecipe = await loadRecipe(recipeId, db, userId);
+  // the swap is what will actually be deducted, so everything downstream —
+  // calories, the plan, the diary — has to see the stand-in, not the original
+  const recipe = {
+    ...loadedRecipe,
+    ingredients: await applySwaps(loadedRecipe.ingredients, swaps, db),
+  };
   const [match] = await evaluateRecipes(userId, [recipe], servings, db, choices, excluded);
   if (!match) throw notFound('Recipe not found');
   // the cook screen is exactly where "use oil instead" is useful
@@ -134,13 +142,16 @@ export async function cookRecipe(
    * onto a plate. The rest is logged as eaten now.
    */
   keepServings: number = 0,
+  /** ingredient food id -> stand-in to use, for this cook only */
+  swaps: Record<string, string> = {},
 ): Promise<CookResult> {
   return prisma.$transaction(async (tx) => {
     const loaded = await loadRecipe(recipeId, tx, userId);
+    const swapped = await applySwaps(loaded.ingredients, swaps, tx);
     // an excluded ingredient is not deducted and not logged
     const recipe = {
       ...loaded,
-      ingredients: loaded.ingredients.filter((i) => !excluded.has(i.foodReferenceId)),
+      ingredients: swapped.filter((i) => !excluded.has(i.foodReferenceId)),
     };
     const scale = servings ? servings / Math.max(1, recipe.servings) : 1;
 

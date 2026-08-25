@@ -64,7 +64,8 @@ function flattenInstructions(raw: unknown, depth = 0): string[] {
   if (typeof raw === 'string') {
     return raw
       .replace(/<[^>]+>/g, ' ')
-      .split(/\n|\.(?=\s+[A-Z])/)
+      // split *after* the full stop, so a step still reads as a sentence
+      .split(/\n|(?<=\.)\s+(?=[A-Z])/)
       .map((line) => line.trim())
       .filter((line) => line.length > 3);
   }
@@ -83,6 +84,33 @@ function parseServings(value: JsonLdRecipe['recipeYield']): number {
   if (typeof first === 'number' && Number.isFinite(first)) return Math.max(1, Math.round(first));
   const match = String(first ?? '').match(/\d+/);
   return match ? Math.max(1, Number(match[0])) : 1;
+}
+
+/**
+ * Recipe sites tag for search engines, not for cooks: "chicken alfredo",
+ * "chicken alfredo recipe", "easy chicken alfredo", "30 minute". Left alone
+ * these flood the tag filter with one-use phrases that describe the recipe you
+ * are already looking at. Keep only short tags that say something about the
+ * food rather than repeating its title.
+ */
+function usefulTags(keywords: string[], recipeName: string): string[] {
+  const title = new Set(recipeName.toLowerCase().split(/\s+/).filter(Boolean));
+  const seen = new Set<string>();
+  const out: string[] = [];
+
+  for (const keyword of keywords) {
+    const tag = String(keyword).trim().toLowerCase().replace(/\s+/g, ' ');
+    if (!tag || tag.length > 24 || seen.has(tag)) continue;
+    const words = tag.split(' ');
+    if (words.length > 2) continue;
+    // "recipe", "recipes", "best chicken alfredo recipe" — all about SEO
+    if (words.some((word) => word === 'recipe' || word === 'recipes')) continue;
+    // a tag that merely repeats the title tells a reader nothing new
+    if (words.every((word) => title.has(word))) continue;
+    seen.add(tag);
+    out.push(tag);
+  }
+  return out.slice(0, 6);
 }
 
 export interface ImportPreview {
@@ -161,7 +189,7 @@ export async function previewImport(url: string, db: Tx = prisma): Promise<Impor
   const ingredients = [];
   for (const raw of lines) {
     const parsedLine = parseIngredientLine(String(raw));
-    const match = await matchLocalFood(parsedLine.name, db);
+    const match = await matchLocalFood(parsedLine.name, db, true);
     ingredients.push({
       raw: String(raw),
       quantity: parsedLine.quantity,
@@ -190,7 +218,7 @@ export async function previewImport(url: string, db: Tx = prisma): Promise<Impor
         ? parseIsoDuration(recipe.totalTime)! - parseIsoDuration(recipe.prepTime)!
         : parseIsoDuration(recipe.totalTime)),
     cuisine: Array.isArray(recipe.recipeCuisine) ? recipe.recipeCuisine[0] ?? null : recipe.recipeCuisine ?? null,
-    tags: keywords.map((k) => String(k).trim().toLowerCase()).filter(Boolean).slice(0, 8),
+    tags: usefulTags(keywords, recipe.name),
     instructions: steps.map((step, i) => `${i + 1}. ${step}`).join('\n'),
     sourceUrl: parsed.toString(),
     ingredients,
@@ -205,7 +233,12 @@ export async function previewImport(url: string, db: Tx = prisma): Promise<Impor
  */
 export async function saveImport(preview: ImportPreview, ownerId: string, db: Tx = prisma) {
   const created: string[] = [];
-  const ingredients = [];
+  const ingredients: Array<{
+    foodReferenceId: string;
+    quantityRequired: number;
+    unitRequired: string;
+    note: string | null;
+  }> = [];
 
   for (const ingredient of preview.ingredients) {
     let foodReferenceId = ingredient.matchedFoodId;
@@ -217,10 +250,32 @@ export async function saveImport(preview: ImportPreview, ownerId: string, db: Tx
       foodReferenceId = resolved.food.id;
       if (resolved.created) created.push(resolved.food.name);
     }
+    const unitRequired = normalizeUnit(ingredient.unit);
+
+    /**
+     * Recipes list the same thing twice all the time — butter for the sauce and
+     * butter for the chicken. Two rows for one food reads as a mistake, and
+     * worse, the pantry check runs against each half separately, so having
+     * enough butter for the whole recipe can still show as short.
+     *
+     * Only same-unit rows merge: 1 cup and 1 tbsp of butter cannot be added up
+     * here without a conversion context, and guessing is how quantities go
+     * wrong quietly.
+     */
+    const twin = ingredients.find(
+      (existing) => existing.foodReferenceId === foodReferenceId && existing.unitRequired === unitRequired,
+    );
+    if (twin) {
+      twin.quantityRequired += ingredient.quantity;
+      const notes = [twin.note, ingredient.note].filter(Boolean).join('; ');
+      twin.note = notes || null;
+      continue;
+    }
+
     ingredients.push({
       foodReferenceId,
       quantityRequired: ingredient.quantity,
-      unitRequired: normalizeUnit(ingredient.unit),
+      unitRequired,
       note: ingredient.note,
     });
   }

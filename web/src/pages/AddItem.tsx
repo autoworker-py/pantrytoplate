@@ -6,6 +6,7 @@ import { formatDateInput } from '../lib/format';
 import { useToast } from '../components/Toast';
 import { UnitSelect } from '../components/UnitSelect';
 import { Sheet } from '../components/Sheet';
+import { PackSize, usePack, type Pack } from '../components/PackSize';
 
 // the scanner pulls in the whole decoder; only load it on the scan tab
 const BarcodeScanner = lazy(() =>
@@ -117,6 +118,10 @@ function ManualForm() {
   const [name, setName] = useState('');
   const [suggestions, setSuggestions] = useState<Food[]>([]);
   const [linked, setLinked] = useState<Food | null>(null);
+  // asked once per food, the first time it is added
+  const loadedPack = usePack(linked?.id);
+  const [pack, setPack] = useState<Pack | null>(null);
+  useEffect(() => setPack(loadedPack), [loadedPack]);
   const [quantity, setQuantity] = useState(1);
   const [unit, setUnit] = useState('count');
   const [category, setCategory] = useState('');
@@ -204,6 +209,19 @@ function ManualForm() {
           </div>
         ) : null}
       </div>
+
+      <PackSize
+        pack={pack}
+        quantity={quantity}
+        unit={unit}
+        onPick={(nextQuantity, nextUnit) => {
+          setQuantity(nextQuantity);
+          setUnit(nextUnit);
+        }}
+        onSaved={(grams) =>
+          setPack((current) => (current ? { ...current, grams, estimated: false, known: true } : current))
+        }
+      />
 
       <QuantityFields
         quantity={quantity}
@@ -369,13 +387,18 @@ function ConfirmScanned({
   onCancel: () => void;
   onAdded: (name: string) => void;
 }) {
-  const usePack = (scanned.packageGrams ?? 0) > 0;
-  const [quantity, setQuantity] = useState(usePack ? scanned.packageGrams! : 1);
-  const [unit, setUnit] = useState(usePack ? 'g' : scanned.food.defaultUnit);
+  // a whole pack is what people actually put away, so default to it
+  const wholePack = (scanned.packageGrams ?? 0) > 0;
+  const [quantity, setQuantity] = useState(wholePack ? scanned.packageGrams! : 1);
+  const [unit, setUnit] = useState(wholePack ? 'g' : scanned.food.defaultUnit);
   const [expiration, setExpiration] = useState('');
   const [perServing, setPerServing] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const loaded = usePack(scanned.food.id);
+  const [pack, setPack] = useState<Pack | null>(null);
+  useEffect(() => setPack(loaded), [loaded]);
 
   async function save() {
     setBusy(true);
@@ -427,47 +450,16 @@ function ConfirmScanned({
 
       {error ? <div className="banner error">{error}</div> : null}
 
-      {scanned.packageGrams ? (
-        <div className="btn-row" style={{ marginBottom: 12 }}>
-          <button
-            type="button"
-            className={`btn-secondary btn-sm ${quantity === scanned.packageGrams && unit === 'g' ? 'active' : ''}`}
-            onClick={() => {
-              setQuantity(scanned.packageGrams!);
-              setUnit('g');
-            }}
-          >
-            Full pack ({scanned.packageGrams} g)
-          </button>
-          <button
-            type="button"
-            className="btn-secondary btn-sm"
-            onClick={() => {
-              setQuantity(Math.round(scanned.packageGrams! / 2));
-              setUnit('g');
-            }}
-          >
-            Half
-          </button>
-          <button
-            type="button"
-            className="btn-secondary btn-sm"
-            onClick={() => {
-              setQuantity(1);
-              setUnit(scanned.food.defaultUnit);
-            }}
-          >
-            One {scanned.food.defaultUnit}
-          </button>
-        </div>
-      ) : null}
-
-      {scanned.packageEstimated ? (
-        <p className="muted" style={{ marginTop: -6 }}>
-          We do not know this pack's exact size, so that is a typical one for its category — adjust it if it is
-          wrong and we will remember.
-        </p>
-      ) : null}
+      <PackSize
+        pack={pack}
+        quantity={quantity}
+        unit={unit}
+        onPick={(nextQuantity, nextUnit) => {
+          setQuantity(nextQuantity);
+          setUnit(nextUnit);
+        }}
+        onSaved={(grams) => setPack((current) => (current ? { ...current, grams, estimated: false, known: true } : current))}
+      />
 
       <QuantityFields
         quantity={quantity}

@@ -413,6 +413,7 @@ All routes except `/api/health` and `/api/auth/*` require
 | `GET` | `/api/recipes/for-food/:foodId` | What you can make with one pantry item |
 | `DELETE` | `/api/recipes/:id` | Delete a recipe you added (soft; diary survives) |
 | `POST` | `/api/auth/password` | Change your own password |
+| `GET` | `/api/foods/:id/pack` | Pack size, and whether it is known or guessed |
 | `GET` | `/api/consumption/today`, `/api/consumption/history` | Calories, macros, meals |
 | `GET` `DELETE` | `/api/consumption/:id` | Entry breakdown / **undo** |
 | `POST` | `/api/consumption/eat-out` | **Log food you ate out** |
@@ -460,7 +461,7 @@ entirely and the app remains fully usable.
 cd server && npm test
 ```
 
-235 tests, weighted toward the risky parts:
+245 tests, weighted toward the risky parts:
 
 - **`units.test.ts` (27)** — normalisation, exact mass/volume factors, round
   trips, ingredient densities, the cups-out-of-a-32-oz-bag case, the serving
@@ -470,6 +471,11 @@ cd server && npm test
   exact depletion without float slivers, unconvertible lots.
 - **`matching.test.ts` (10)** — pluralisation, synonyms, fuzzy thresholds, and
   refusing a bad match.
+- **`patches.test.ts` (8)** — the parser against the lines that actually broke
+  it (brackets the page never closed, "salt / kosher salt", a food that ended up
+  named after its own footnote); pack sizes reporting *known* separately from
+  *guessed*; and a substitute swap deducting the stand-in at its own ratio while
+  leaving the recipe itself untouched.
 - **`deployment.test.ts` (6)** — the things that only matter once this is
   reachable from the internet: changing a password actually invalidates the old
   one, needs the current password even with a valid session, and cannot touch

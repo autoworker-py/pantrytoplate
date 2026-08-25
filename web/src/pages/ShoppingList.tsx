@@ -123,28 +123,37 @@ export default function ShoppingList() {
               </p>
             ) : (
               <ul className="list">
+                {/*
+                  * The name gets the room. Everything else that used to sit on
+                  * this line — a source pill, an info button — squeezed a
+                  * shopping list down to "Parmesan C…", which is no use in a
+                  * shop. Why it is on the list goes underneath, and the row
+                  * itself is the tap target for what it is for.
+                  */}
                 {open.map((item) => (
-                  <li key={item.id} className="row">
-                    <label className="row grow" style={{ margin: 0, fontWeight: 400, color: 'var(--ink)', fontSize: '1rem' }}>
-                      <input
-                        type="checkbox"
-                        checked={false}
-                        onChange={() => toggle(item)}
-                        style={{ width: 20, height: 20, marginRight: 10 }}
-                      />
-                      <span className="grow truncate">{item.name}</span>
-                    </label>
-                    {item.addedFrom === 'recipe_gap' ? <span className="pill neutral">recipe</span> : null}
-                    {item.addedFrom === 'low_stock' ? <span className="pill warn">ran out</span> : null}
+                  <li key={item.id} className="shop-row">
+                    <input
+                      type="checkbox"
+                      checked={false}
+                      onChange={() => toggle(item)}
+                      aria-label={`Tick off ${item.name}`}
+                    />
                     <button
                       type="button"
-                      className="btn-ghost btn-sm"
+                      className="shop-name"
                       onClick={() => setOpenItem(item)}
                       aria-label={`What is ${item.name} for?`}
                     >
-                      ⓘ
+                      <span className="truncate">{item.name}</span>
+                      {item.addedFrom === 'recipe_gap' ? <span className="shop-why">for a recipe</span> : null}
+                      {item.addedFrom === 'low_stock' ? <span className="shop-why warn">you ran out</span> : null}
                     </button>
-                    <button type="button" className="btn-ghost btn-sm" onClick={() => remove(item)} aria-label={`Remove ${item.name}`}>
+                    <button
+                      type="button"
+                      className="btn-ghost btn-sm"
+                      onClick={() => remove(item)}
+                      aria-label={`Remove ${item.name}`}
+                    >
                       ✕
                     </button>
                   </li>

@@ -58,10 +58,15 @@ export default function App() {
           </Routes>
         </main>
 
-        <nav className="tabbar">
+        {/*
+          * A floating pill rather than a full-width bar: it reads as an object
+          * sitting on the content instead of a wall at the bottom, and it keeps
+          * clear of the home indicator on a modern iPhone.
+          */}
+        <nav className="tabbar" aria-label="Main">
           {TABS.map((tab) => (
             <NavLink key={tab.to} to={tab.to} end={tab.end}>
-              <span className="icon">{tab.icon}</span>
+              <span className="icon" aria-hidden="true">{tab.icon}</span>
               {tab.label}
             </NavLink>
           ))}
