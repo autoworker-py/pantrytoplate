@@ -1,5 +1,10 @@
 # Designing screens in Figma
 
+> **This describes the CURRENT implementation, not a design direction.**
+> For a redesign it is evidence and anti-reference — the look to replace, not
+> preserve. The numbers below are accurate to what ships today; treat them as a
+> record of the incumbent, and feel free to discard all of it.
+
 A cheat sheet to keep open in a second window. Everything here is the real
 values the app already uses, so a design built on these numbers will match what
 gets built — no translation step, nothing to guess.
