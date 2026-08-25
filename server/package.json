@@ -17,7 +17,8 @@
     "schema:pg": "node scripts/pg-schema.mjs",
     "build:pg": "npm run schema:pg && prisma generate --schema prisma/schema.postgres.prisma && tsc -p tsconfig.build.json",
     "db:push:pg": "npm run schema:pg && prisma db push --schema prisma/schema.postgres.prisma",
-    "seed:pg": "prisma generate --schema prisma/schema.postgres.prisma && tsx prisma/seed.ts"
+    "seed:pg": "prisma generate --schema prisma/schema.postgres.prisma && tsx prisma/seed.ts",
+    "contract": "npm run build && node scripts/api-contract.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
