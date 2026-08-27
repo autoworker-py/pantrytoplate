@@ -74,21 +74,58 @@ export async function previewCook(
       return `${i.name}: no known conversion to ${i.requiredUnit}`;
     });
 
+  /*
+   * Estimate from the lots that would actually be drawn, not from the generic
+   * ingredients. Confirming the cook logs the real products' calories, so an
+   * estimate built on generic figures would disagree with the diary entry it
+   * produces moments later.
+   */
+  const plannedItemIds = [
+    ...new Set(match.ingredients.flatMap((i) => i.plan.deductions.map((d) => d.inventoryItemId))),
+  ];
+  const plannedLots = plannedItemIds.length
+    ? await db.inventoryItem.findMany({
+        where: { id: { in: plannedItemIds } },
+        include: { foodReference: true },
+      })
+    : [];
+  const foodByItem = new Map(plannedLots.map((lot) => [lot.id, lot.foodReference]));
+  const plannedFoods = plannedLots.map((lot) => lot.foodReference);
+
   const contexts = await loadConvertContexts(
-    recipe.ingredients.map((i) => i.foodReference),
+    [...recipe.ingredients.map((i) => i.foodReference), ...plannedFoods],
     db,
   );
+
   let calories: number | null = 0;
   for (const ingredient of match.ingredients) {
-    const food = recipe.ingredients.find((i) => i.foodReferenceId === ingredient.foodReferenceId)?.foodReference;
-    if (!food || calories === null) continue;
-    const totals = nutritionFor(
-      ingredient.requiredQuantity,
-      ingredient.requiredUnit,
-      food,
-      contexts.get(food.id) ?? {},
-    );
-    calories = totals.calories === null ? null : calories + totals.calories;
+    if (calories === null) continue;
+    const generic = recipe.ingredients.find((i) => i.foodReferenceId === ingredient.foodReferenceId)?.foodReference;
+    if (!generic) continue;
+
+    // nothing planned (missing, or short) falls back to the generic figure
+    if (ingredient.plan.deductions.length === 0) {
+      const totals = nutritionFor(
+        ingredient.requiredQuantity,
+        ingredient.requiredUnit,
+        generic,
+        contexts.get(generic.id) ?? {},
+      );
+      calories = totals.calories === null ? null : calories + totals.calories;
+      continue;
+    }
+
+    for (const draw of ingredient.plan.deductions) {
+      if (calories === null) break;
+      const food = foodByItem.get(draw.inventoryItemId) ?? generic;
+      const totals = nutritionFor(
+        draw.quantityDeducted,
+        draw.unit,
+        food,
+        contexts.get(food.id) ?? {},
+      );
+      calories = totals.calories === null ? null : calories + totals.calories;
+    }
   }
 
   return {

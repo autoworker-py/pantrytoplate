@@ -11,6 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app.js';
 import { prisma } from '../src/db.js';
+import { PRIVACY_VERSION } from '../src/content/privacy.js';
 import { saveImport, type ImportPreview } from '../src/services/recipeImport.js';
 
 let app: FastifyInstance;
@@ -24,7 +25,7 @@ async function register(label: string) {
   const response = await app.inject({
     method: 'POST',
     url: '/api/auth/register',
-    payload: { email: `${label}-${stamp}@example.test`, password: 'testpassword' },
+    payload: { email: `${label}-${stamp}@example.test`, password: 'testpassword' , acceptPrivacyVersion: PRIVACY_VERSION },
   });
   const body = JSON.parse(response.body);
   created.push(body.user.id);

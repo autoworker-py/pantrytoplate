@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../db.js';
-import { notFound } from '../errors.js';
+import { badRequest, notFound } from '../errors.js';
 import {
   findOrCreateFoodByName,
   importUsdaFood,
@@ -13,6 +13,7 @@ import {
   setCanonical,
 } from '../services/foodRef.js';
 import { invalidateUniversalConversionCache } from '../services/conversions.js';
+import { normalizeName } from '../services/matching.js';
 import { KNOWN_UNITS, normalizeUnit } from '../services/units.js';
 
 const routes: FastifyPluginAsync = async (app) => {
@@ -88,6 +89,90 @@ const routes: FastifyPluginAsync = async (app) => {
 
     const result = await findOrCreateFoodByName(body);
     return reply.code(result.created ? 201 : 200).send(result);
+  });
+
+  /**
+   * Teach the app a product the barcode databases do not have.
+   *
+   * Open Food Facts is community-maintained and genuinely does not know a great
+   * many products, particularly own-brand and non-European ones. Without this,
+   * a failed scan is a dead end and the only way forward is to type the item in
+   * by hand every single time.
+   *
+   * Stamping the barcode onto the row is the whole point: the next scan of the
+   * same product resolves locally and instantly, which is the app's promise —
+   * enter a food once.
+   */
+  app.post('/barcode/:code', async (request, reply) => {
+    const { code } = request.params as { code: string };
+    const barcode = code.replace(/\D/g, '');
+    if (barcode.length < 6) throw badRequest('That does not look like a barcode.');
+
+    const body = z
+      .object({
+        name: z.string().min(1, 'Give the product a name.'),
+        brand: z.string().nullish(),
+        defaultUnit: z.string().default('g'),
+        category: z.string().nullish(),
+        /** per one of defaultUnit — the label's per-100g figures divided by 100 */
+        caloriesPerUnit: z.number().nonnegative().nullish(),
+        proteinPerUnit: z.number().nonnegative().nullish(),
+        carbsPerUnit: z.number().nonnegative().nullish(),
+        fatPerUnit: z.number().nonnegative().nullish(),
+        servingSizeGrams: z.number().positive().nullish(),
+        /** what one whole pack weighs, so "full pack" means something */
+        packageGrams: z.number().positive().nullish(),
+      })
+      .parse(request.body);
+
+    const existing = await prisma.foodReference.findUnique({ where: { barcode } });
+    const data = {
+      name: body.name.trim(),
+      nameNorm: normalizeName(body.name),
+      brand: body.brand ?? null,
+      barcode,
+      source: 'manual',
+      category: body.category ?? null,
+      defaultUnit: normalizeUnit(body.defaultUnit),
+      caloriesPerUnit: body.caloriesPerUnit ?? null,
+      proteinPerUnit: body.proteinPerUnit ?? null,
+      carbsPerUnit: body.carbsPerUnit ?? null,
+      fatPerUnit: body.fatPerUnit ?? null,
+      servingSizeGrams: body.servingSizeGrams ?? null,
+    };
+
+    // a second scan of a product someone already described corrects it rather
+    // than failing on the unique barcode
+    const food = existing
+      ? await prisma.foodReference.update({ where: { id: existing.id }, data })
+      : await prisma.foodReference.create({ data });
+
+    if (body.packageGrams) {
+      await prisma.unitConversion.upsert({
+        where: {
+          foodReferenceId_fromUnit_toUnit: {
+            foodReferenceId: food.id,
+            fromUnit: 'package',
+            toUnit: 'g',
+          },
+        },
+        create: { foodReferenceId: food.id, fromUnit: 'package', toUnit: 'g', multiplier: body.packageGrams },
+        update: { multiplier: body.packageGrams },
+      });
+    }
+
+    /*
+     * Work out what generic ingredient this is a version of, so recipes calling
+     * for "olive oil" count it. Only a suggestion, and only when the name and
+     * the calorie density agree — a wrong link is worse than none.
+     */
+    const suggestion = await linkCanonical(food.id);
+
+    return reply.code(existing ? 200 : 201).send({
+      food: { ...food, canonicalId: suggestion?.foodId ?? food.canonicalId },
+      countsAs: suggestion ? { id: suggestion.foodId, name: suggestion.foodName } : null,
+      updated: Boolean(existing),
+    });
   });
 
   app.get('/:id', async (request) => {

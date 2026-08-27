@@ -135,7 +135,7 @@ export default function RecipeDetail() {
   return (
     <>
       <button type="button" className="btn-ghost btn-sm" onClick={() => navigate(-1)}>
-        ← Back
+        <Icon name="arrow-left" size={16} /> Back
       </button>
 
       <h1 style={{ marginTop: 8 }}>{preview.name}</h1>
@@ -386,7 +386,7 @@ export default function RecipeDetail() {
                 toast(`Rated ${value}/5 — this will show up higher next time.`);
               }}
             >
-              ★
+              <Icon name={rating !== null && value <= rating ? 'star-filled' : 'star'} size={26} />
             </button>
           ))}
         </div>
@@ -500,7 +500,7 @@ function CookConfirmation({
               <div className="after" style={{ textAlign: 'right' }}>
                 <div className="muted">{formatAmount(deduction.quantityBefore, deduction.unit)}</div>
                 <div>
-                  <span className="arrow">→ </span>
+                  <span className="arrow"><Icon name="arrow-right" size={14} /></span>
                   <strong>{formatAmount(deduction.quantityAfter, deduction.unit)}</strong>
                 </div>
               </div>

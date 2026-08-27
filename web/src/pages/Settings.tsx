@@ -4,6 +4,7 @@ import type { Settings as SettingsData, WeightGoal } from '../lib/types';
 import { useAuth } from '../lib/auth';
 import { useTheme } from '../lib/theme';
 import { useToast } from '../components/Toast';
+import { Icon } from '../components/Icon';
 
 const GOALS: Array<{ value: WeightGoal; label: string; note: string }> = [
   { value: 'lose', label: 'Lose', note: 'Lighter, higher-protein recipes first' },
@@ -52,9 +53,9 @@ export default function Settings() {
         <div className="theme-grid">
           {(
             [
-              { value: 'system', label: 'System', icon: '◑' },
-              { value: 'light', label: 'Light', icon: '☀' },
-              { value: 'dark', label: 'Dark', icon: '☾' },
+              { value: 'system', label: 'System', icon: 'gear' as const },
+              { value: 'light', label: 'Light', icon: 'sun' as const },
+              { value: 'dark', label: 'Dark', icon: 'moon' as const },
             ] as const
           ).map((option) => (
             <button
@@ -63,7 +64,7 @@ export default function Settings() {
               className={theme === option.value ? 'active' : ''}
               onClick={() => setTheme(option.value)}
             >
-              <span className="icon">{option.icon}</span>
+              <Icon name={option.icon} size={20} className="icon" />
               <strong>{option.label}</strong>
             </button>
           ))}

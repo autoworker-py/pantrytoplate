@@ -11,6 +11,7 @@ import type { FastifyInstance } from 'fastify';
 import bcrypt from 'bcryptjs';
 import { buildApp } from '../src/app.js';
 import { prisma } from '../src/db.js';
+import { PRIVACY_VERSION } from '../src/content/privacy.js';
 import { changePassword } from '../src/services/auth.js';
 
 let app: FastifyInstance;
@@ -21,7 +22,7 @@ async function register(label: string, password = 'testpassword') {
   const response = await app.inject({
     method: 'POST',
     url: '/api/auth/register',
-    payload: { email: `${label}-${stamp}@example.test`, password },
+    payload: { email: `${label}-${stamp}@example.test`, password , acceptPrivacyVersion: PRIVACY_VERSION },
   });
   const body = JSON.parse(response.body);
   created.push(body.user.id);

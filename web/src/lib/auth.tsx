@@ -4,14 +4,20 @@ import { api, tokenStore } from './api';
 interface User {
   id: string;
   email: string;
+  /** the first-run questions have been answered or deliberately skipped */
+  onboarded: boolean;
+  /** false when the notice has been revised since this person agreed */
+  privacyCurrent: boolean;
 }
 
 interface AuthState {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, acceptPrivacyVersion: string) => Promise<void>;
   logout: () => void;
+  /** re-read the account after onboarding or accepting a revised notice */
+  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -20,36 +26,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const refresh = useCallback(async () => {
+    if (!tokenStore.get()) {
+      setUser(null);
+      return;
+    }
+    const data = await api.get<{ user: User }>('/api/auth/me');
+    setUser(data.user);
+  }, []);
+
   useEffect(() => {
     if (!tokenStore.get()) {
       setLoading(false);
       return;
     }
-    api
-      .get<{ user: { id: string; email: string } }>('/api/auth/me')
-      .then((data) => setUser(data.user))
+    refresh()
       .catch(() => tokenStore.clear())
       .finally(() => setLoading(false));
-  }, []);
+  }, [refresh]);
 
-  const authenticate = useCallback(async (path: string, email: string, password: string) => {
-    const data = await api.post<{ token: string; user: User }>(path, { email, password });
-    tokenStore.set(data.token);
-    setUser(data.user);
-  }, []);
+  const authenticate = useCallback(
+    async (path: string, body: Record<string, unknown>) => {
+      const data = await api.post<{ token: string }>(path, body);
+      tokenStore.set(data.token);
+      // read the account back rather than trusting the sign-in response: it is
+      // the one place that knows whether onboarding and consent are current
+      await refresh();
+    },
+    [refresh],
+  );
 
   const value = useMemo<AuthState>(
     () => ({
       user,
       loading,
-      login: (email, password) => authenticate('/api/auth/login', email, password),
-      register: (email, password) => authenticate('/api/auth/register', email, password),
+      login: (email, password) => authenticate('/api/auth/login', { email, password }),
+      register: (email, password, acceptPrivacyVersion) =>
+        authenticate('/api/auth/register', { email, password, acceptPrivacyVersion }),
       logout: () => {
         tokenStore.clear();
         setUser(null);
       },
+      refresh,
     }),
-    [user, loading, authenticate],
+    [user, loading, authenticate, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

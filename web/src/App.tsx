@@ -3,6 +3,8 @@ import { useAuth } from './lib/auth';
 import { ToastProvider } from './components/Toast';
 import { Icon } from './components/Icon';
 import Login from './pages/Login';
+import Onboarding from './pages/Onboarding';
+import { ReconsentGate } from './components/ReconsentGate';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import AddItem from './pages/AddItem';
@@ -33,12 +35,35 @@ export default function App() {
     );
   }
 
+  /*
+   * Two gates before the app proper, in order.
+   *
+   * A revised privacy notice comes first: past agreement covered the old text,
+   * so continuing without re-reading would make the record meaningless. Then
+   * the first-run questions, asked once and skippable.
+   */
+  if (!user.privacyCurrent) {
+    return (
+      <ToastProvider>
+        <ReconsentGate />
+      </ToastProvider>
+    );
+  }
+
+  if (!user.onboarded) {
+    return (
+      <ToastProvider>
+        <Onboarding />
+      </ToastProvider>
+    );
+  }
+
   return (
     <ToastProvider>
       <div className="app">
         <header className="topbar">
           <Link to="/" className="brand" style={{ textDecoration: 'none', color: 'inherit' }}>
-            Pantry<span>→</span>Plate
+            Pantry <span>to</span> Plate
           </Link>
           <NavLink to="/settings" className="btn-ghost btn-sm" aria-label="Settings">
             <Icon name="gear" size={19} />

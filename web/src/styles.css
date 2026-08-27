@@ -686,7 +686,7 @@ input[type='checkbox'] {
 .rating-row { display: flex; gap: 4px; }
 .star {
   background: transparent; border: none; color: var(--line);
-  font-size: 1.9rem; padding: 0 3px; line-height: 1; min-height: 0;
+  padding: 2px 3px; line-height: 0; min-height: 0;
   transition: transform var(--fast) var(--ease), color var(--fast) var(--ease);
 }
 .star.on { color: var(--red); }
@@ -717,6 +717,64 @@ input[type='checkbox'] {
   font-weight: 800; font-size: 1.15rem; line-height: 1.15;
   display: block; margin-bottom: 4px;
 }
+
+/* ---- consent ---- */
+.consent {
+  background: var(--sunken); border-radius: var(--r-md);
+  padding: 14px 16px; margin: 4px 0 16px;
+}
+.consent-check {
+  display: flex; gap: 12px; align-items: flex-start;
+  margin: 0; text-transform: none; letter-spacing: 0;
+  font-family: var(--font-body); font-size: 0.94rem; font-weight: 500;
+  color: var(--ink); cursor: pointer;
+}
+.consent-check input { margin-top: 1px; }
+.consent-check .btn-ghost {
+  display: inline; padding: 0; min-height: 0; font-size: inherit;
+  text-decoration: underline; text-underline-offset: 2px;
+}
+
+/* ---- the privacy notice ---- */
+.policy { font-size: 0.92rem; line-height: 1.6; }
+.policy h2 {
+  font-size: 1.3rem; margin: 4px 0 10px;
+}
+.policy h3 {
+  font-size: 1rem; margin: 22px 0 8px;
+  padding-top: 14px; border-top: 1px solid var(--line-soft);
+}
+.policy h4 {
+  font-family: var(--font-display); text-transform: uppercase;
+  font-size: 0.8rem; letter-spacing: 0.08em; font-weight: 800;
+  margin: 16px 0 6px; color: var(--muted);
+}
+.policy p { margin: 0 0 10px; }
+.policy-list { margin: 0 0 12px; padding-left: 20px; }
+.policy-list li { margin-bottom: 6px; }
+.policy-table-wrap { overflow-x: auto; margin: 0 0 14px; }
+.policy-table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+.policy-table th, .policy-table td {
+  text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+.policy-table th {
+  font-family: var(--font-display); text-transform: uppercase;
+  font-size: 0.68rem; letter-spacing: 0.08em; color: var(--muted);
+}
+
+/* ---- onboarding ---- */
+.activity-row {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  width: 100%; text-align: left;
+  background: transparent; color: var(--ink);
+  border: 1.5px solid var(--line); border-radius: var(--r-md);
+  padding: 12px 16px; margin-bottom: 8px; font-weight: 500;
+}
+.activity-row:last-child { margin-bottom: 0; }
+.activity-row.active { border-color: var(--brown); background: var(--brown); color: var(--on-dark); }
+.activity-row.active .muted { color: var(--on-dark); opacity: 0.75; }
+.activity-label { font-weight: 700; }
 
 @media (min-width: 640px) {
   .container { padding: 26px; }

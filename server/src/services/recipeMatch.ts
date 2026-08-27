@@ -171,6 +171,22 @@ export async function evaluateRecipes(
     for (const lot of lots) foods.set(lot.foodReferenceId, lot.foodReference);
   }
 
+  /**
+   * What this kitchen would actually reach for, per generic ingredient, in the
+   * order the deduction would take it: soonest expiry first, undated last.
+   * The nutrition pass uses the head of each list, so a recipe's calories are
+   * this household's calories rather than a generic figure.
+   */
+  const ownedFoods = new Map<string, typeof recipes[number]['ingredients'][number]['foodReference'][]>();
+  for (const [ingredientId, lots] of inventory) {
+    const ordered = [...lots].sort((a, b) => {
+      const left = a.expirationDate?.getTime() ?? Number.POSITIVE_INFINITY;
+      const right = b.expirationDate?.getTime() ?? Number.POSITIVE_INFINITY;
+      return left - right;
+    });
+    ownedFoods.set(ingredientId, ordered.map((lot) => lot.foodReference));
+  }
+
   const [contexts, nutrition] = await Promise.all([
     loadConvertContexts([...foods.values()], db),
     // leaving the carrots out means the calories drop; recompute on what is kept
@@ -180,6 +196,7 @@ export async function evaluateRecipes(
         ingredients: recipe.ingredients.filter((i) => !excluded.has(i.foodReferenceId)),
       })),
       db,
+      ownedFoods,
     ),
   ]);
 

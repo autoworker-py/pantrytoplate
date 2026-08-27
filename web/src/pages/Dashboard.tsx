@@ -129,7 +129,7 @@ export default function Dashboard() {
                 : `${Math.abs(data.today.caloriesRemaining)} kcal over`}
             </span>
             <Link to="/diary" className="muted">
-              Diary →
+              Diary <Icon name="arrow-right" size={15} />
             </Link>
           </div>
         </div>

@@ -41,6 +41,29 @@ model User {
   /// daily reminder about food about to expire
   notifyExpiry        Boolean @default(true)
 
+  /// ---- body data, used only to work out a calorie target ----
+  /// All optional: the app is fully usable without any of it, and the target
+  /// falls back to a plain default. Health data, so the privacy notice names it
+  /// explicitly and it is deleted with the account.
+  heightCm            Float?
+  weightKg            Float?
+  birthYear           Int?
+  /// "male" | "female" | "unspecified" — Mifflin-St Jeor needs it; the third
+  /// option averages the two constants rather than guessing.
+  sex                 String?
+  /// "sedentary" | "light" | "moderate" | "active" | "very_active"
+  activityLevel       String?
+  /// how much per week to lose or gain, in kg; null means the goal's default
+  weeklyRateKg        Float?
+  /// set once the first-run questions are done or deliberately skipped
+  onboardedAt         DateTime?
+
+  /// ---- consent ----
+  /// When the privacy notice was accepted, and which version. A new version
+  /// clears the gate and asks again rather than assuming past consent covers it.
+  privacyAcceptedAt   DateTime?
+  privacyVersion      String?
+
   inventoryItems    InventoryItem[]
   consumptionLogs   ConsumptionLog[]
   shoppingListItems ShoppingListItem[]

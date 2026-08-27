@@ -75,7 +75,7 @@ export default function Nutrition() {
 
       <div className="daynav">
         <button type="button" className="btn-secondary btn-sm" onClick={() => shiftDay(-1)} aria-label="Previous day">
-          ←
+          <Icon name="arrow-left" size={18} />
         </button>
         <strong>
           {isToday
@@ -89,7 +89,7 @@ export default function Nutrition() {
           disabled={isToday}
           aria-label="Next day"
         >
-          →
+          <Icon name="arrow-right" size={18} />
         </button>
       </div>
 

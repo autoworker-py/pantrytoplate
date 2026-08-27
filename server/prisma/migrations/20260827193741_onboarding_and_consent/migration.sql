@@ -1,0 +1,10 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN "activityLevel" TEXT;
+ALTER TABLE "User" ADD COLUMN "birthYear" INTEGER;
+ALTER TABLE "User" ADD COLUMN "heightCm" REAL;
+ALTER TABLE "User" ADD COLUMN "onboardedAt" DATETIME;
+ALTER TABLE "User" ADD COLUMN "privacyAcceptedAt" DATETIME;
+ALTER TABLE "User" ADD COLUMN "privacyVersion" TEXT;
+ALTER TABLE "User" ADD COLUMN "sex" TEXT;
+ALTER TABLE "User" ADD COLUMN "weeklyRateKg" REAL;
+ALTER TABLE "User" ADD COLUMN "weightKg" REAL;

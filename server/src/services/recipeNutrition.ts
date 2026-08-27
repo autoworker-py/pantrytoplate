@@ -20,17 +20,44 @@ export interface RecipeNutrition {
   fatPerServing: number | null;
   /** true when at least one ingredient contributed nothing */
   partial: boolean;
+  /**
+   * Ingredients whose figures came from a product actually in the pantry
+   * rather than from the generic catalog entry. Named so the interface can
+   * say why a recipe's calories differ from the number on a website.
+   */
+  fromPantry: string[];
 }
 
 type IngredientWithFood = RecipeIngredient & { foodReference: FoodReference };
 
+/**
+ * Recipe nutrition, counted from the food you will actually cook with.
+ *
+ * "400 kcal" for a cheese toastie is a fiction about somebody else's bread. If
+ * this pantry holds a 45-kcal loaf, the honest number for this household is
+ * lower — and it is the number that will land in the diary anyway, because
+ * cooking deducts and logs the real lot. Showing the generic figure beforehand
+ * and a different one afterwards is the app disagreeing with itself.
+ *
+ * `owned` maps a generic ingredient to the products held for it, in the order
+ * a cook would reach for them (first-expiring first, the same order the
+ * deduction uses). The first entry is what the figures are based on.
+ */
 export async function nutritionForRecipes(
   recipes: Array<{ id: string; servings: number; ingredients: IngredientWithFood[] }>,
   db: Tx,
+  owned?: Map<string, FoodReference[]>,
 ): Promise<Map<string, RecipeNutrition>> {
   const foods = new Map<string, FoodReference>();
   for (const recipe of recipes) {
     for (const ingredient of recipe.ingredients) foods.set(ingredient.foodReferenceId, ingredient.foodReference);
+  }
+  // the held products need conversion contexts of their own: a branded jar
+  // converts by its own serving weight, not by the generic ingredient's
+  if (owned) {
+    for (const held of owned.values()) {
+      for (const food of held) foods.set(food.id, food);
+    }
   }
   const contexts = await loadConvertContexts([...foods.values()], db);
 
@@ -41,17 +68,30 @@ export async function nutritionForRecipes(
     let carbs = 0;
     let fat = 0;
     let partial = false;
+    const fromPantry: string[] = [];
 
     for (const ingredient of recipe.ingredients) {
+      /*
+       * The product this kitchen would reach for, when it has one whose
+       * nutrition we actually know. A held lot with no nutrition data is worse
+       * than the generic entry, not better, so it does not displace it.
+       */
+      const held = owned?.get(ingredient.foodReferenceId) ?? [];
+      const substitute = held.find((food) => food.caloriesPerUnit !== null);
+      const source = substitute ?? ingredient.foodReference;
+
       const totals = nutritionFor(
         ingredient.quantityRequired,
         ingredient.unitRequired,
-        ingredient.foodReference,
-        contexts.get(ingredient.foodReferenceId) ?? {},
+        source,
+        contexts.get(source.id) ?? {},
       );
       if (totals.calories === null) {
         partial = true;
         continue;
+      }
+      if (substitute && substitute.id !== ingredient.foodReferenceId) {
+        fromPantry.push(substitute.name);
       }
       calories += totals.calories;
       protein += totals.protein ?? 0;
@@ -66,6 +106,7 @@ export async function nutritionForRecipes(
       carbsPerServing: roundQuantity(carbs / servings),
       fatPerServing: roundQuantity(fat / servings),
       partial,
+      fromPantry,
     });
   }
   return out;

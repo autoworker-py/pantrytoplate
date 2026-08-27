@@ -19,9 +19,31 @@ export type IconName =
   | 'bowl'
   | 'snow'
   | 'box'
-  | 'close';
+  | 'close'
+  | 'sun'
+  | 'moon'
+  | 'star'
+  | 'star-filled'
+  | 'arrow-left'
+  | 'arrow-right';
 
 const PATHS: Record<IconName, React.ReactNode> = {
+  sun: (
+    <>
+      <circle cx="12" cy="12" r="4.2" />
+      <path d="M12 2.5v2.6M12 18.9v2.6M4.2 12H1.6M22.4 12h-2.6M6.5 6.5 4.6 4.6M19.4 19.4l-1.9-1.9M17.5 6.5l1.9-1.9M4.6 19.4l1.9-1.9" />
+    </>
+  ),
+  moon: <path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.5 8.5 0 1 0 10.2 10.2z" />,
+  star: <path d="m12 3.6 2.6 5.4 5.9.8-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.8l5.9-.8z" />,
+  'star-filled': (
+    <path
+      d="m12 3.6 2.6 5.4 5.9.8-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.8l5.9-.8z"
+      fill="currentColor"
+    />
+  ),
+  'arrow-left': <path d="M19 12H5m0 0 6.5-6.5M5 12l6.5 6.5" />,
+  'arrow-right': <path d="M5 12h14m0 0-6.5-6.5M19 12l-6.5 6.5" />,
   board: (
     <>
       <path d="M8 3.5h8l1.5 2H6.5z" />

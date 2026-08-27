@@ -8,6 +8,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app.js';
 import { prisma } from '../src/db.js';
+import { PRIVACY_VERSION } from '../src/content/privacy.js';
 
 let app: FastifyInstance;
 let token: string;
@@ -61,7 +62,7 @@ beforeAll(async () => {
   const registered = await app.inject({
     method: 'POST',
     url: '/api/auth/register',
-    payload: { email: userEmail, password: 'testpassword' },
+    payload: { email: userEmail, password: 'testpassword', acceptPrivacyVersion: PRIVACY_VERSION },
   });
   token = JSON.parse(registered.body).token;
   userId = JSON.parse(registered.body).user.id;

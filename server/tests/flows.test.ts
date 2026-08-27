@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app.js';
 import { prisma } from '../src/db.js';
+import { PRIVACY_VERSION } from '../src/content/privacy.js';
 
 let app: FastifyInstance;
 let token: string;
@@ -53,7 +54,7 @@ beforeAll(async () => {
   const registered = await app.inject({
     method: 'POST',
     url: '/api/auth/register',
-    payload: { email: userEmail, password: 'testpassword' },
+    payload: { email: userEmail, password: 'testpassword', acceptPrivacyVersion: PRIVACY_VERSION },
   });
   expect(registered.statusCode).toBe(201);
   token = JSON.parse(registered.body).token;
@@ -443,7 +444,7 @@ describe('auth', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { email: userEmail, password: 'testpassword' },
+      payload: { email: userEmail, password: 'testpassword', acceptPrivacyVersion: PRIVACY_VERSION },
     });
     expect(response.statusCode).toBe(409);
   });

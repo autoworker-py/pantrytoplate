@@ -9,8 +9,8 @@
  * The rule is the head noun. In English food names the last words say what the
  * thing is and everything before it is description:
  *
- *   "organic extra virgin OLIVE OIL"          -> olive oil    ✓
- *   "organic olive oil, basil & garlic SAUCE" -> a sauce      ✗ (not olive oil)
+ *   "organic extra virgin OLIVE OIL"          -> olive oil    (yes)
+ *   "organic olive oil, basil & garlic SAUCE" -> a sauce      (no)
  *
  * So a catalog name only counts if the product name *ends* with it. Matching
  * anywhere in the string would wrongly file that sauce as olive oil, which is
