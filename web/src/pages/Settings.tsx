@@ -6,6 +6,14 @@ import { useTheme } from '../lib/theme';
 import { useToast } from '../components/Toast';
 import { Icon } from '../components/Icon';
 
+const ACTIVITY_LEVELS = [
+  { value: 'sedentary', label: 'Not much', note: 'Desk job, little exercise' },
+  { value: 'light', label: 'A little', note: 'Light exercise 1–3 days a week' },
+  { value: 'moderate', label: 'Moderate', note: 'Exercise 3–5 days a week' },
+  { value: 'active', label: 'A lot', note: 'Hard exercise 6–7 days a week' },
+  { value: 'very_active', label: 'Very high', note: 'Physical job, or training twice a day' },
+];
+
 const GOALS: Array<{ value: WeightGoal; label: string; note: string }> = [
   { value: 'lose', label: 'Lose', note: 'Lighter, higher-protein recipes first' },
   { value: 'maintain', label: 'Maintain', note: 'No calorie preference in ranking' },
@@ -92,6 +100,8 @@ export default function Settings() {
           {GOALS.find((goal) => goal.value === settings.weightGoal)?.note}
         </p>
       </div>
+
+      <BodySection settings={settings} onSaved={setSettings} />
 
       <h2>Daily targets</h2>
       <div className="card">
@@ -409,5 +419,162 @@ function ChangePassword() {
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * The numbers a calorie target is computed from, kept on file and editable.
+ *
+ * Weight is the one that actually moves, so it is first and it is the only
+ * field that ever needs touching again. Changing it — or the goal, or how
+ * active you are — recomputes the target, because a figure worked out from
+ * last month's weight is quietly wrong in a way nobody thinks to check.
+ */
+function BodySection({
+  settings,
+  onSaved,
+}: {
+  settings: SettingsData;
+  onSaved: (next: SettingsData) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+
+  const body = settings.body;
+  const [heightCm, setHeightCm] = useState(body.heightCm ? String(body.heightCm) : '');
+  const [weightKg, setWeightKg] = useState(body.weightKg ? String(body.weightKg) : '');
+  const [birthYear, setBirthYear] = useState(body.birthYear ? String(body.birthYear) : '');
+  const [sex, setSex] = useState(body.sex ?? 'unspecified');
+  const [activityLevel, setActivityLevel] = useState(body.activityLevel ?? 'moderate');
+
+  async function persist(update: Record<string, unknown>) {
+    setBusy(true);
+    setError(null);
+    try {
+      const data = await api.patch<{ settings: SettingsData & { recalculated?: boolean } }>(
+        '/api/settings',
+        update,
+      );
+      onSaved(data.settings);
+      toast(
+        data.settings.recalculated
+          ? `Updated. Your target is now ${data.settings.dailyCalorieTarget} kcal a day.`
+          : 'Updated.',
+      );
+      setOpen(false);
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : 'Could not save that.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const summary = body.weightKg
+    ? `${body.heightCm ?? '—'} cm · ${body.weightKg} kg${body.birthYear ? ` · born ${body.birthYear}` : ''}`
+    : 'Not set — your target is a general default';
+
+  return (
+    <>
+      <h2>Your measurements</h2>
+      <div className="card">
+        <div className="row">
+          <div className="grow stack">
+            <strong>{summary}</strong>
+            <span className="muted">
+              {settings.energy
+                ? `Burning about ${settings.energy.tdee} kcal a day, target ${settings.energy.target}.`
+                : 'Add these and the target is worked out for you.'}
+            </span>
+          </div>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => setOpen((was) => !was)}>
+            {open ? 'Close' : body.weightKg ? 'Change' : 'Add'}
+          </button>
+        </div>
+
+        {open ? (
+          <div style={{ marginTop: 16 }}>
+            {error ? <div className="banner error">{error}</div> : null}
+
+            {/* weight first: it is the one that moves */}
+            <div className="field">
+              <label htmlFor="set-weight">Weight (kg)</label>
+              <input
+                id="set-weight" type="number" inputMode="decimal" min={30} max={350} step="any"
+                value={weightKg} onChange={(event) => setWeightKg(event.target.value)}
+              />
+            </div>
+
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor="set-height">Height (cm)</label>
+                <input
+                  id="set-height" type="number" inputMode="numeric" min={120} max={250}
+                  value={heightCm} onChange={(event) => setHeightCm(event.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="set-birth">Born</label>
+                <input
+                  id="set-birth" type="number" inputMode="numeric" min={1900}
+                  max={new Date().getFullYear() - 12}
+                  value={birthYear} onChange={(event) => setBirthYear(event.target.value)}
+                />
+              </div>
+            </div>
+
+            <label>Sex</label>
+            <div className="segmented">
+              {['male', 'female', 'unspecified'].map((option) => (
+                <button
+                  key={option} type="button"
+                  className={sex === option ? 'active' : ''}
+                  onClick={() => setSex(option)}
+                >
+                  {option === 'unspecified' ? 'Rather not say' : option === 'male' ? 'Male' : 'Female'}
+                </button>
+              ))}
+            </div>
+
+            <label>How active are you?</label>
+            {ACTIVITY_LEVELS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`activity-row ${activityLevel === option.value ? 'active' : ''}`}
+                onClick={() => setActivityLevel(option.value)}
+              >
+                <span className="activity-label">{option.label}</span>
+                <span className="muted">{option.note}</span>
+              </button>
+            ))}
+
+            <button
+              type="button"
+              className="btn-block"
+              style={{ marginTop: 14 }}
+              disabled={busy}
+              onClick={() =>
+                persist({
+                  heightCm: Number(heightCm) || null,
+                  weightKg: Number(weightKg) || null,
+                  birthYear: Number(birthYear) || null,
+                  sex,
+                  activityLevel,
+                })
+              }
+            >
+              {busy ? 'Saving…' : 'Save and update my target'}
+            </button>
+
+            <p className="muted" style={{ margin: '10px 0 0' }}>
+              Changing any of these, or your goal, recalculates the target. An estimate from a standard
+              formula, not medical advice.
+            </p>
+          </div>
+        ) : null}
+      </div>
+    </>
   );
 }

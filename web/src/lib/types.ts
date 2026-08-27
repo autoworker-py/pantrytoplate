@@ -301,9 +301,34 @@ export interface WastePattern {
   suggestion: string;
 }
 
+export interface EnergyEstimate {
+  bmr: number;
+  tdee: number;
+  target: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  weeklyRateKg: number;
+  flooredAt: number | null;
+  notes: string[];
+}
+
+export interface BodyData {
+  heightCm: number | null;
+  weightKg: number | null;
+  birthYear: number | null;
+  sex: string | null;
+  activityLevel: string | null;
+  weeklyRateKg: number | null;
+}
+
 export interface Settings {
   email: string;
   weightGoal: WeightGoal;
+  /** kept on file so a target can follow a weight that moved */
+  body: BodyData;
+  /** null when there is not enough on file to compute one */
+  energy: EnergyEstimate | null;
   dailyCalorieTarget: number;
   proteinTargetGrams: number;
   carbsTargetGrams: number;

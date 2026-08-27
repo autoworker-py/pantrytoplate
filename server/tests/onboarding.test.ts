@@ -234,3 +234,105 @@ describe('deleting an account', () => {
     expect(await prisma.consumptionLog.count({ where: { userId } })).toBe(0);
   });
 });
+
+describe('body data stays on file and keeps the target current', () => {
+  /** An account that has completed onboarding, ready to be changed afterwards. */
+  async function settled(label: string) {
+    const created = await register(label);
+    const token = created.body.token;
+    await api(token, 'POST', '/api/auth/onboarding', {
+      heightCm: 178, weightKg: 82, birthYear: 1995,
+      sex: 'male', activityLevel: 'moderate', weightGoal: 'maintain',
+    });
+    return { token, id: created.body.user.id };
+  }
+
+  it('gives the body data back so it can be corrected', async () => {
+    const { token } = await settled('bodyread');
+    const settings = await api(token, 'GET', '/api/settings');
+
+    expect(settings.body.settings.body).toMatchObject({
+      heightCm: 178, weightKg: 82, birthYear: 1995,
+      sex: 'male', activityLevel: 'moderate',
+    });
+    expect(settings.body.settings.energy.target).toBeGreaterThan(0);
+  });
+
+  it('recalculates from the body when the goal changes, not from a flat baseline', async () => {
+    const { token } = await settled('goalchange');
+    const before = (await api(token, 'GET', '/api/settings')).body.settings.dailyCalorieTarget;
+
+    const changed = await api(token, 'PATCH', '/api/settings', { weightGoal: 'lose' });
+    const after = changed.body.settings.dailyCalorieTarget;
+
+    expect(after).toBeLessThan(before);
+    expect(changed.body.settings.recalculated).toBe(true);
+    // the regression this guards: 1700 is the no-data fallback, and an account
+    // that told us its height and weight should never be handed it
+    expect(after).not.toBe(1700);
+    expect(after).toBe(changed.body.settings.energy.target);
+  });
+
+  it('follows a weight that moved', async () => {
+    const { token } = await settled('weightdrift');
+    const before = (await api(token, 'GET', '/api/settings')).body.settings.dailyCalorieTarget;
+
+    const lighter = await api(token, 'PATCH', '/api/settings', { weightKg: 74 });
+    expect(lighter.body.settings.body.weightKg).toBe(74);
+    expect(lighter.body.settings.dailyCalorieTarget).toBeLessThan(before);
+
+    const heavier = await api(token, 'PATCH', '/api/settings', { weightKg: 90 });
+    expect(heavier.body.settings.dailyCalorieTarget).toBeGreaterThan(before);
+  });
+
+  it('follows a change in activity', async () => {
+    const { token } = await settled('activity');
+    const before = (await api(token, 'GET', '/api/settings')).body.settings.dailyCalorieTarget;
+
+    const less = await api(token, 'PATCH', '/api/settings', { activityLevel: 'sedentary' });
+    expect(less.body.settings.dailyCalorieTarget).toBeLessThan(before);
+
+    const more = await api(token, 'PATCH', '/api/settings', { activityLevel: 'very_active' });
+    expect(more.body.settings.dailyCalorieTarget).toBeGreaterThan(before);
+  });
+
+  it('macros move with the target, not just the calories', async () => {
+    const { token } = await settled('macros');
+    const before = (await api(token, 'GET', '/api/settings')).body.settings;
+
+    const after = (await api(token, 'PATCH', '/api/settings', { weightKg: 100 })).body.settings;
+    expect(after.proteinTargetGrams).toBeGreaterThan(before.proteinTargetGrams);
+  });
+
+  it('a number typed by hand beats the formula', async () => {
+    const { token } = await settled('manual');
+    const set = await api(token, 'PATCH', '/api/settings', {
+      weightGoal: 'lose',
+      dailyCalorieTarget: 1850,
+    });
+
+    // saying both means the explicit number wins for this request
+    expect(set.body.settings.dailyCalorieTarget).toBe(1850);
+    expect(set.body.settings.recalculated).toBe(false);
+    // and the body is untouched, so a later change still computes correctly
+    expect(set.body.settings.body.weightKg).toBe(82);
+  });
+
+  it('leaves the target alone when nothing relevant changed', async () => {
+    const { token } = await settled('unrelated');
+    const before = (await api(token, 'GET', '/api/settings')).body.settings.dailyCalorieTarget;
+
+    const after = await api(token, 'PATCH', '/api/settings', { adsEnabled: false });
+    expect(after.body.settings.dailyCalorieTarget).toBe(before);
+    expect(after.body.settings.recalculated).toBe(false);
+  });
+
+  it('still falls back to the flat baseline for an account with no body data', async () => {
+    const created = await register('nobody');
+    await api(created.body.token, 'POST', '/api/auth/onboarding', { skipped: true });
+
+    const changed = await api(created.body.token, 'PATCH', '/api/settings', { weightGoal: 'lose' });
+    expect(changed.body.settings.energy).toBeNull();
+    expect(changed.body.settings.dailyCalorieTarget).toBe(1700);
+  });
+});
