@@ -3,7 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#e8dcc0" />
+    <meta name="theme-color" content="#f0ede8" />
+    <!--
+      Archivo stands in for the reference app's proprietary display face: the
+      same squarish grotesque built for heavy uppercase. DM Sans carries body
+      copy. preconnect first so the first paint is not held up by DNS.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icon.svg" />
@@ -13,25 +24,6 @@
     <title>Pantry to Plate</title>
   </head>
   <body>
-    <!--
-      THESIS: The pantry as the corner store's own inventory board — refusing
-      the soft pastel food-app card for a kraft-paper ledger watched like a hawk.
-      OWN-WORLD: Warm kraft paper ground, laminated white tag-cards, grease-marker
-      stencil headings, kraft-tan hairlines, status as printed tag words (IN STOCK /
-      LOW / OUT / CHECK) in produce-green, marker-amber, sticker-red; torn-edge
-      sheets, a taped order-pad tab bar, ink-stamp active states.
-      STORY: A tired cook opens the app and reads it like the board behind a deli
-      counter — what's about to turn gets a torn "cook me" tag, what's ready sits
-      right there, nothing needs a second read.
-      FIRST VIEWPORT: Kraft ground top to bottom; a stencil heading; a taped strip
-      of expiring tag-cards; ticket rows with a torn left edge; the tab bar as a
-      taped order-pad strip with an ink-stamped active state.
-      FORM: The Corner Store Board, assigned (index 5 of 7, direction-scope roll),
-      seed key a782a69f.
-      FINISH: unreviewed and undocumented is unfinished; this build ends with the
-      finish review, the verdict, DESIGN.md, and every shipping raster carrying
-      its provenance.
-    -->
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

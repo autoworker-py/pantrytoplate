@@ -1,7 +1,7 @@
 import { Link, NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './lib/auth';
 import { ToastProvider } from './components/Toast';
-import { Icon, type IconName } from './components/Icon';
+import { Icon } from './components/Icon';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
@@ -12,12 +12,12 @@ import ShoppingList from './pages/ShoppingList';
 import Nutrition from './pages/Nutrition';
 import Settings from './pages/Settings';
 
-const TABS: Array<{ to: string; label: string; icon: IconName; end: boolean }> = [
-  { to: '/', label: 'Home', icon: 'board', end: true },
-  { to: '/inventory', label: 'Pantry', icon: 'crate', end: false },
-  { to: '/diary', label: 'Diary', icon: 'spike', end: false },
-  { to: '/recipes', label: 'Recipes', icon: 'skillet', end: false },
-  { to: '/shopping', label: 'Shopping', icon: 'cart', end: false },
+const TABS: Array<{ to: string; label: string; end: boolean }> = [
+  { to: '/', label: 'Home', end: true },
+  { to: '/inventory', label: 'Pantry', end: false },
+  { to: '/diary', label: 'Diary', end: false },
+  { to: '/recipes', label: 'Recipes', end: false },
+  { to: '/shopping', label: 'Shopping', end: false },
 ];
 
 export default function App() {
@@ -64,10 +64,14 @@ export default function App() {
           * sitting on the content instead of a wall at the bottom, and it keeps
           * clear of the home indicator on a modern iPhone.
           */}
+        {/*
+          * Words, no icons. The reference app carries its five destinations on
+          * type alone with a rule under the active one — and the label is what
+          * people read regardless, so an icon above it only adds noise.
+          */}
         <nav className="tabbar" aria-label="Main">
           {TABS.map((tab) => (
             <NavLink key={tab.to} to={tab.to} end={tab.end}>
-              <Icon name={tab.icon} size={20} className="icon" />
               {tab.label}
             </NavLink>
           ))}
