@@ -10,3 +10,6 @@ server/prisma/*.db-journal
 
 # generated from schema.prisma by scripts/pg-schema.mjs
 server/prisma/schema.postgres.prisma
+
+# impeccable's screenshot scratch space
+.impeccable/review/

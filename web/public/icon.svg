@@ -1,7 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Pantry to Plate">
-  <rect width="512" height="512" rx="112" fill="#1f6f4a"/>
-  <circle cx="256" cy="286" r="132" fill="none" stroke="#ffffff" stroke-width="26"/>
-  <circle cx="256" cy="286" r="72" fill="#ffffff" opacity="0.28"/>
-  <path d="M256 96v76" stroke="#ffffff" stroke-width="26" stroke-linecap="round"/>
-  <path d="M196 116l30 44M316 116l-30 44" stroke="#ffffff" stroke-width="20" stroke-linecap="round"/>
+  <rect width="512" height="512" rx="96" fill="#211c13"/>
+  <path d="M300 120H176a24 24 0 0 0-24 24v124a24 24 0 0 0 7 17l160 160a24 24 0 0 0 34 0l117-117a24 24 0 0 0 0-34L310 134a24 24 0 0 0-10-14z" fill="#f4edda" stroke="#f4edda" stroke-width="4"/>
+  <circle cx="224" cy="200" r="26" fill="#211c13"/>
 </svg>
