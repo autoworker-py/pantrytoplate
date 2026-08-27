@@ -9,6 +9,7 @@ import { buildApp } from '../src/app.js';
 import { prisma } from '../src/db.js';
 import { PRIVACY_VERSION } from '../src/content/privacy.js';
 import { parseIngredientLine } from '../src/services/ingredientParser.js';
+import { tidySteps } from '../src/services/recipeImport.js';
 
 let app: FastifyInstance;
 let token = '';
@@ -80,6 +81,38 @@ describe('the ingredient parser survives real recipe sites', () => {
     expect(can).toMatchObject({ quantity: 1, unit: 'can', name: 'diced tomatoes' });
     expect(parseIngredientLine('½ tsp black pepper')).toMatchObject({ quantity: 0.5, name: 'black pepper' });
     expect(parseIngredientLine('2-3 cloves garlic, minced')).toMatchObject({ quantity: 2, name: 'garlic' });
+  });
+});
+
+describe('imported methods read like the seeded ones', () => {
+  // These are the shapes real recipe pages produce.
+  it('folds a section heading into the step it introduces', () => {
+    expect(tidySteps(['For the sauce:', 'Melt the butter in a wide pan over a low heat.'])).toEqual([
+      'For the sauce: Melt the butter in a wide pan over a low heat.',
+    ]);
+  });
+
+  it('strips the page’s own numbering so ours is not doubled', () => {
+    expect(tidySteps(['1. Bring a large pot of water to the boil.'])[0]).toBe(
+      'Bring a large pot of water to the boil.',
+    );
+    expect(tidySteps(['Step 2: Season the chicken well.'])[0]).toBe('Season the chicken well.');
+    expect(tidySteps(['• Drain and set aside for later.'])[0]).toBe('Drain and set aside for later.');
+  });
+
+  it('glues a stray fragment onto the step before it', () => {
+    const result = tidySteps(['Add the fettuccine and cook until al dente.', 'Set aside.']);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toContain('Set aside.');
+  });
+
+  it('drops blank and whitespace-only steps', () => {
+    expect(tidySteps(['', '   ', 'Warm the oil until it shimmers, then add the garlic.'])).toHaveLength(1);
+  });
+
+  it('never silently loses a trailing heading', () => {
+    const result = tidySteps(['Whisk the eggs and cream together thoroughly.', 'To serve:']);
+    expect(result.join(' ')).toContain('To serve');
   });
 });
 

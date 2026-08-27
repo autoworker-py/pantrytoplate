@@ -718,6 +718,23 @@ input[type='checkbox'] {
   display: block; margin-bottom: 4px;
 }
 
+/* ---- recipe method ---- */
+.method { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.method li {
+  counter-increment: step;
+  position: relative; padding-left: 40px; margin-bottom: 16px;
+  line-height: 1.55;
+}
+.method li:last-child { margin-bottom: 0; }
+.method li::before {
+  content: counter(step);
+  position: absolute; left: 0; top: 1px;
+  width: 26px; height: 26px; border-radius: var(--r-pill);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--brown); color: var(--on-dark);
+  font-family: var(--font-display); font-weight: 800; font-size: 0.8rem;
+}
+
 /* ---- consent ---- */
 .consent {
   background: var(--sunken); border-radius: var(--r-md);

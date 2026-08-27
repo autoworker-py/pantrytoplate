@@ -59,6 +59,53 @@ function findRecipeNode(node: unknown, depth = 0): JsonLdRecipe | null {
   return null;
 }
 
+/**
+ * Clean up the steps a page gives us.
+ *
+ * Recipe sites produce three kinds of mess: a step that is really a section
+ * heading ("For the sauce:"), leftover numbering that would be doubled by our
+ * own, and fragments of two or three words left behind by an over-eager split.
+ * All three make an imported recipe look broken next to a seeded one.
+ *
+ * Headings are folded into the step that follows rather than dropped — a
+ * recipe with two components needs to say which part you are on, and deleting
+ * that loses real information.
+ */
+export function tidySteps(steps: string[]): string[] {
+  const out: string[] = [];
+  let pendingHeading: string | null = null;
+
+  for (const raw of steps) {
+    const step = raw
+      .replace(/\s+/g, ' ')
+      // the page's own numbering; ours is added back on save
+      .replace(/^\s*(?:step\s*)?\d+[.):]\s*/i, '')
+      .replace(/^[•*\u2013-]\s*/, '')
+      .trim();
+    if (!step) continue;
+
+    // "For the sauce:" — a label for what comes next, not an instruction
+    const isHeading = /^[^.!?]{2,40}:$/.test(step) && step.split(' ').length <= 6;
+    if (isHeading) {
+      pendingHeading = step.replace(/:$/, '');
+      continue;
+    }
+
+    // a two-word remnant is not a step; glue it to the one before it
+    if (step.split(' ').length < 4 && out.length > 0) {
+      out[out.length - 1] += ` ${step}`;
+      continue;
+    }
+
+    out.push(pendingHeading ? `${pendingHeading}: ${step}` : step);
+    pendingHeading = null;
+  }
+
+  // a trailing heading with nothing under it still belongs to the reader
+  if (pendingHeading && out.length > 0) out[out.length - 1] += ` (${pendingHeading})`;
+  return out;
+}
+
 function flattenInstructions(raw: unknown, depth = 0): string[] {
   if (depth > 4 || !raw) return [];
   if (typeof raw === 'string') {
@@ -202,7 +249,7 @@ export async function previewImport(url: string, db: Tx = prisma): Promise<Impor
     });
   }
 
-  const steps = flattenInstructions(recipe.recipeInstructions);
+  const steps = tidySteps(flattenInstructions(recipe.recipeInstructions));
   const keywords = Array.isArray(recipe.keywords)
     ? recipe.keywords
     : String(recipe.keywords ?? '').split(',');

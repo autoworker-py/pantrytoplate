@@ -61,6 +61,27 @@ function DeleteRecipe({ id, name, onDeleted }: { id: string; name: string; onDel
   );
 }
 
+/**
+ * Instructions into a list of steps.
+ *
+ * Both seeded and imported recipes store the method as "1. …\n2. …", so the
+ * numbering is already in the text. Rendering that inside a numbered list gives
+ * "1. 1. Bring water to the boil" — so the stored number is stripped and the
+ * list supplies it, which also means a step is numbered correctly after another
+ * is skipped or a heading is dropped.
+ *
+ * Imported pages contribute the ragged cases: blank lines, a stray bullet
+ * character, and section headings like "For the sauce:" left stranded on their
+ * own. A heading is kept but marked, never silently deleted — losing "for the
+ * sauce" from a recipe with two components is worse than an odd-looking line.
+ */
+function parseSteps(instructions: string): string[] {
+  return instructions
+    .split('\n')
+    .map((line) => line.replace(/^\s*(?:\d+[.)]\s*)+/, '').replace(/^[•*-]\s*/, '').trim())
+    .filter((line) => line.length > 0);
+}
+
 export default function RecipeDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -125,6 +146,7 @@ export default function RecipeDetail() {
   if (!preview) return <div className="empty">Loading…</div>;
 
   const gaps = preview.ingredients.filter((ingredient) => ingredient.status !== 'ok');
+  const methodSteps = parseSteps(preview.instructions);
 
   // after a swap the row *is* the stand-in, so a row is "swapped" when its food
   // is one we asked for in place of something else
@@ -356,19 +378,15 @@ export default function RecipeDetail() {
         </button>
       </div>
       <div className="card">
-        {preview.instructions.split('\n').map((line) => (
-          <p key={line} style={{ marginBottom: 8 }}>
-            {line}
-          </p>
-        ))}
+        <ol className="method">
+          {methodSteps.map((step, index) => (
+            <li key={`${index}-${step.slice(0, 24)}`}>{step}</li>
+          ))}
+        </ol>
       </div>
 
       {cooking ? (
-        <CookMode
-          name={preview.name}
-          steps={preview.instructions.split('\n').filter(Boolean)}
-          onClose={() => setCooking(false)}
-        />
+        <CookMode name={preview.name} steps={methodSteps} onClose={() => setCooking(false)} />
       ) : null}
 
       <h2 style={{ marginTop: 20 }}>Cooked it?</h2>

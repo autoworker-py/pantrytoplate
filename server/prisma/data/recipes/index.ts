@@ -10,6 +10,7 @@ import { BAKING } from './baking.js';
 import { WORLD } from './world.js';
 import { PASTA } from './pasta.js';
 import { SNACKS } from './snacks.js';
+import { MORE } from './more.js';
 
 export type { SeedRecipe };
 
@@ -25,4 +26,5 @@ export const RECIPES: SeedRecipe[] = [
   ...WORLD,
   ...PASTA,
   ...SNACKS,
+  ...MORE,
 ];

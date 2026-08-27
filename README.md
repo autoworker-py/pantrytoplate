@@ -153,7 +153,7 @@ no density data of its own.
 
 ## The recipe corpus
 
-**226 recipes over a 203-food catalog**, written for this app rather than
+**276 recipes over a 203-food catalog**, written for this app rather than
 scraped: breakfasts, poultry, meat, seafood, vegetarian, pasta, soups, salads,
 sides, baking and desserts, world cooking, and snacks. Twenty-plus cuisines,
 every meal type tagged, cook times and difficulty on all of them.
@@ -181,7 +181,7 @@ shipping a recipe that breaks when someone tries to cook it.
 running the conversion planner over every ingredient — far too expensive for a
 whole book on every search. So search runs in two stages: a cheap SQL count of
 how many of each recipe's ingredients the user owns at all, then the full
-evaluation on only the best ~60 candidates. Search over 226 recipes returns in
+evaluation on only the best ~60 candidates. Search over 276 recipes returns in
 about 20ms, and the cost stays flat as the corpus grows.
 
 **Shopping list**
@@ -461,7 +461,7 @@ entirely and the app remains fully usable.
 cd server && npm test
 ```
 
-245 tests, weighted toward the risky parts:
+269 tests, weighted toward the risky parts:
 
 - **`units.test.ts` (27)** — normalisation, exact mass/volume factors, round
   trips, ingredient densities, the cups-out-of-a-32-oz-bag case, the serving
