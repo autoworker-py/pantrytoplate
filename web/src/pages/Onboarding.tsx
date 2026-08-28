@@ -98,7 +98,7 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="container" style={{ maxWidth: 520, paddingTop: 32 }}>
+    <div className="container safe-top" style={{ maxWidth: 520 }}>
       <h1>A few numbers</h1>
       <p className="muted" style={{ marginBottom: 22 }}>
         Only used to work out a daily calorie target and a macro split. Every part of this is optional —

@@ -27,8 +27,11 @@ model User {
   carbsTargetGrams    Int?
   fatTargetGrams      Int?
 
-  /// demo monetisation: every ad surface disappears when this is false
-  adsEnabled          Boolean @default(true)
+  /// Demo monetisation: every ad surface disappears when this is false.
+  /// Off by default — an app should not show anyone an advert they did not ask
+  /// for on their first run, and these name real companies who have agreed to
+  /// nothing.
+  adsEnabled          Boolean @default(false)
   /// auto-add low-stock items to the shopping list
   autoShoppingEnabled Boolean @default(true)
   /// how many days ahead the expiry alerts look

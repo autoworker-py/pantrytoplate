@@ -32,7 +32,7 @@ async function register(label: string, extra: Record<string, unknown> = {}) {
   return { status: response.statusCode, body };
 }
 
-async function api(token: string, method: 'GET' | 'POST', url: string, payload?: Record<string, unknown>) {
+async function api(token: string, method: 'GET' | 'POST' | 'PATCH', url: string, payload?: Record<string, unknown>) {
   const response = await app.inject({
     method, url,
     headers: { authorization: `Bearer ${token}` },

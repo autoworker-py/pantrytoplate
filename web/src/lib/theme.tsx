@@ -24,8 +24,16 @@ function apply(theme: ThemeChoice) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  /*
+   * Light by default, not "system".
+   *
+   * The design is drawn for a warm off-white ground and that is how it should
+   * be met on a first run; a phone set to dark would otherwise present a
+   * version of the app nobody chose. Dark remains one tap away in Settings, and
+   * a choice once made is remembered.
+   */
   const [theme, setThemeState] = useState<ThemeChoice>(
-    () => (localStorage.getItem(KEY) as ThemeChoice) || 'system',
+    () => (localStorage.getItem(KEY) as ThemeChoice) || 'light',
   );
 
   useEffect(() => {

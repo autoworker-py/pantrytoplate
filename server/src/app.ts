@@ -27,8 +27,21 @@ export async function buildApp(): Promise<FastifyInstance> {
     logger: env.nodeEnv === 'test' ? false : { transport: undefined, level: 'info' },
   });
 
+  /**
+   * CORS.
+   *
+   * The native build is not same-origin: an iOS Capacitor web view identifies
+   * itself as `capacitor://localhost`, and the simulator sometimes as
+   * `http://localhost`. Neither is a browser origin anyone could navigate to,
+   * so allowing them costs nothing and omitting them makes every request from
+   * the phone fail with an error that looks like the server being down.
+   */
+  const NATIVE_ORIGINS = ['capacitor://localhost', 'ionic://localhost', 'http://localhost'];
   await app.register(cors, {
-    origin: env.corsOrigin === '*' ? true : env.corsOrigin.split(',').map((o) => o.trim()),
+    origin:
+      env.corsOrigin === '*'
+        ? true
+        : [...env.corsOrigin.split(',').map((o) => o.trim()).filter(Boolean), ...NATIVE_ORIGINS],
     credentials: true,
   });
   await app.register(jwt, { secret: env.jwtSecret, sign: { expiresIn: '30d' } });

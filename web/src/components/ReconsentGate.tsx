@@ -44,7 +44,7 @@ export function ReconsentGate() {
   }
 
   return (
-    <div className="container" style={{ maxWidth: 520, paddingTop: 40 }}>
+    <div className="container safe-top" style={{ maxWidth: 520 }}>
       <h1>The privacy notice has changed</h1>
       <p className="muted">
         {effective ? `A new version took effect on ${effective}. ` : ''}

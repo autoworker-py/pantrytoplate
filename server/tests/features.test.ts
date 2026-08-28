@@ -376,7 +376,8 @@ describe('settings and goals', () => {
     const result = await api('GET', '/api/settings');
     expect(result.body.settings.weightGoal).toBe('maintain');
     expect(result.body.settings.dailyCalorieTarget).toBe(2000);
-    expect(result.body.settings.adsEnabled).toBe(true);
+    // nobody is shown an advert they did not ask for on a first run
+    expect(result.body.settings.adsEnabled).toBe(false);
   });
 
   it('re-suggests the whole target set when the goal changes', async () => {
@@ -652,6 +653,8 @@ describe('ads', () => {
   beforeEach(reset);
 
   it('shows a sponsored card for a sponsored product on the list', async () => {
+    // ads are off by default now, so this has to opt in before it can assert
+    await api('PATCH', '/api/settings', { adsEnabled: true });
     await api('POST', '/api/shopping-list', {
       name: 'Semisweet Chocolate Chips',
       quantityNeeded: 340,
@@ -663,6 +666,7 @@ describe('ads', () => {
     expect(list.body.ads).toHaveLength(1);
     expect(list.body.ads[0].sponsor).toBe('Nestlé');
     expect(list.body.ads[0].label).toBe('Sponsored · Demo');
+    await api('PATCH', '/api/settings', { adsEnabled: false });
   });
 
   it('disappears completely when ads are switched off', async () => {

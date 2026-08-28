@@ -214,6 +214,14 @@ a { color: var(--red); text-decoration: none; font-weight: 600; }
 .app { min-height: 100dvh; padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 .container { max-width: 720px; margin: 0 auto; padding: var(--pad); }
 
+/*
+ * Pages that stand alone — sign-in, onboarding, the consent gate — have no
+ * sticky header above them to absorb the notch, so they carry the inset
+ * themselves. Without this the first heading sits under the Dynamic Island on
+ * a real device, which is invisible in a browser and obvious on a phone.
+ */
+.container.safe-top { padding-top: calc(env(safe-area-inset-top) + 28px); }
+
 .topbar {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;

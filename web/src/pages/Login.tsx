@@ -45,7 +45,7 @@ export default function Login() {
   }
 
   return (
-    <div className="container" style={{ maxWidth: 420, paddingTop: 48 }}>
+    <div className="container safe-top" style={{ maxWidth: 420 }}>
       <h1>
         Pantry to Plate
       </h1>

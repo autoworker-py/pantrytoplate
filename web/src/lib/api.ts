@@ -1,6 +1,10 @@
 /**
- * Tiny typed fetch wrapper. The dev server proxies /api to the backend, so the
- * base URL is empty unless VITE_API_URL is set for a split deployment.
+ * Tiny typed fetch wrapper.
+ *
+ * On the web the dev server proxies /api to the backend and production serves
+ * both from one origin, so the base is empty. In the native build the frontend
+ * lives inside the app bundle and there is no origin to fall back on, so
+ * VITE_API_URL is baked in at build time — see web/.env.production.
  */
 const BASE = import.meta.env.VITE_API_URL ?? '';
 const TOKEN_KEY = 'pantry.token';
