@@ -571,10 +571,30 @@ input[type='checkbox'] {
 .donut-wrap .legend strong { color: var(--ink); font-variant-numeric: tabular-nums; }
 .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 
+/*
+ * The seven-day chart.
+ *
+ * `> div` is load-bearing. Written as `.week div` it also matched the bar
+ * inside each column and handed it `flex: 1`, and in a column flex container
+ * flex-grow beats the height property — so every bar filled its track and the
+ * chart drew seven identical bars whatever the numbers were. The heights were
+ * being computed correctly the whole time; flexbox was throwing them away.
+ */
 .week { display: flex; align-items: flex-end; gap: 6px; height: 92px; }
-.week div { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; height: 100%; }
-.week .col { width: 100%; background: var(--sunken); border-radius: 4px 4px 0 0; min-height: 3px; }
+.week > div {
+  flex: 1; min-width: 0; height: 100%;
+  display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px;
+}
+/* the track the bar grows inside, so the label always sits on the baseline */
+.week .bar-track { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.week .col {
+  width: 100%; background: var(--sunken);
+  border-radius: 4px 4px 0 0; min-height: 3px;
+  transition: height var(--slow) var(--ease);
+}
 .week .col.today { background: var(--red); }
+.week .col.has-data { background: var(--brown); }
+.week .col.today.has-data { background: var(--red); }
 .week span { font-size: 0.62rem; color: var(--muted); font-weight: 700; }
 
 .meal-head {

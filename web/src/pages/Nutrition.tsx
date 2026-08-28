@@ -180,10 +180,24 @@ export default function Nutrition() {
         <div className="week">
           {week.map((entry) => (
             <div key={entry.date} title={`${entry.totalCalories} kcal`}>
-              <div
-                className={`col ${entry.date === isoDate(new Date()) ? 'today' : ''}`}
-                style={{ height: `${Math.max(3, (entry.totalCalories / maxWeek) * 100)}%` }}
-              />
+              {/*
+                * The bar lives in its own track so its height is measured
+                * against the chart area rather than against a box that also
+                * holds the day label.
+                */}
+              <div className="bar-track">
+                <div
+                  className={[
+                    'col',
+                    entry.date === isoDate(new Date()) ? 'today' : '',
+                    entry.totalCalories > 0 ? 'has-data' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  style={{ height: `${Math.max(2, (entry.totalCalories / maxWeek) * 100)}%` }}
+                  aria-hidden="true"
+                />
+              </div>
               <span>{new Date(`${entry.date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'narrow' })}</span>
             </div>
           ))}
