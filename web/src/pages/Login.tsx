@@ -19,13 +19,35 @@ export default function Login() {
   const [agreed, setAgreed] = useState(false);
   const [reading, setReading] = useState(false);
   const [privacyVersion, setPrivacyVersion] = useState<string | null>(null);
+  /**
+   * Whether the notice could be fetched at all.
+   *
+   * Consent has to be to a specific version, so without it there is nothing to
+   * agree to and the button must stay disabled. What it must not do is stay
+   * disabled *silently* — a ticked box above a dead button is the app refusing
+   * to explain itself.
+   */
+  const [noticeFailed, setNoticeFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    let live = true;
+    setNoticeFailed(false);
     api
       .get<{ version: string }>('/api/auth/privacy')
-      .then((data) => setPrivacyVersion(data.version))
-      .catch(() => setPrivacyVersion(null));
-  }, []);
+      .then((data) => {
+        if (!live) return;
+        setPrivacyVersion(data.version);
+      })
+      .catch(() => {
+        if (!live) return;
+        setPrivacyVersion(null);
+        setNoticeFailed(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, [attempt]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -89,12 +111,28 @@ export default function Login() {
               required
             />
           </div>
+          {mode === 'register' && noticeFailed ? (
+            <div className="banner error">
+              <strong>Cannot reach the privacy notice.</strong> Creating an account means agreeing to a
+              specific version of it, so we will not ask you to agree to something we could not show you.
+              <button
+                type="button"
+                className="btn-ghost btn-sm"
+                style={{ marginTop: 8 }}
+                onClick={() => setAttempt((n) => n + 1)}
+              >
+                Try again
+              </button>
+            </div>
+          ) : null}
+
           {mode === 'register' ? (
             <div className="consent">
               <label className="consent-check">
                 <input
                   type="checkbox"
                   checked={agreed}
+                  disabled={!privacyVersion}
                   onChange={(event) => setAgreed(event.target.checked)}
                 />
                 <span>
@@ -124,10 +162,17 @@ export default function Login() {
         {reading ? <PrivacyNotice onClose={() => setReading(false)} /> : null}
       </div>
 
-      <p className="muted">
-        The seeded demo account is <strong>demo@pantry.local</strong> / <strong>pantrydemo</strong> — it comes with a
-        stocked pantry.
-      </p>
+      {/*
+        * The demo account is seeded on a development database only; the
+        * deployed build skips it deliberately. Offering those credentials in
+        * the shipped app would just be an invitation to a failed sign-in.
+        */}
+      {import.meta.env.VITE_API_URL ? null : (
+        <p className="muted">
+          The seeded demo account is <strong>demo@pantry.local</strong> / <strong>pantrydemo</strong> — it comes
+          with a stocked pantry.
+        </p>
+      )}
     </div>
   );
 }
