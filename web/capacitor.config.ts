@@ -25,6 +25,20 @@ const config: CapacitorConfig = {
   },
 
   plugins: {
+    /*
+     * Route fetch through native networking rather than the web view's.
+     *
+     * A Capacitor web view is its own origin (capacitor://localhost), so every
+     * request from the app is cross-origin and subject to CORS — which means a
+     * server-side header controls whether the app works at all. That is a
+     * fragile place for the app's fate to live: a stale deployment silently
+     * breaks sign-in and surfaces as "something went wrong", indistinguishable
+     * from the server being down.
+     *
+     * Native requests are not browser requests, so CORS does not apply. The app
+     * then works against any deployment of its backend, current or not.
+     */
+    CapacitorHttp: { enabled: true },
     SplashScreen: {
       launchShowDuration: 600,
       backgroundColor: '#f0ede8',

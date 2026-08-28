@@ -29,19 +29,47 @@ export const tokenStore = {
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = tokenStore.get();
-  const response = await fetch(`${BASE}${path}`, {
-    method,
-    headers: {
-      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
+
+  let response: Response;
+  try {
+    response = await fetch(`${BASE}${path}`, {
+      method,
+      headers: {
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+  } catch {
+    /*
+     * fetch only rejects when the request never completed: no network, DNS
+     * failure, the server refusing the connection, or CORS blocking it. Saying
+     * "something went wrong" for all of that sent us hunting a login bug when
+     * the real answer was a header. Name it as a connection problem, and say
+     * where it was trying to reach.
+     */
+    throw new ApiError(
+      0,
+      'network_error',
+      `Could not reach the server${BASE ? ` at ${BASE}` : ''}. Check your connection and try again.`,
+    );
+  }
 
   if (response.status === 204) return undefined as T;
 
   const text = await response.text();
-  const payload = text ? JSON.parse(text) : {};
+  let payload: { error?: string; message?: string; details?: unknown } = {};
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    // an HTML error page from a proxy is not JSON; do not let the parse failure
+    // masquerade as whatever the request was trying to do
+    throw new ApiError(
+      response.status,
+      'bad_response',
+      `The server replied with something unexpected (${response.status}).`,
+    );
+  }
 
   if (!response.ok) {
     if (response.status === 401) tokenStore.clear();
