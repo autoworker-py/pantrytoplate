@@ -159,10 +159,30 @@
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 
+/*
+ * The page never scrolls; a scroll area inside it does.
+ *
+ * On iOS a page-level scroll rubber-bands past its bounds, dragging the whole
+ * document off the web view and showing the native background behind it — a
+ * pale bar at the top and bottom that no CSS on the page can colour, because at
+ * that moment the page is not there. Pinning the document and scrolling a child
+ * keeps the bounce inside a box that does have a background.
+ *
+ * `html` carries the ground colour too, so anything that does overscroll shows
+ * the current theme rather than white.
+ */
+html {
+  background: var(--bg);
+  height: 100%;
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
+  height: 100%;
+  overscroll-behavior: none;
   font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.5;
@@ -211,19 +231,50 @@ a { color: var(--red); text-decoration: none; font-weight: 600; }
 :focus-visible { outline: 2.5px solid var(--red); outline-offset: 2px; border-radius: 4px; }
 
 /* ============================ layout ============================ */
-.app { min-height: 100dvh; padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+/*
+ * Header, scroller, tab bar — a column that exactly fills the screen. The
+ * header and the bar are siblings of the scroll area rather than floating over
+ * it, so neither can be dragged out of place.
+ */
+.app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* a bounce here must not propagate to the document behind it */
+  overscroll-behavior-y: contain;
+  background: var(--bg);
+}
 .container { max-width: 720px; margin: 0 auto; padding: var(--pad); }
 
 /*
- * Pages that stand alone — sign-in, onboarding, the consent gate — have no
- * sticky header above them to absorb the notch, so they carry the inset
- * themselves. Without this the first heading sits under the Dynamic Island on
- * a real device, which is invisible in a browser and obvious on a phone.
+ * Pages that stand alone — sign-in, onboarding, the consent gate.
+ *
+ * Two things they have to do for themselves. They carry the safe-area inset,
+ * because there is no header above them to absorb the notch. And they scroll
+ * themselves: the document is pinned so the app shell can own its own
+ * scrolling, which leaves nothing to scroll these unless they bring a scroller
+ * with them. Onboarding is taller than a phone, so without this its lower half
+ * is simply unreachable.
  */
-.container.safe-top { padding-top: calc(env(safe-area-inset-top) + 28px); }
+.container.safe-top {
+  height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding-top: calc(env(safe-area-inset-top) + 28px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 32px);
+}
 
 .topbar {
-  position: sticky; top: 0; z-index: 20;
+  flex-shrink: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 12px var(--pad);
   padding-top: calc(12px + env(safe-area-inset-top));
@@ -243,7 +294,7 @@ a { color: var(--red); text-decoration: none; font-weight: 600; }
  * alone, and the words are what people read anyway.
  */
 .tabbar {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+  flex-shrink: 0; z-index: 30;
   display: grid; grid-template-columns: repeat(5, 1fr);
   background: var(--card);
   border-top: 1px solid var(--line);
@@ -442,7 +493,7 @@ input[type='checkbox'] {
 .banner button { background: transparent; border-color: currentColor; }
 
 .toast {
-  position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom));
+  position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   z-index: 60; max-width: min(90vw, 460px);
   background: var(--brown); color: var(--on-dark);

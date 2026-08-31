@@ -16,12 +16,18 @@ const config: CapacitorConfig = {
   webDir: 'dist',
 
   ios: {
-    // the design is drawn on a warm off-white; match it so there is no white
-    // flash between the splash screen and the first paint
+    // Matches the light ground so there is no flash between the splash screen
+    // and the first paint. It cannot follow the theme — it is a native colour
+    // set once at launch — which is the second reason the page itself must not
+    // scroll: in dark mode this would show as a pale bar on every bounce.
     backgroundColor: '#f0ede8',
-    contentInset: 'always',
-    // a rubber-band scroll past the end of a list looks wrong on a fixed shell
-    scrollEnabled: true,
+    contentInset: 'never',
+    /*
+     * The shell is a fixed column with its own scrolling region, so the web
+     * view has nothing to scroll. Leaving this on gives the document a second
+     * scroller that only ever rubber-bands.
+     */
+    scrollEnabled: false,
   },
 
   plugins: {

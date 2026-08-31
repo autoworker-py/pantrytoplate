@@ -70,7 +70,14 @@ export default function App() {
           </NavLink>
         </header>
 
-        <main className="container">
+        {/*
+          * Only this scrolls. The header and tab bar sit outside it, so a
+          * rubber-band bounce at either end moves the list inside its own box
+          * rather than dragging the whole page off the web view and revealing
+          * the native background behind it.
+          */}
+        <main className="scroll-area">
+          <div className="container">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/inventory" element={<Inventory />} />
@@ -82,6 +89,7 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </div>
         </main>
 
         {/*
