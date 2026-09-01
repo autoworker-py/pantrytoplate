@@ -5,8 +5,11 @@ import type { CookPreview, MealSlot } from '../lib/types';
 import { formatAmount } from '../lib/format';
 import { IngredientPill } from '../components/StatusPill';
 import { Sheet } from '../components/Sheet';
+import { Overlay } from '../components/Overlay';
 import { useToast } from '../components/Toast';
 import { Icon } from '../components/Icon';
+import { describeDuration, formatClock, parseDuration } from '../lib/duration';
+import { loadTimer, secondsRemaining, startTimer, stopTimer, type RunningTimer } from '../lib/cookTimer';
 
 /**
  * Removing a recipe you added.
@@ -588,8 +591,14 @@ function CookConfirmation({
  * without hunting for your phone's clock app.
  */
 function CookMode({ name, steps, onClose }: { name: string; steps: string[]; onClose: () => void }) {
+  const toast = useToast();
   const [index, setIndex] = useState(0);
-  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  // a timer already running is picked back up, even across an app restart
+  const [timer, setTimer] = useState<RunningTimer | null>(() => loadTimer());
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(() => {
+    const existing = loadTimer();
+    return existing ? secondsRemaining(existing) : null;
+  });
 
   // keep the screen on while cooking, where the browser allows it
   useEffect(() => {
@@ -609,70 +618,118 @@ function CookMode({ name, steps, onClose }: { name: string; steps: string[]; onC
     };
   }, []);
 
+  /*
+   * The countdown is recomputed from the deadline every tick rather than
+   * decremented, so a suspended app resumes showing the true time remaining
+   * instead of carrying on from wherever it was frozen. Re-reading on wake
+   * covers the case where the app was asleep across the finish line.
+   */
   useEffect(() => {
-    if (secondsLeft === null) return;
-    if (secondsLeft <= 0) {
-      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-      setSecondsLeft(null);
-      return;
-    }
-    const timer = window.setTimeout(() => setSecondsLeft((current) => (current === null ? null : current - 1)), 1000);
-    return () => window.clearTimeout(timer);
-  }, [secondsLeft]);
+    if (!timer) return;
+
+    const sync = () => {
+      const left = secondsRemaining(timer);
+      setSecondsLeft(left);
+      if (left <= 0) {
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        void stopTimer();
+        setTimer(null);
+        setSecondsLeft(null);
+      }
+    };
+
+    sync();
+    const tick = window.setInterval(sync, 250);
+    document.addEventListener('visibilitychange', sync);
+    return () => {
+      window.clearInterval(tick);
+      document.removeEventListener('visibilitychange', sync);
+    };
+  }, [timer]);
 
   const step = steps[index] ?? '';
-  // "simmer 18 minutes", "bake 10-12 minutes", "rest 5 minutes"
-  const minutes = step.match(/(\d+)(?:\s*[-–]\s*(\d+))?\s*minutes?/i);
-  const timerMinutes = minutes ? Number(minutes[2] ?? minutes[1]) : null;
+  // digits or words: "simmer 18 minutes", "cook for thirty-five minutes",
+  // "bake 10-12 minutes", "roast an hour and a half"
+  const timerSeconds = parseDuration(step);
 
   return (
-    <div className="cook-mode">
-      <div className="row" style={{ marginBottom: 18 }}>
-        <div className="grow truncate">
-          <strong>{name}</strong>
-          <div className="muted">
-            Step {index + 1} of {steps.length}
+    <Overlay>
+      <div className="cook-mode">
+        <div className="row" style={{ marginBottom: 18 }}>
+          <div className="grow truncate">
+            <strong>{name}</strong>
+            <div className="muted">
+              Step {index + 1} of {steps.length}
+            </div>
           </div>
-        </div>
-        <button type="button" className="btn-ghost icon-btn" onClick={onClose} aria-label="Leave cook mode">
-          <Icon name="close" size={18} />
-        </button>
-      </div>
-
-      <p className="cook-step">{step.replace(/^\d+\.\s*/, '')}</p>
-
-      {secondsLeft !== null ? (
-        <div className="cook-timer">
-          {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, '0')}
-          <button type="button" className="btn-ghost btn-sm" onClick={() => setSecondsLeft(null)}>
-            Stop
+          <button type="button" className="btn-ghost icon-btn" onClick={onClose} aria-label="Leave cook mode">
+            <Icon name="close" size={18} />
           </button>
         </div>
-      ) : timerMinutes ? (
-        <button type="button" className="btn-secondary" onClick={() => setSecondsLeft(timerMinutes * 60)}>
-          Start {timerMinutes} minute timer
-        </button>
-      ) : null}
 
-      <div className="cook-nav">
-        <button
-          type="button"
-          className="btn-secondary"
-          disabled={index === 0}
-          onClick={() => setIndex((current) => current - 1)}
-        >
-          Back
-        </button>
-        {index < steps.length - 1 ? (
-          <button type="button" onClick={() => setIndex((current) => current + 1)}>
-            Next step
+        <p className="cook-step">{step.replace(/^\d+\.\s*/, '')}</p>
+
+        {secondsLeft !== null ? (
+          <div className="cook-timer">
+            {formatClock(secondsLeft)}
+            <button
+              type="button"
+              className="btn-ghost btn-sm"
+              onClick={() => {
+                void stopTimer();
+                setTimer(null);
+                setSecondsLeft(null);
+              }}
+            >
+              Stop
+            </button>
+          </div>
+        ) : timerSeconds ? (
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              void startTimer(timerSeconds, step.replace(/^\d+\.\s*/, ''), name).then((result) => {
+                setTimer(result.timer);
+                /*
+                 * Say so when the timer can only run on screen. Silently
+                 * starting a timer that will never alert them is how the
+                 * background timer looked like it worked and did not.
+                 */
+                if (!result.liveActivity && !result.notification) {
+                  toast(
+                    result.problem === 'notifications_denied'
+                      ? 'Timer started. Allow notifications to be alerted with the app closed.'
+                      : 'Timer started, but it can only run while the app is open.',
+                  );
+                }
+              });
+            }}
+          >
+            Start {describeDuration(timerSeconds)} timer
           </button>
-        ) : (
-          <button type="button" onClick={onClose}>
-            Done
+        ) : null}
+
+        <div className="cook-nav">
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={index === 0}
+            onClick={() => setIndex((current) => current - 1)}
+          >
+            Back
           </button>
-        )}
+          {index < steps.length - 1 ? (
+            <button type="button" onClick={() => setIndex((current) => current + 1)}>
+              Next step
+            </button>
+          ) : (
+            <button type="button" onClick={onClose}>
+              Done
+            </button>
+          )}
+        </div>
       </div>
-    </div>
+    </Overlay>
   );
 }

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1C152D51C6462D8A87FC48AF /* CookTimerWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B985E15CA9C5ECF883688947 /* CookTimerWidget.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
@@ -15,11 +16,43 @@
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		5A368A56AEA68E5E05C75C81 /* CookTimerWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3C4908653B58C2075BAA20B0 /* CookTimerWidget.appex */; };
+		7A0DC6EFD5ADA0D6AB40D49A /* LiveActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = D967DD576E68CC92B4BD25C0 /* LiveActivityPlugin.swift */; };
+		813566B37C5DFAA8C8B1DE4E /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F26FCCB9BA5FCF03966E9349 /* Foundation.framework */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
+		B7D4B34849ECD07E427E089A /* CookTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DF8333A6B338642F65040B /* CookTimerAttributes.swift */; };
+		FC5F10B5FAC34C92C81BC24E /* CookTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DF8333A6B338642F65040B /* CookTimerAttributes.swift */; };
+		FCE2E5D6D464C2E996DCE12A /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B685E29280F69AFD4E73B72 /* MainViewController.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		144DEF5F256CE5E91CDCB569 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7150A8EB0512BB80FB0F4730;
+			remoteInfo = CookTimerWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		0A95E80A3676C73394F67C2F /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				5A368A56AEA68E5E05C75C81 /* CookTimerWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		0B685E29280F69AFD4E73B72 /* MainViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
+		3C4908653B58C2075BAA20B0 /* CookTimerWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CookTimerWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -30,6 +63,11 @@
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		A3DF8333A6B338642F65040B /* CookTimerAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CookTimerAttributes.swift; sourceTree = "<group>"; };
+		B985E15CA9C5ECF883688947 /* CookTimerWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CookTimerWidget.swift; sourceTree = "<group>"; };
+		D967DD576E68CC92B4BD25C0 /* LiveActivityPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiveActivityPlugin.swift; sourceTree = "<group>"; };
+		F26FCCB9BA5FCF03966E9349 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		F27105A5EABD896028E22A1B /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,15 +79,47 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		EDF812AA153C5E552186B88A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				813566B37C5DFAA8C8B1DE4E /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0F40A9E4885CE786DEA84A0D /* LiveActivity */ = {
+			isa = PBXGroup;
+			children = (
+				A3DF8333A6B338642F65040B /* CookTimerAttributes.swift */,
+				D967DD576E68CC92B4BD25C0 /* LiveActivityPlugin.swift */,
+				0B685E29280F69AFD4E73B72 /* MainViewController.swift */,
+			);
+			name = LiveActivity;
+			path = App/LiveActivity;
+			sourceTree = "<group>";
+		};
+		3AE9668A1205244989C725AF /* CookTimerWidget */ = {
+			isa = PBXGroup;
+			children = (
+				B985E15CA9C5ECF883688947 /* CookTimerWidget.swift */,
+				F27105A5EABD896028E22A1B /* Info.plist */,
+			);
+			name = CookTimerWidget;
+			path = CookTimerWidget;
+			sourceTree = "<group>";
+		};
 		504EC2FB1FED79650016851F = {
 			isa = PBXGroup;
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
 				504EC3051FED79650016851F /* Products */,
+				519FA29ACAF6DC63949C447A /* Frameworks */,
+				3AE9668A1205244989C725AF /* CookTimerWidget */,
+				0F40A9E4885CE786DEA84A0D /* LiveActivity */,
 			);
 			sourceTree = "<group>";
 		};
@@ -57,6 +127,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				3C4908653B58C2075BAA20B0 /* CookTimerWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -77,6 +148,22 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		519FA29ACAF6DC63949C447A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C9A865902B92C90F8E6FD4E7 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		C9A865902B92C90F8E6FD4E7 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				F26FCCB9BA5FCF03966E9349 /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -87,10 +174,12 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				0A95E80A3676C73394F67C2F /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				F4119B8DDB8BACBA7FC92B04 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -99,6 +188,23 @@
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
+		};
+		7150A8EB0512BB80FB0F4730 /* CookTimerWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 649372D08A8827DB5545B14D /* Build configuration list for PBXNativeTarget "CookTimerWidget" */;
+			buildPhases = (
+				6C04D4B3B563CA72E1FE84C5 /* Sources */,
+				EDF812AA153C5E552186B88A /* Frameworks */,
+				AD1827C1E0D1A9740F676F42 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CookTimerWidget;
+			productName = CookTimerWidget;
+			productReference = 3C4908653B58C2075BAA20B0 /* CookTimerWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -133,6 +239,7 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				7150A8EB0512BB80FB0F4730 /* CookTimerWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -151,6 +258,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AD1827C1E0D1A9740F676F42 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -160,10 +274,31 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
+				FC5F10B5FAC34C92C81BC24E /* CookTimerAttributes.swift in Sources */,
+				7A0DC6EFD5ADA0D6AB40D49A /* LiveActivityPlugin.swift in Sources */,
+				FCE2E5D6D464C2E996DCE12A /* MainViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6C04D4B3B563CA72E1FE84C5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1C152D51C6462D8A87FC48AF /* CookTimerWidget.swift in Sources */,
+				B7D4B34849ECD07E427E089A /* CookTimerAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F4119B8DDB8BACBA7FC92B04 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = CookTimerWidget;
+			target = 7150A8EB0512BB80FB0F4730 /* CookTimerWidget */;
+			targetProxy = 144DEF5F256CE5E91CDCB569 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		504EC30B1FED79650016851F /* Main.storyboard */ = {
@@ -185,6 +320,59 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		39DBD47BB990DCBCE0DD39DD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 945GA493Y5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CookTimerWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Cook Timer";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.connordavidson.pantrytoplate.CookTimerWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		4264CE02B536829EDA8C7F61 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 945GA493Y5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CookTimerWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Cook Timer";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.connordavidson.pantrytoplate.CookTimerWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		504EC3141FED79650016851F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
@@ -357,6 +545,15 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		649372D08A8827DB5545B14D /* Build configuration list for PBXNativeTarget "CookTimerWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4264CE02B536829EDA8C7F61 /* Release */,
+				39DBD47BB990DCBCE0DD39DD /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

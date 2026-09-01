@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Overlay } from './Overlay';
 
 const ToastContext = createContext<(message: string) => void>(() => {});
 
@@ -17,7 +18,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {message ? <div className="toast" role="status">{message}</div> : null}
+      {message ? (
+        <Overlay>
+          <div className="toast" role="status">{message}</div>
+        </Overlay>
+      ) : null}
     </ToastContext.Provider>
   );
 }

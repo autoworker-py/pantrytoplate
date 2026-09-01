@@ -82,6 +82,19 @@
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
   --fast: 140ms;
   --slow: 260ms;
+
+  /* ---- layer scale ----
+   * Anything above the shell must also be rendered through <Overlay>, which
+   * portals it out of the scrolling region. Inside that region these numbers
+   * are meaningless on iOS: the scroller traps fixed children, so an overlay
+   * painted "above" the tab bar still ends up beneath it. Number and portal
+   * go together; neither works alone.
+   */
+  --z-topbar: 20;
+  --z-tabbar: 30;
+  --z-sheet: 50;
+  --z-toast: 60;
+  --z-cook: 80;
 }
 
 /*
@@ -274,7 +287,7 @@ a { color: var(--red); text-decoration: none; font-weight: 600; }
 }
 
 .topbar {
-  flex-shrink: 0; z-index: 20;
+  flex-shrink: 0; z-index: var(--z-topbar);
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 12px var(--pad);
   padding-top: calc(12px + env(safe-area-inset-top));
@@ -294,7 +307,7 @@ a { color: var(--red); text-decoration: none; font-weight: 600; }
  * alone, and the words are what people read anyway.
  */
 .tabbar {
-  flex-shrink: 0; z-index: 30;
+  flex-shrink: 0; z-index: var(--z-tabbar);
   display: grid; grid-template-columns: repeat(5, 1fr);
   background: var(--card);
   border-top: 1px solid var(--line);
@@ -495,7 +508,7 @@ input[type='checkbox'] {
 .toast {
   position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
-  z-index: 60; max-width: min(90vw, 460px);
+  z-index: var(--z-toast); max-width: min(90vw, 460px);
   background: var(--brown); color: var(--on-dark);
   padding: 13px 22px; border-radius: var(--r-pill);
   font-size: 0.9rem; font-weight: 600; text-align: center;
@@ -522,7 +535,7 @@ input[type='checkbox'] {
 
 /* ============================ sheets ============================ */
 .sheet-backdrop {
-  position: fixed; inset: 0; z-index: 50;
+  position: fixed; inset: 0; z-index: var(--z-sheet);
   background: rgba(30, 12, 4, 0.45);
   display: flex; align-items: flex-end; justify-content: center;
   animation: fade-in var(--fast) var(--ease);
@@ -772,19 +785,25 @@ input[type='checkbox'] {
 .star:active { transform: scale(1.15); }
 
 .cook-mode {
-  position: fixed; inset: 0; z-index: 80;
+  position: fixed; inset: 0; z-index: var(--z-cook);
   background: var(--bg); color: var(--ink);
   padding: calc(24px + env(safe-area-inset-top)) 22px calc(24px + env(safe-area-inset-bottom));
   display: flex; flex-direction: column;
 }
-.cook-step { font-size: 1.4rem; line-height: 1.5; flex: 1; overflow-y: auto; }
+/*
+ * The step used to take flex:1, which grew it to fill the screen and pushed the
+ * timer down against the nav buttons. The step now takes only the room it needs
+ * (scrolling if a step is long), so the timer sits just under the text where
+ * you are already looking, and the nav is held at the bottom by its own margin.
+ */
+.cook-step { font-size: 1.4rem; line-height: 1.5; flex: 0 1 auto; overflow-y: auto; margin-bottom: 20px; }
 .cook-timer {
   font-family: var(--font-display);
   font-size: 3rem; font-weight: 800; font-variant-numeric: tabular-nums;
   display: flex; align-items: center; gap: 14px; margin-bottom: 14px;
   letter-spacing: -0.02em;
 }
-.cook-nav { display: flex; gap: 10px; }
+.cook-nav { display: flex; gap: 10px; margin-top: auto; padding-top: 20px; }
 .cook-nav button { flex: 1; padding: 18px; }
 
 .digest {
@@ -875,4 +894,25 @@ input[type='checkbox'] {
 @media (min-width: 640px) {
   .container { padding: 26px; }
   h1 { font-size: 2.6rem; }
+}
+
+/* ---- first-launch placeholder ----
+ * Shown only when there is a token but no cached account yet. It mimics the
+ * shape of a loaded screen so the app looks started rather than stalled.
+ */
+.skeleton-card {
+  height: 92px;
+  border-radius: var(--r-lg);
+  background: var(--card);
+  margin-bottom: 14px;
+  animation: skeleton-pulse 1.4s var(--ease) infinite;
+}
+.skeleton-card:nth-child(2) { animation-delay: 0.15s; }
+.skeleton-card:nth-child(3) { animation-delay: 0.3s; }
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.9; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-card { animation: none; }
 }

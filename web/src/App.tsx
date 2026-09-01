@@ -25,7 +25,33 @@ const TABS: Array<{ to: string; label: string; end: boolean }> = [
 export default function App() {
   const { user, loading } = useAuth();
 
-  if (loading) return <div className="empty">Loading…</div>;
+  /*
+   * Only reached when there is a token but no cached account — a first launch
+   * after signing in elsewhere, or a cleared store. Everyone else opens
+   * straight into the app from the cached account, without waiting.
+   *
+   * Even here, show the shell rather than a bare word on an empty page: the
+   * app appears immediately and fills in, instead of looking like it has not
+   * started.
+   */
+  if (loading) {
+    return (
+      <div className="app">
+        <header className="topbar">
+          <span className="brand">
+            Pantry <span>to</span> Plate
+          </span>
+        </header>
+        <main className="scroll-area">
+          <div className="container">
+            <div className="skeleton-card" />
+            <div className="skeleton-card" />
+            <div className="skeleton-card" />
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   if (!user) {
     return (

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, tokenStore } from './api';
+import { sessionStore, shouldEndSession } from './session';
 
 interface User {
   id: string;
@@ -23,16 +24,23 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  /*
+   * Start from what we already know. If there is a token and a cached account,
+   * the app renders on the first frame and the server is asked afterwards.
+   * Only a genuinely unknown account has to wait for an answer.
+   */
+  const [user, setUser] = useState<User | null>(() => (tokenStore.get() ? sessionStore.get() : null));
+  const [loading, setLoading] = useState(() => Boolean(tokenStore.get()) && !sessionStore.get());
 
   const refresh = useCallback(async () => {
     if (!tokenStore.get()) {
       setUser(null);
+      sessionStore.clear();
       return;
     }
-    const data = await api.get<{ user: User }>('/api/auth/me');
+    const data = await api.getFresh<{ user: User }>('/api/auth/me');
     setUser(data.user);
+    sessionStore.set(data.user);
   }, []);
 
   useEffect(() => {
@@ -41,7 +49,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     refresh()
-      .catch(() => tokenStore.clear())
+      .catch((error: unknown) => {
+        /*
+         * Only the server saying "this token is not valid" ends the session.
+         * Any failure used to sign the person out, so a moment without signal
+         * on launch discarded a perfectly good login and sent them back to the
+         * sign-in screen. Being offline is not being logged out.
+         */
+        if (shouldEndSession(error)) {
+          tokenStore.clear();
+          sessionStore.clear();
+          setUser(null);
+        }
+      })
       .finally(() => setLoading(false));
   }, [refresh]);
 
@@ -65,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         authenticate('/api/auth/register', { email, password, acceptPrivacyVersion }),
       logout: () => {
         tokenStore.clear();
+        sessionStore.clear();
         setUser(null);
       },
       refresh,
