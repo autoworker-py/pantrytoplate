@@ -11,7 +11,7 @@
  * Planning is separated from applying so the UI can show the user exactly what
  * will be deducted before anything mutates (spec 8.5).
  */
-import { convert, gte, roundQuantity, type ConvertContext } from './units.js';
+import { convert, gte, roundQuantity, type ConvertContext, isNegligible } from './units.js';
 
 export interface LotInput {
   id: string;
@@ -99,7 +99,15 @@ export function planDeduction(
   /** the user picked this jar; use it before anything else */
   preferredLotId?: string | null,
 ): DeductionPlan {
-  const fefo = sortLotsFefo(lots.filter((lot) => lot.quantity > 0));
+  /*
+   * A lot too small to be stock is not stock.
+   *
+   * Deducting in one unit from a lot held in another strands remainders like
+   * 0.00025 of a gallon. The pantry hides those, so the recipe view must agree:
+   * otherwise the shelf says you have no milk while the recipe says you are
+   * merely short of it, and the two screens contradict each other.
+   */
+  const fefo = sortLotsFefo(lots.filter((lot) => lot.quantity > 0 && !isNegligible(lot.quantity, lot.unit)));
   const ordered = preferredLotId
     ? [...fefo.filter((lot) => lot.id === preferredLotId), ...fefo.filter((lot) => lot.id !== preferredLotId)]
     : fefo;

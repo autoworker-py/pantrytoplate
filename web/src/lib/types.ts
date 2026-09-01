@@ -6,6 +6,16 @@ export type WeightGoal = 'lose' | 'maintain' | 'gain';
 export type RemovalReason = 'other_person' | 'used_up' | 'wasted';
 export type StorageLocation = 'pantry' | 'fridge' | 'freezer';
 
+/** A product found in Open Food Facts but not yet in the local catalogue. */
+export interface ExternalHit {
+  /** the barcode, which is how the result becomes a real food */
+  code: string;
+  name: string;
+  brand: string | null;
+  caloriesPer100g: number | null;
+  quantity: string | null;
+}
+
 export interface Food {
   id: string;
   name: string;

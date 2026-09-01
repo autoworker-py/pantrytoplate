@@ -16,6 +16,7 @@ import { env } from '../env.js';
 import { parseIngredientLine, parseIsoDuration } from './ingredientParser.js';
 import { findOrCreateFoodByName, matchLocalFood } from './foodRef.js';
 import { normalizeUnit } from './units.js';
+import { sanitizeImportedText } from './text.js';
 
 interface JsonLdRecipe {
   '@type'?: string | string[];
@@ -76,8 +77,9 @@ export function tidySteps(steps: string[]): string[] {
   let pendingHeading: string | null = null;
 
   for (const raw of steps) {
-    const step = raw
-      .replace(/\s+/g, ' ')
+    // markup and entities first: everything below reasons about words, and
+    // "&frac12;" is not a word
+    const step = sanitizeImportedText(raw)
       // the page's own numbering; ours is added back on save
       .replace(/^\s*(?:step\s*)?\d+[.):]\s*/i, '')
       .replace(/^[•*\u2013-]\s*/, '')
@@ -91,8 +93,21 @@ export function tidySteps(steps: string[]): string[] {
       continue;
     }
 
-    // a two-word remnant is not a step; glue it to the one before it
-    if (step.split(' ').length < 4 && out.length > 0) {
+    /*
+     * Glue a remnant to the step before it - but only a genuine remnant.
+     *
+     * The old rule merged anything under four words, which quietly destroyed
+     * real instructions: a bulleted method of "Rinse the rice", "Drain
+     * thoroughly", "Add to the pan" came out as two steps with the first two
+     * welded together. Short imperatives are the most common way a recipe is
+     * written, not a parsing failure.
+     *
+     * What is actually left over by an over-eager sentence split is a fragment
+     * that continues the previous sentence, and that reads as one: it starts
+     * lowercase, or it is a stray initial like "C.".
+     */
+    const isContinuation = /^[a-z]/.test(step) || step.replace(/[^a-z]/gi, '').length <= 1;
+    if (isContinuation && step.split(' ').length < 4 && out.length > 0) {
       out[out.length - 1] += ` ${step}`;
       continue;
     }

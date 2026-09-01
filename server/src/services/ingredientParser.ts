@@ -7,6 +7,7 @@
  * catalog row happens elsewhere.
  */
 import { normalizeUnit } from './units.js';
+import { sanitizeImportedText } from './text.js';
 
 export interface ParsedIngredient {
   quantity: number;
@@ -130,7 +131,9 @@ function tidyName(name: string): string {
 }
 
 export function parseIngredientLine(raw: string): ParsedIngredient {
-  let line = String(raw ?? '').trim().replace(/\s+/g, ' ');
+  // an ingredient line from an imported recipe still carries its markup, and
+  // "&frac12; cups milk" has no number in it until the entity is decoded
+  let line = sanitizeImportedText(String(raw ?? ''));
 
   const notes: string[] = [];
 
@@ -149,6 +152,16 @@ export function parseIngredientLine(raw: string): ParsedIngredient {
 
   // "2-3 cloves garlic" — take the lower bound rather than guessing an average
   line = line.replace(/^(\d+(?:\.\d+)?)\s*[-–—]\s*\d+(?:\.\d+)?/, '$1');
+
+  /*
+   * "200g chicken" is written without a space at least as often as with one,
+   * and the tokeniser splits on spaces - so the whole quantity was being read
+   * as part of the name and the amount silently became 1. Only split when the
+   * letters are a unit we know, so "9x13" and "350F" are left alone.
+   */
+  line = line.replace(/(^|\s)(\d+(?:\.\d+)?)([a-zA-Z]+)\b/g, (whole, pre: string, num: string, word: string) =>
+    UNIT_WORDS.has(word.toLowerCase()) ? `${pre}${num} ${word}` : whole,
+  );
 
   const tokens = line.split(' ').filter(Boolean);
   let quantity = 1;

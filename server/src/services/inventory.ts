@@ -9,7 +9,7 @@ import { badRequest, conflict, notFound } from '../errors.js';
 import { env } from '../env.js';
 import { loadConvertContext } from './conversions.js';
 import { nutritionFor } from './nutrition.js';
-import { clampZero, convert, gte, normalizeUnit, roundQuantity } from './units.js';
+import { clampZero, convert, gte, normalizeUnit, roundQuantity, isNegligible } from './units.js';
 import { estimateShelfLife, freezeExtension, type StorageLocation } from './shelfLife.js';
 import { checkLowStock, type LowStockResult } from './lowStock.js';
 
@@ -135,8 +135,21 @@ export async function listInventory(
     include: { foodReference: true },
   });
 
+  /*
+   * Hide lots that are mathematically present and practically empty.
+   *
+   * SQL can filter "greater than zero", but not "worth keeping": deducting in
+   * one unit from a lot stored in another leaves remainders like 0.00025 of a
+   * gallon, which the pantry listed as "0 gallons". Cooking now sweeps these
+   * up as it goes, but lots stranded before that still need to disappear from
+   * the shelf, and this is where they do.
+   */
+  const stocked = options.includeDepleted
+    ? items
+    : items.filter((item) => !isNegligible(item.quantity, item.unit));
+
   const warningDays = await warningDaysFor(userId, db);
-  const views = await Promise.all(items.map((item) => toInventoryView(item, db, warningDays)));
+  const views = await Promise.all(stocked.map((item) => toInventoryView(item, db, warningDays)));
 
   const sort = options.sort ?? 'expiration';
   return views.sort((a, b) => {

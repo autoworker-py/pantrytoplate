@@ -94,3 +94,83 @@ export async function lookupBarcode(barcode: string): Promise<ExternalOutcome<Ex
     },
   };
 }
+
+/**
+ * Free-text product search.
+ *
+ * The manual-add box only ever searched the local catalogue, so typing anything
+ * the app had not been seeded with produced nothing and the person was left to
+ * enter macros by hand. Open Food Facts indexes millions of products and needs
+ * no key, which makes it the right backstop for "the app does not know what
+ * this is".
+ *
+ * Results carry their barcode, so choosing one goes through exactly the same
+ * resolver as scanning the box - one tested path, not two.
+ */
+const SEARCH_BASE = 'https://search.openfoodfacts.org/search';
+
+export interface ExternalSearchHit {
+  /** the barcode, which is how this result gets resolved into a food */
+  code: string;
+  name: string;
+  brand: string | null;
+  caloriesPer100g: number | null;
+  quantity: string | null;
+}
+
+interface SearchResponse {
+  hits?: Array<{
+    code?: string;
+    product_name?: string;
+    product_name_en?: string;
+    brands?: string[] | string;
+    quantity?: string;
+    nutriments?: Record<string, number | string | undefined>;
+  }>;
+}
+
+export async function searchProducts(
+  query: string,
+  limit = 12,
+): Promise<ExternalOutcome<ExternalSearchHit[]>> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return { ok: true, data: [] };
+
+  const url =
+    `${SEARCH_BASE}?q=${encodeURIComponent(trimmed)}` +
+    `&page_size=${Math.min(Math.max(limit, 1), 25)}`;
+
+  const result = await getJson<SearchResponse>(url, { 'User-Agent': env.offUserAgent });
+  if (!result.ok) return result;
+
+  const hits = result.data.hits ?? [];
+  const seen = new Set<string>();
+  const mapped: ExternalSearchHit[] = [];
+
+  for (const hit of hits) {
+    const code = String(hit.code ?? '').replace(/\D/g, '');
+    const name = (hit.product_name_en || hit.product_name || '').trim();
+    // without a name there is nothing to show, and without a code there is no
+    // way to turn the result into a food
+    if (!code || !name) continue;
+    // the same product is often listed under several barcodes
+    const dedupe = `${name.toLowerCase()}|${String(hit.brands ?? '')}`;
+    if (seen.has(dedupe)) continue;
+    seen.add(dedupe);
+
+    const n = hit.nutriments ?? {};
+    const kcal100 =
+      num(n['energy-kcal_100g']) ??
+      (num(n['energy-kj_100g']) !== null ? Math.round(num(n['energy-kj_100g'])! / 4.184) : null);
+
+    mapped.push({
+      code,
+      name,
+      brand: Array.isArray(hit.brands) ? (hit.brands[0] ?? null) : hit.brands ? String(hit.brands).split(',')[0]!.trim() : null,
+      caloriesPer100g: kcal100,
+      quantity: hit.quantity ? String(hit.quantity) : null,
+    });
+  }
+
+  return { ok: true, data: mapped };
+}

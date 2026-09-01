@@ -13,7 +13,7 @@ import { conflict, notFound } from '../errors.js';
 import { loadConvertContexts } from './conversions.js';
 import { planDeduction } from './deduction.js';
 import { nutritionFor } from './nutrition.js';
-import { clampZero, roundQuantity } from './units.js';
+import { clampZero, isNegligible, roundQuantity } from './units.js';
 import { attachSubstitutes, evaluateRecipes, type RecipeMatch } from './recipeMatch.js';
 import { checkLowStock } from './lowStock.js';
 import { storeLeftovers, type StoredLeftovers } from './leftovers.js';
@@ -279,15 +279,49 @@ export async function cookRecipe(
       const ctx = contexts.get(food.id) ?? {};
 
       for (const deduction of plan.deductions) {
-        const remaining = clampZero(deduction.quantityAfter);
+        const remaining = isNegligible(clampZero(deduction.quantityAfter), deduction.unit)
+          ? 0
+          : clampZero(deduction.quantityAfter);
         const lot = lots.find((candidate) => candidate.id === deduction.inventoryItemId);
         // nutrition comes from the product actually used, in its own units
         const usedFood = (lot && foodById.get(lot.foodReferenceId)) ?? food;
         const usedCtx = lot ? lotContext(lot, food.id) : ctx;
-        await tx.inventoryItem.update({
-          where: { id: deduction.inventoryItemId },
-          data: { quantity: remaining },
+        /*
+         * A guarded relative decrement, not an absolute write.
+         *
+         * Writing the planned figure straight in is a lost update: two cooks
+         * confirming at once both read a lot of 2, both plan to take 2, and
+         * both write 0 - four units consumed from a lot of two. SQLite
+         * serialises writes so it hides this, but production is Postgres,
+         * where read-committed lets both transactions through.
+         *
+         * Decrementing is relative, so concurrent cooks compose instead of
+         * overwriting each other, and the `gte` guard means a lot can never be
+         * driven negative. If the guard does not match, someone else got there
+         * first: the whole cook rolls back rather than deducting part of a
+         * recipe, because a partial deduction is silent inventory corruption.
+         */
+        /*
+         * Sweep up a remainder too small to be stock.
+         *
+         * Taking 250 ml from a gallon of milk leaves 0.00025 gallons, which the
+         * pantry listed as "0 gallons" - an item that reads as empty but still
+         * occupies the shelf, and still counts as owning the ingredient. Take
+         * the whole lot instead when what would be left is nothing.
+         */
+        const taken = isNegligible(remaining, deduction.unit)
+          ? deduction.quantityBefore
+          : deduction.quantityDeducted;
+        const written = await tx.inventoryItem.updateMany({
+          // the epsilon absorbs float noise when a lot is taken to exactly zero
+          where: { id: deduction.inventoryItemId, quantity: { gte: taken - 1e-9 } },
+          data: { quantity: { decrement: taken } },
         });
+        if (written.count !== 1) {
+          throw conflict(
+            'Your pantry changed while this cook was being confirmed. Nothing was deducted - open the recipe again.',
+          );
+        }
 
         const totals = nutritionFor(deduction.quantityDeducted, deduction.unit, usedFood, usedCtx);
         const log = await tx.consumptionLog.create({

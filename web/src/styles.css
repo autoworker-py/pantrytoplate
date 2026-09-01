@@ -916,3 +916,14 @@ input[type='checkbox'] {
 @media (prefers-reduced-motion: reduce) {
   .skeleton-card { animation: none; }
 }
+
+/* a divider inside the autocomplete, separating your catalogue from the wider
+   product database - the local entry is the one that links to recipes, so it
+   is always listed first */
+.suggest-group {
+  padding: 9px 16px;
+  background: var(--sunken);
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted);
+}

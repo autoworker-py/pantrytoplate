@@ -10,6 +10,7 @@ import {
   dimensionOf,
   formatQuantity,
   gte,
+  isNegligible,
   isCountUnit,
   normalizeUnit,
   roundQuantity,
@@ -232,5 +233,33 @@ describe('float safety', () => {
     expect(formatQuantity(2, 'cup')).toBe('2 cups');
     expect(formatQuantity(1, 'cup')).toBe('1 cup');
     expect(formatQuantity(240, 'g')).toBe('240 g');
+  });
+});
+
+describe('isNegligible', () => {
+  it('treats a conversion remainder as nothing', () => {
+    // 0.00025 gallons is about a millilitre; it was sitting in the pantry
+    // displayed as "0 gallons"
+    expect(isNegligible(0.00025, 'gallon')).toBe(true);
+    expect(isNegligible(0.0004, 'l')).toBe(true);
+    expect(isNegligible(0.0009, 'kg')).toBe(true);
+  });
+
+  it('leaves real stock alone', () => {
+    expect(isNegligible(0.25, 'gallon')).toBe(false);
+    expect(isNegligible(2, 'g')).toBe(false);
+    expect(isNegligible(1, 'count')).toBe(false);
+    expect(isNegligible(0.5, 'kg')).toBe(false);
+  });
+
+  it('is cautious with a unit it cannot reason about', () => {
+    // half a jar is still half a jar; only a float sliver counts as nothing
+    expect(isNegligible(0.5, 'jar')).toBe(false);
+    expect(isNegligible(1e-12, 'jar')).toBe(true);
+  });
+
+  it('treats zero and negatives as nothing', () => {
+    expect(isNegligible(0, 'g')).toBe(true);
+    expect(isNegligible(-1, 'g')).toBe(true);
   });
 });

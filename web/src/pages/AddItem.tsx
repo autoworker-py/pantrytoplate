@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiError, api } from '../lib/api';
-import type { Food } from '../lib/types';
+import type { ExternalHit, Food } from '../lib/types';
 import { formatDateInput } from '../lib/format';
 import { useToast } from '../components/Toast';
 import { UnitSelect } from '../components/UnitSelect';
@@ -128,6 +128,14 @@ function ManualForm() {
   const [expiration, setExpiration] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /*
+   * Results from Open Food Facts, shown only when our own catalogue comes up
+   * short. The catalogue holds a few hundred everyday ingredients; a person
+   * adding a specific branded product was finding nothing and being sent to
+   * type the macros in by hand.
+   */
+  const [external, setExternal] = useState<ExternalHit[]>([]);
+  const [lookingUp, setLookingUp] = useState(false);
 
   // Autocomplete against the local catalog: matching an existing entry is what
   // keeps "eggs" from becoming four different foods.
@@ -138,12 +146,59 @@ function ManualForm() {
     }
     const timer = window.setTimeout(() => {
       api
-        .get<{ foods: Food[] }>(`/api/foods/search?q=${encodeURIComponent(name)}`)
-        .then((data) => setSuggestions(data.foods.slice(0, 5)))
-        .catch(() => setSuggestions([]));
+        .get<{ foods: Food[] }>(`/api/foods/search?q=${encodeURIComponent(name)}&limit=12`)
+        .then((data) => {
+          setSuggestions(data.foods.slice(0, 8));
+          /*
+           * Always offer the wider database too, rather than only when the
+           * local list is short. Typing "oat milk" returned four unrelated
+           * milks - enough results to look like an answer, none of them the
+           * thing being added - so a count of matches is no measure of whether
+           * we found it. Catalogue entries still come first: they are the ones
+           * that link to recipes.
+           */
+          if (name.trim().length < 3) {
+            setExternal([]);
+            return;
+          }
+          setLookingUp(true);
+          api
+            .get<{ results: ExternalHit[] }>(`/api/foods/search/external?q=${encodeURIComponent(name)}&limit=8`)
+            .then((found) => setExternal(found.results ?? []))
+            .catch(() => setExternal([]))
+            .finally(() => setLookingUp(false));
+        })
+        .catch(() => {
+          setSuggestions([]);
+          setExternal([]);
+        });
     }, 220);
     return () => window.clearTimeout(timer);
   }, [name, linked]);
+
+  /**
+   * Turn a search result into a real food.
+   *
+   * Every hit carries its barcode, so this is the same resolver the scanner
+   * uses - one tested path into the catalogue rather than a second one written
+   * for search.
+   */
+  async function pickExternal(hit: ExternalHit) {
+    setLookingUp(true);
+    setError(null);
+    try {
+      const found = await api.get<{ food: Food }>(`/api/foods/barcode/${encodeURIComponent(hit.code)}`);
+      setLinked(found.food);
+      setName(found.food.name);
+      setUnit(found.food.defaultUnit === 'g' ? 'g' : found.food.defaultUnit);
+      setExternal([]);
+      setSuggestions([]);
+    } catch {
+      setError('Could not add that product. Try again, or enter it by hand.');
+    } finally {
+      setLookingUp(false);
+    }
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -190,7 +245,7 @@ function ManualForm() {
               change
             </button>
           </p>
-        ) : suggestions.length > 0 ? (
+        ) : suggestions.length > 0 || external.length > 0 || lookingUp ? (
           <div className="suggestions">
             {suggestions.map((food) => (
               <button
@@ -206,6 +261,23 @@ function ManualForm() {
                 {food.brand ? <span className="muted"> · {food.brand}</span> : null}
               </button>
             ))}
+
+            {external.length > 0 ? (
+              <div className="suggest-group">From the product database</div>
+            ) : null}
+            {external.map((hit) => (
+              <button key={hit.code} type="button" onClick={() => void pickExternal(hit)} disabled={lookingUp}>
+                {hit.name}
+                <span className="muted">
+                  {hit.brand ? ` · ${hit.brand}` : ''}
+                  {hit.caloriesPer100g !== null ? ` · ${Math.round(hit.caloriesPer100g)} kcal/100g` : ''}
+                </span>
+              </button>
+            ))}
+
+            {lookingUp && external.length === 0 ? (
+              <div className="suggest-group">Searching the product database…</div>
+            ) : null}
           </div>
         ) : null}
       </div>

@@ -12,6 +12,7 @@ import {
   searchUsda,
   setCanonical,
 } from '../services/foodRef.js';
+import { searchProducts } from '../external/openfoodfacts.js';
 import { invalidateUniversalConversionCache } from '../services/conversions.js';
 import { normalizeName } from '../services/matching.js';
 import { KNOWN_UNITS, normalizeUnit } from '../services/units.js';
@@ -24,6 +25,18 @@ const routes: FastifyPluginAsync = async (app) => {
     const { q = '', limit = '10' } = request.query as { q?: string; limit?: string };
     const foods = await searchLocalFoods(q, Number(limit) || 10);
     return { foods };
+  });
+
+  /**
+   * Free-text search of Open Food Facts, for when the local catalogue does not
+   * know the product. Never fatal: a failure here just means the person adds
+   * the food by hand, exactly as before.
+   */
+  app.get('/search/external', async (request) => {
+    const { q = '', limit = '12' } = request.query as { q?: string; limit?: string };
+    const result = await searchProducts(q, Number(limit) || 12);
+    if (!result.ok) return { results: [], unavailable: result.reason };
+    return { results: result.data };
   });
 
   app.get('/units', async () => ({ units: KNOWN_UNITS }));

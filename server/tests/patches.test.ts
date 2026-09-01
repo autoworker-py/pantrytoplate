@@ -100,10 +100,25 @@ describe('imported methods read like the seeded ones', () => {
     expect(tidySteps(['• Drain and set aside for later.'])[0]).toBe('Drain and set aside for later.');
   });
 
-  it('glues a stray fragment onto the step before it', () => {
-    const result = tidySteps(['Add the fettuccine and cook until al dente.', 'Set aside.']);
+  it('glues a genuine fragment onto the step before it', () => {
+    /*
+     * Changed deliberately. This used to assert that "Set aside." merged into
+     * the previous step, on a rule that swallowed anything under four words.
+     * But "Set aside." is an instruction, not a remnant, and that rule was
+     * welding real bulleted methods together - see the test below.
+     *
+     * What an over-eager sentence split actually leaves behind is a tail that
+     * continues the sentence before it, and reads as one.
+     */
+    const result = tidySteps(['Add the fettuccine and cook until al dente', 'then set aside.']);
     expect(result).toHaveLength(1);
-    expect(result[0]).toContain('Set aside.');
+    expect(result[0]).toContain('then set aside.');
+  });
+
+  it('keeps short instructions, which are steps rather than remnants', () => {
+    // a bulleted method was coming out with its first two steps glued together
+    expect(tidySteps(['Rinse the rice', 'Drain thoroughly', 'Add to the pan'])).toHaveLength(3);
+    expect(tidySteps(['Add the fettuccine and cook until al dente.', 'Set aside.'])).toHaveLength(2);
   });
 
   it('drops blank and whitespace-only steps', () => {

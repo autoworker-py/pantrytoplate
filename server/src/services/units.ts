@@ -275,6 +275,32 @@ export function clampZero(value: number): number {
   return Math.abs(value) < EPSILON ? 0 : value;
 }
 
+/**
+ * Is what is left of a lot too small to be worth keeping?
+ *
+ * Deducting in one unit from a lot stored in another leaves a remainder that is
+ * mathematically real and practically nothing: cooking 250 ml out of a gallon
+ * of milk left 0.00025 gallons on the shelf, which the pantry then displayed as
+ * "0 gallons". A quantity that rounds to zero on screen should be gone, not
+ * sitting in the list pretending to be stock.
+ *
+ * The threshold is expressed in the unit's own base - a gram, a millilitre, a
+ * hundredth of an item - so it means the same thing whatever the lot is
+ * measured in.
+ */
+export function isNegligible(quantity: number, unit: string): boolean {
+  if (!(quantity > 0)) return true;
+  const normalized = normalizeUnit(unit);
+  const factorToBase =
+    MASS_TO_G[normalized] ?? VOLUME_TO_ML[normalized] ?? COUNT_TO_EACH[normalized] ?? null;
+  // an opaque unit (a "bag", a "jar") has no base to reason in, so only a
+  // true floating-point sliver counts as nothing
+  if (factorToBase === null) return quantity < EPSILON;
+  const inBase = quantity * factorToBase;
+  const limit = normalized in COUNT_TO_EACH ? 0.01 : 1;
+  return inBase < limit;
+}
+
 /** Round for display without pretending to precision we don't have. */
 export function roundQuantity(value: number): number {
   if (!Number.isFinite(value)) return 0;
