@@ -12,7 +12,7 @@ const SHELL = 'pantry-shell-v1';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(SHELL).then((cache) => cache.addAll(['/', '/manifest.webmanifest', '/icon.svg'])),
+    caches.open(SHELL).then((cache) => cache.addAll(['/', '/manifest.webmanifest', '/icon-192.png'])),
   );
   self.skipWaiting();
 });
@@ -46,8 +46,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title ?? 'Pantry to Plate', {
       body: data.body ?? 'Something in your fridge needs using.',
-      icon: '/icon.svg',
-      badge: '/icon.svg',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
       data: { url: data.url ?? '/' },
     }),
   );

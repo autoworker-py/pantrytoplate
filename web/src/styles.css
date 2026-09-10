@@ -23,7 +23,7 @@
   /* the three colours that do all the work */
   --brown: #451400;
   --brown-2: #6b3a22;
-  --red: #a81612;
+  --red: #a81712;
   --tan: #ad7b3c;
 
   /* surfaces */
@@ -293,13 +293,38 @@ a { color: var(--red); text-decoration: none; font-weight: 600; }
   padding-top: calc(12px + env(safe-area-inset-top));
   background: var(--bg);
 }
+/*
+ * The brand in the header: the wordmark alone.
+ *
+ * The logo was tried here as a 30px disc beside the words and it did not
+ * survive the shrink - the wordmark drawn inside the circle turned to noise at
+ * that size, which reads as a smudge rather than a logo. The mark keeps its
+ * detail where it has room: the sign-in screen and the app icon.
+ *
+ * Set in title case rather than shouted in capitals, because that is how the
+ * logo draws it - "Pantry2Plate", with the 2 carrying the red.
+ */
 .topbar .brand {
-  font-family: var(--font-display);
-  text-transform: uppercase; font-weight: 800; letter-spacing: -0.01em;
-  font-size: 1.05rem; color: var(--ink);
-  display: inline-flex; align-items: center; gap: 3px;
+  display: inline-flex; align-items: center;
+  color: var(--ink); min-width: 0;
 }
-.topbar .brand span { color: var(--red); }
+.brand-word {
+  font-family: var(--font-display);
+  font-weight: 800; letter-spacing: -0.02em;
+  font-size: 1.2rem; line-height: 1;
+  white-space: nowrap;
+}
+.brand-word span { color: var(--red); }
+
+/* the sign-in screen is the one place the mark gets room to be the logo */
+.auth-hero { text-align: center; margin-bottom: 26px; }
+.auth-logo {
+  width: 148px; height: 148px; display: block; margin: 0 auto 14px;
+  border-radius: 50%;
+}
+.auth-hero h1 { margin: 0 0 6px; letter-spacing: -0.02em; }
+.auth-hero h1 span { color: var(--red); }
+.auth-hero p { margin: 0; }
 
 /*
  * Text-only tab bar with an underline on the active item, flat against the

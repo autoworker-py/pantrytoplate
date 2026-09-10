@@ -68,12 +68,12 @@ export default function Login() {
 
   return (
     <div className="container safe-top" style={{ maxWidth: 420 }}>
-      <h1>
-        Pantry to Plate
-      </h1>
-      <p className="muted" style={{ marginBottom: 24 }}>
-        Enter your food once. After that, eating it is a tap.
-      </p>
+      {/* the logo carries the wordmark, so repeating it as a heading below
+          only says the same thing twice */}
+      <div className="auth-hero">
+        <img src="/logo-mark.png" alt="Pantry2Plate" className="auth-logo" />
+        <p className="muted">Enter your food once. After that, eating it is a tap.</p>
+      </div>
 
       <div className="card">
         <div className="segmented">

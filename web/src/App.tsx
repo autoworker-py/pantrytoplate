@@ -39,7 +39,9 @@ export default function App() {
       <div className="app">
         <header className="topbar">
           <span className="brand">
-            Pantry <span>to</span> Plate
+            <span className="brand-word">
+              Pantry<span>2</span>Plate
+            </span>
           </span>
         </header>
         <main className="scroll-area">
@@ -89,7 +91,9 @@ export default function App() {
       <div className="app">
         <header className="topbar">
           <Link to="/" className="brand" style={{ textDecoration: 'none', color: 'inherit' }}>
-            Pantry <span>to</span> Plate
+            <span className="brand-word">
+              Pantry<span>2</span>Plate
+            </span>
           </Link>
           <NavLink to="/settings" className="btn-ghost btn-sm" aria-label="Settings">
             <Icon name="gear" size={19} />

@@ -35,7 +35,7 @@ export function notifyDigest(digest: Digest): boolean {
   const rescue = digest.rescueRecipes[0];
   new Notification('Use it or lose it', {
     body: rescue ? `${digest.headline}` : digest.headline,
-    icon: '/icon.svg',
+    icon: '/icon-192.png',
     tag: 'pantry-digest',
   });
   markShown();
