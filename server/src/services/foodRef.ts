@@ -219,11 +219,25 @@ async function loadSynonymIndex(db: Tx = prisma): Promise<Map<string, string>> {
  * Local catalog search used by the manual-add autocomplete and by recipe
  * ingredient linking. Ranked: exact/synonym first, then fuzzy.
  */
-export async function searchLocalFoods(query: string, limit = 10, db: Tx = prisma) {
+/**
+ * Search the catalog a given person can see.
+ *
+ * That is the shipped catalog and anything resolved from a barcode - both
+ * facts about products rather than about anyone - plus that person's own
+ * entries. Someone else's homemade granola is theirs, and leaking it here
+ * would leak it into their recipe matches too.
+ *
+ * `userId` is optional only so the seed and the tests can search the shared
+ * catalog; every request path passes one.
+ */
+export async function searchLocalFoods(query: string, limit = 10, db: Tx = prisma, userId?: string) {
   const norm = normalizeName(query);
   if (!norm) return [];
 
-  const candidates = await db.foodReference.findMany({ take: 1000 });
+  const candidates = await db.foodReference.findMany({
+    where: { OR: [{ ownerId: null }, ...(userId ? [{ ownerId: userId }] : [])] },
+    take: 2000,
+  });
   const synonyms = await loadSynonymIndex(db);
   const result = matchFood(norm, candidates, synonyms);
 
@@ -256,10 +270,13 @@ export async function matchLocalFood(
    * "ORGANIC EXTRA VIRGIN OLIVE OIL".
    */
   genericOnly = false,
+  /** restrict to the shared catalog plus this person's own entries */
+  viewerId?: string,
 ): Promise<MatchResult<FoodReference>> {
+  const visible = { OR: [{ ownerId: null }, ...(viewerId ? [{ ownerId: viewerId }] : [])] };
   const candidates = await db.foodReference.findMany({
-    where: genericOnly ? { barcode: null, canonicalId: null } : {},
-    take: 1000,
+    where: genericOnly ? { ...visible, barcode: null, canonicalId: null } : visible,
+    take: 2000,
   });
   const synonyms = await loadSynonymIndex(db);
   return matchFood(name, candidates, synonyms) as MatchResult<FoodReference>;
@@ -284,8 +301,16 @@ export interface ManualFoodInput {
 export async function findOrCreateFoodByName(
   input: ManualFoodInput,
   db: Tx = prisma,
+  /**
+   * Who is adding this.
+   *
+   * A food typed in by hand is that person's own entry until proven otherwise:
+   * "Nan's stuffing" belongs in their catalog, not everyone's. Passing no owner
+   * is how the seed adds shared catalog rows.
+   */
+  ownerId?: string,
 ): Promise<{ food: FoodReference; created: boolean; matchMethod: MatchResult<FoodReference>['method'] }> {
-  const match = await matchLocalFood(input.name, db);
+  const match = await matchLocalFood(input.name, db, false, ownerId);
   if (match.match) {
     return { food: match.match, created: false, matchMethod: match.method };
   }
@@ -302,6 +327,7 @@ export async function findOrCreateFoodByName(
       fatPerUnit: input.fatPerUnit ?? null,
       carbsPerUnit: input.carbsPerUnit ?? null,
       servingSizeGrams: input.servingSizeGrams ?? null,
+      ownerId: ownerId ?? null,
     },
   });
   return { food, created: true, matchMethod: 'none' };

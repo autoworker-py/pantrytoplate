@@ -138,8 +138,8 @@ export async function recentEatingOut(userId: string, limit = 8, db: Tx = prisma
  * Search for something you ate out. Branded and restaurant foods rank above
  * raw ingredients — nobody eating out is looking for "Egg, whole, raw".
  */
-export async function searchEatOutFoods(query: string, limit = 12, db: Tx = prisma) {
-  const foods = await searchLocalFoods(query, limit * 2, db);
+export async function searchEatOutFoods(query: string, limit = 12, db: Tx = prisma, userId?: string) {
+  const foods = await searchLocalFoods(query, limit * 2, db, userId);
   const scored = foods
     .map((food) => ({
       food,

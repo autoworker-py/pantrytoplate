@@ -74,6 +74,7 @@ model User {
   recipeRatings     RecipeRating[]
   mealPlanEntries   MealPlanEntry[]
   recipes           Recipe[]
+  ownedFoods          FoodReference[] @relation("OwnedFoods")
 }
 
 /// The shared dictionary of foods. Both packaged barcode products and raw
@@ -122,9 +123,19 @@ model FoodReference {
   /// already works — expiry, consumption, waste, calories — works for them too.
   cookedFromRecipeId String?
 
+  /// Who added this food, when it is not part of the shipped catalog.
+  ///
+  /// null means everyone can see it - the seeded catalog and anything resolved
+  /// from a barcode, which is a fact about a product rather than about a
+  /// person. A row with an owner is that person's own entry: their homemade
+  /// granola, the deli counter thing with no barcode. It appears in their
+  /// search and nobody else's, for the same reason their pantry does.
+  ownerId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  owner     User?           @relation("OwnedFoods", fields: [ownerId], references: [id], onDelete: Cascade)
   canonical FoodReference?  @relation("ProductCanonical", fields: [canonicalId], references: [id])
   variants  FoodReference[]  @relation("ProductCanonical")
 
@@ -140,6 +151,7 @@ model FoodReference {
 
   @@index([nameNorm])
   @@index([canonicalId])
+  @@index([ownerId])
 }
 
 /// Alternate names that should resolve to the same food ("scallion" -> green onion).

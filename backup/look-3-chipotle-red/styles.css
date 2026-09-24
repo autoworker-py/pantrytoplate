@@ -1,0 +1,954 @@
+/*
+ * Pantry-to-Plate — Chipotle-styled build.
+ *
+ * A deliberate 1:1 restyle in the visual language of the Chipotle app, at the
+ * owner's request, as a temporary placeholder while the real identity is
+ * decided. Nothing here reproduces their logo, wordmark, mascot or licensed
+ * typeface — the display face is Archivo, the closest free match to their
+ * squarish grotesque.
+ *
+ * The world, as read off the reference screens:
+ *   - warm off-white ground, pure white cards, no gradients, almost no shadow
+ *   - one very dark brown carrying nearly all the text and every solid button
+ *   - a single red used sparingly: active tab, eyebrow labels, page dots
+ *   - HEAVY UPPERCASE display type, tight leading, for anything structural
+ *   - small uppercase letterspaced labels as section headers and eyebrows
+ *   - sentence case, regular weight, for body and for buttons inside content
+ *   - fully-round pill buttons; generous white space; text-only tab bar with an
+ *     underline on the active item
+ */
+
+/* ============================ tokens ============================ */
+:root {
+  /* the three colours that do all the work */
+  --brown: #451400;
+  --brown-2: #6b3a22;
+  --red: #a81712;
+  --tan: #ad7b3c;
+
+  /* surfaces */
+  --bg: #f0ede8;
+  --card: #ffffff;
+  --raised: #ffffff;
+  --sunken: #e6e2db;
+  --line: #ddd8d0;
+  --line-soft: #eae6e0;
+
+  /* text */
+  --ink: var(--brown);
+  --ink-2: #5c3823;
+  --muted: #7a5c4b;
+  --on-dark: #ffffff;
+
+  /*
+   * Status, drawn from the same five colours as everything else — the
+   * reference app has no green anywhere in its chrome, and a lone green chip
+   * is the thing that gives a borrowed palette away.
+   *
+   * Safe to do here because status is never carried by colour alone: every
+   * pill also says the word (READY, SHORT, MISSING), so the three only have to
+   * be distinguishable, not independently meaningful.
+   */
+  --green: #4a6b35;        /* "ready" — olive, the greenest thing in the world */
+  --green-soft: #eae7d8;
+  --amber: #96591a;        /* "short", "expiring" — the tan, darkened to read */
+  --amber-soft: #f7ecd9;
+  --danger: #a81612;       /* "missing", "expired" — the brand red */
+  --danger-soft: #f6e2df;
+  --mine: #6b3a22;         /* "yours" — mid brown */
+  --mine-soft: #ece3dc;
+
+  /* shape: pills and softly-rounded cards, nothing sharp */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+  --radius: var(--r-lg);
+
+  /* depth is almost absent in this world; keep it barely there */
+  --shadow-sm: 0 1px 2px rgba(69, 20, 0, 0.05);
+  --shadow-md: 0 2px 10px rgba(69, 20, 0, 0.07);
+  --shadow-lg: 0 10px 34px rgba(69, 20, 0, 0.16);
+  --shadow: var(--shadow-sm);
+
+  --gap: 12px;
+  --pad: 20px;
+  --tap: 44px;
+
+  --font-display: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --fast: 140ms;
+  --slow: 260ms;
+
+  /* ---- layer scale ----
+   * Anything above the shell must also be rendered through <Overlay>, which
+   * portals it out of the scrolling region. Inside that region these numbers
+   * are meaningless on iOS: the scroller traps fixed children, so an overlay
+   * painted "above" the tab bar still ends up beneath it. Number and portal
+   * go together; neither works alone.
+   */
+  --z-topbar: 20;
+  --z-tabbar: 30;
+  --z-sheet: 50;
+  --z-toast: 60;
+  --z-cook: 80;
+}
+
+/*
+ * The reference app is light-only. A dark kitchen at night is a real part of
+ * this product though, so dark stays — as the same world after hours rather
+ * than a different one: the ground goes to roasted brown, the ink to cream.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --brown: #f2e7df;
+    --brown-2: #d9c3b4;
+    --red: #e8635c;
+    --tan: #d0a163;
+
+    --bg: #1a0e07;
+    --card: #251610;
+    --raised: #2e1c14;
+    --sunken: #1f120b;
+    --line: #3d271c;
+    --line-soft: #312016;
+
+    --ink: var(--brown);
+    --ink-2: #d9c3b4;
+    --muted: #a98b79;
+    --on-dark: #1a0e07;
+
+    --green: #a8bf7e;
+    --green-soft: #262a1a;
+    --amber: #d9a05a;
+    --amber-soft: #2d2113;
+    --danger: #e8635c;
+    --danger-soft: #33191a;
+    --mine: #d9b89e;
+    --mine-soft: #2b1d15;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 10px 34px rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-theme='dark'] {
+  --brown: #f2e7df;
+  --brown-2: #d9c3b4;
+  --red: #e8635c;
+  --tan: #d0a163;
+
+  --bg: #1a0e07;
+  --card: #251610;
+  --raised: #2e1c14;
+  --sunken: #1f120b;
+  --line: #3d271c;
+  --line-soft: #312016;
+
+  --ink: var(--brown);
+  --ink-2: #d9c3b4;
+  --muted: #a98b79;
+  --on-dark: #1a0e07;
+
+  --green: #a8bf7e;
+  --green-soft: #262a1a;
+  --amber: #d9a05a;
+  --amber-soft: #2d2113;
+  --danger: #e8635c;
+  --danger-soft: #33191a;
+  --mine: #d9b89e;
+  --mine-soft: #2b1d15;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 34px rgba(0, 0, 0, 0.6);
+}
+
+/* ============================ base ============================ */
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+/*
+ * The page never scrolls; a scroll area inside it does.
+ *
+ * On iOS a page-level scroll rubber-bands past its bounds, dragging the whole
+ * document off the web view and showing the native background behind it — a
+ * pale bar at the top and bottom that no CSS on the page can colour, because at
+ * that moment the page is not there. Pinning the document and scrolling a child
+ * keeps the bounce inside a box that does have a background.
+ *
+ * `html` carries the ground colour too, so anything that does overscroll shows
+ * the current theme rather than white.
+ */
+html {
+  background: var(--bg);
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  height: 100%;
+  overscroll-behavior: none;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/*
+ * Headings are the loudest thing in this world: heavy, uppercase, set tight
+ * enough that two lines lock together as a block.
+ */
+h1, h2, h3 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 0.98;
+  margin: 0 0 0.35em;
+  color: var(--ink);
+}
+h1 { font-size: 2.2rem; }
+h2 { font-size: 1.3rem; letter-spacing: 0; }
+h3 { font-size: 1.02rem; letter-spacing: 0; line-height: 1.15; }
+p { margin: 0 0 0.8em; }
+a { color: var(--red); text-decoration: none; font-weight: 600; }
+
+/* the small letterspaced uppercase label used as an eyebrow or a section head */
+.meal-head, .ad-label, .stat .label, .waste-reason, .shop-why {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  font-size: 0.7rem;
+}
+
+::selection { background: var(--red); color: #fff; }
+:focus-visible { outline: 2.5px solid var(--red); outline-offset: 2px; border-radius: 4px; }
+
+/* ============================ layout ============================ */
+/*
+ * Header, scroller, tab bar — a column that exactly fills the screen. The
+ * header and the bar are siblings of the scroll area rather than floating over
+ * it, so neither can be dragged out of place.
+ */
+.app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* a bounce here must not propagate to the document behind it */
+  overscroll-behavior-y: contain;
+  background: var(--bg);
+}
+.container { max-width: 720px; margin: 0 auto; padding: var(--pad); }
+
+/*
+ * Pages that stand alone — sign-in, onboarding, the consent gate.
+ *
+ * Two things they have to do for themselves. They carry the safe-area inset,
+ * because there is no header above them to absorb the notch. And they scroll
+ * themselves: the document is pinned so the app shell can own its own
+ * scrolling, which leaves nothing to scroll these unless they bring a scroller
+ * with them. Onboarding is taller than a phone, so without this its lower half
+ * is simply unreachable.
+ */
+.container.safe-top {
+  height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding-top: calc(env(safe-area-inset-top) + 28px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 32px);
+}
+
+.topbar {
+  flex-shrink: 0; z-index: var(--z-topbar);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px var(--pad);
+  padding-top: calc(12px + env(safe-area-inset-top));
+  background: var(--bg);
+}
+/*
+ * The brand in the header: the wordmark alone.
+ *
+ * The logo was tried here as a 30px disc beside the words and it did not
+ * survive the shrink - the wordmark drawn inside the circle turned to noise at
+ * that size, which reads as a smudge rather than a logo. The mark keeps its
+ * detail where it has room: the sign-in screen and the app icon.
+ *
+ * Set in title case rather than shouted in capitals, because that is how the
+ * logo draws it - "Pantry2Plate", with the 2 carrying the red.
+ */
+.topbar .brand {
+  display: inline-flex; align-items: center;
+  color: var(--ink); min-width: 0;
+}
+.brand-word {
+  font-family: var(--font-display);
+  font-weight: 800; letter-spacing: -0.02em;
+  font-size: 1.2rem; line-height: 1;
+  white-space: nowrap;
+}
+.brand-word span { color: var(--red); }
+
+/* the sign-in screen is the one place the mark gets room to be the logo */
+.auth-hero { text-align: center; margin-bottom: 26px; }
+.auth-logo {
+  width: 148px; height: 148px; display: block; margin: 0 auto 14px;
+  border-radius: 50%;
+}
+.auth-hero h1 { margin: 0 0 6px; letter-spacing: -0.02em; }
+.auth-hero h1 span { color: var(--red); }
+.auth-hero p { margin: 0; }
+
+/*
+ * Text-only tab bar with an underline on the active item, flat against the
+ * bottom of the screen. No icons: the reference app carries these five words
+ * alone, and the words are what people read anyway.
+ */
+.tabbar {
+  flex-shrink: 0; z-index: var(--z-tabbar);
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.tabbar a {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 56px; padding: 6px 2px;
+  font-family: var(--font-display);
+  text-transform: uppercase; font-weight: 800;
+  /* "SHOPPING" is the longest of the five and sets the ceiling: at a fifth of a
+     375px screen it has to fit without clipping or ellipsis */
+  font-size: clamp(0.62rem, 2.9vw, 0.8rem);
+  letter-spacing: -0.02em;
+  color: var(--ink); text-decoration: none; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--fast) var(--ease);
+}
+.tabbar a.active { color: var(--red); }
+.tabbar a.active::after {
+  content: ''; position: absolute; bottom: 12px; left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 26px); max-width: 74px; height: 2.5px;
+  background: var(--red);
+}
+.tabbar a:active { opacity: 0.6; }
+.tabbar .icon { display: none; }
+.tabbar .badge {
+  position: absolute; top: 8px; left: 50%; margin-left: 18px;
+  background: var(--red); color: #fff; border-radius: var(--r-pill);
+  font-family: var(--font-body);
+  font-size: 0.58rem; font-weight: 700; padding: 1px 5px; min-width: 15px; text-align: center;
+}
+
+/* ============================ cards & lists ============================ */
+.card {
+  background: var(--card);
+  border: none;
+  border-radius: var(--r-lg);
+  padding: var(--pad);
+  margin-bottom: var(--gap);
+  box-shadow: var(--shadow-sm);
+}
+.card.tight { padding: 14px 16px; }
+
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.row.top { align-items: flex-start; }
+.stack { display: flex; flex-direction: column; gap: 3px; }
+.grow { flex: 1; min-width: 0; }
+.muted { color: var(--muted); font-size: 0.9rem; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.list { list-style: none; margin: 0; padding: 0; }
+.list > li { border-bottom: 1px solid var(--line-soft); padding: 15px 0; }
+.list > li:first-child { padding-top: 3px; }
+.list > li:last-child { border-bottom: none; padding-bottom: 3px; }
+
+/* ============================ pills ============================ */
+.pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 11px; border-radius: var(--r-pill);
+  font-family: var(--font-display);
+  text-transform: uppercase; font-weight: 700;
+  font-size: 0.68rem; letter-spacing: 0.06em; white-space: nowrap;
+  background: var(--green-soft); color: var(--green);
+}
+.pill.warn { background: var(--amber-soft); color: var(--amber); }
+.pill.danger { background: var(--danger-soft); color: var(--danger); }
+.pill.neutral { background: var(--sunken); color: var(--muted); }
+.pill.mine { background: var(--mine-soft); color: var(--mine); }
+
+/* ============================ buttons ============================ */
+/*
+ * Two shapes only, both fully round: a solid brown one that carries the page's
+ * action, and a hairline-outlined one for everything secondary.
+ */
+button, .btn, .btn-secondary, .btn-ghost, .btn-danger, .btn-sm, .btn-lg, .btn-block, .chip {
+  font-family: var(--font-body);
+  font-size: 0.97rem; font-weight: 700; letter-spacing: 0;
+  border-radius: var(--r-pill);
+  border: 1.5px solid transparent;
+  padding: 12px 24px; min-height: var(--tap);
+  cursor: pointer;
+  background: var(--brown); color: var(--on-dark);
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  text-decoration: none;
+  transition: opacity var(--fast) var(--ease), transform var(--fast) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+button:active:not(:disabled), .btn:active { transform: scale(0.975); opacity: 0.9; }
+/* low enough to read as unavailable, high enough that the label is still
+   legible — 0.35 on a cream button over roasted brown went muddy */
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-secondary {
+  background: transparent; color: var(--ink); border-color: var(--brown);
+  box-shadow: none;
+}
+.btn-secondary.active, .btn-secondary[aria-pressed='true'] {
+  background: var(--brown); color: var(--on-dark);
+}
+.btn-ghost {
+  background: transparent; color: var(--red); border-color: transparent;
+  padding: 8px 10px; min-height: 0; font-weight: 700;
+}
+.btn-danger { background: var(--red); color: #fff; border-color: var(--red); }
+.btn-sm { padding: 8px 16px; font-size: 0.86rem; min-height: 38px; }
+.btn-lg { padding: 16px 28px; font-size: 1.02rem; }
+.btn-block { width: 100%; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.icon-btn {
+  background: transparent; color: var(--ink); border: none;
+  padding: 8px; min-height: var(--tap); min-width: var(--tap);
+  border-radius: var(--r-pill);
+}
+.inline-icon { display: inline-flex; vertical-align: middle; }
+
+.chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.chip {
+  background: transparent; color: var(--ink); border: 1.5px solid var(--line);
+  padding: 9px 17px; font-size: 0.88rem; min-height: 38px; font-weight: 600;
+}
+.chip-on { background: var(--brown); color: var(--on-dark); border-color: var(--brown); }
+
+/* ============================ forms ============================ */
+label {
+  display: block;
+  font-family: var(--font-display);
+  text-transform: uppercase; font-weight: 700;
+  font-size: 0.7rem; letter-spacing: 0.12em;
+  color: var(--muted); margin-bottom: 7px;
+}
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+select,
+textarea {
+  font-family: var(--font-body); width: 100%;
+  font-size: max(16px, 1rem);
+  padding: 13px 16px; min-height: var(--tap);
+  border: 1.5px solid var(--line); border-radius: var(--r-pill);
+  background: var(--card); color: var(--ink);
+  transition: border-color var(--fast) var(--ease);
+  -webkit-appearance: none; appearance: none;
+}
+textarea { border-radius: var(--r-md); }
+select {
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+                    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 20px) calc(50% + 2px), calc(100% - 15px) calc(50% + 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 40px;
+}
+input:not([type='checkbox']):not([type='radio']):not([type='range']):focus,
+select:focus, textarea:focus {
+  outline: none; border-color: var(--brown);
+}
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.7; }
+.field { margin-bottom: 16px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+input[type='range'] { width: 100%; accent-color: var(--red); padding: 0; min-height: 0; border: none; background: none; }
+input[type='checkbox'] {
+  accent-color: var(--brown);
+  width: 22px; height: 22px; min-height: 0; flex-shrink: 0;
+  border-radius: 5px; padding: 0; margin: 0;
+  -webkit-appearance: auto; appearance: auto;
+}
+
+.prompt-card {
+  background: var(--card); border: 1.5px solid var(--line);
+  border-radius: var(--r-lg); padding: 18px; margin-bottom: 16px;
+}
+.prompt-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+.prompt-icon { font-size: 1.3rem; line-height: 1.2; }
+.prompt-head strong {
+  display: block; font-family: var(--font-display);
+  text-transform: uppercase; font-weight: 800; font-size: 1rem; line-height: 1.05;
+}
+.prompt-head .muted { margin: 4px 0 0; font-size: 0.86rem; }
+.prompt-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.prompt-row input { flex: 1; }
+.prompt-row button { flex-shrink: 0; }
+.unit-suffix { color: var(--muted); font-weight: 700; font-size: 0.9rem; }
+
+/* ============================ feedback ============================ */
+.banner {
+  padding: 14px 16px; border-radius: var(--r-md); margin-bottom: 14px;
+  font-size: 0.92rem; border: none;
+}
+.banner.error { background: var(--danger-soft); color: var(--danger); }
+.banner.success { background: var(--green-soft); color: var(--green); }
+.banner.info { background: var(--amber-soft); color: var(--amber); }
+.banner a, .banner button { color: inherit; }
+.banner button { background: transparent; border-color: currentColor; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: var(--z-toast); max-width: min(90vw, 460px);
+  background: var(--brown); color: var(--on-dark);
+  padding: 13px 22px; border-radius: var(--r-pill);
+  font-size: 0.9rem; font-weight: 600; text-align: center;
+  box-shadow: var(--shadow-lg);
+  animation: toast-in var(--slow) var(--ease);
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/*
+ * The empty state is a headline, not an apology: the reference app answers
+ * "you haven't ordered before?" with "we can fix that" and one round button.
+ */
+.empty { text-align: center; color: var(--ink); padding: 56px 20px; }
+.empty .big { font-size: 2.6rem; margin-bottom: 10px; }
+.empty p {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.45rem; line-height: 1.1; letter-spacing: -0.01em;
+  margin: 0 auto 18px; max-width: 20ch;
+}
+
+/* ============================ sheets ============================ */
+.sheet-backdrop {
+  position: fixed; inset: 0; z-index: var(--z-sheet);
+  background: rgba(30, 12, 4, 0.45);
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: fade-in var(--fast) var(--ease);
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.sheet {
+  background: var(--card); width: 100%; max-width: 560px;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  padding: 10px 20px calc(22px + env(safe-area-inset-bottom));
+  max-height: 90dvh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  box-shadow: var(--shadow-lg);
+  animation: sheet-up var(--slow) var(--ease);
+}
+@keyframes sheet-up { from { transform: translateY(16px); } to { transform: translateY(0); } }
+.sheet::before {
+  content: ''; display: block;
+  width: 40px; height: 4px; border-radius: var(--r-pill);
+  background: var(--line); margin: 0 auto 14px;
+}
+@media (min-width: 640px) {
+  .sheet-backdrop { align-items: center; }
+  .sheet { border-radius: var(--r-xl); }
+}
+
+/* ============================ controls ============================ */
+.segmented {
+  display: flex; gap: 0; background: transparent;
+  border-bottom: 1.5px solid var(--line);
+  padding: 0; margin-bottom: 18px;
+}
+.segmented button {
+  flex: 1; background: transparent; color: var(--muted);
+  font-family: var(--font-display);
+  text-transform: uppercase; font-weight: 800; font-size: 0.85rem;
+  padding: 12px 8px; min-height: 44px; border-radius: 0;
+  border-bottom: 2.5px solid transparent; margin-bottom: -1.5px;
+}
+.segmented button.active { color: var(--ink); border-bottom-color: var(--red); }
+
+.filters {
+  display: flex; gap: 8px; overflow-x: auto;
+  padding: 2px 2px 10px; margin: 0 -2px 14px;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.filters::-webkit-scrollbar { display: none; }
+.filters button {
+  background: transparent; color: var(--ink); border: 1.5px solid var(--line);
+  border-radius: var(--r-pill); padding: 9px 18px; font-size: 0.87rem;
+  white-space: nowrap; min-height: 40px; flex-shrink: 0; font-weight: 600;
+}
+.filters button.active { background: var(--brown); color: var(--on-dark); border-color: var(--brown); }
+
+.suggestions {
+  border: 1.5px solid var(--line); border-radius: var(--r-lg);
+  margin-top: 8px; overflow: hidden;
+}
+.suggestions button {
+  width: 100%; background: var(--card); color: var(--ink); border: none;
+  border-bottom: 1px solid var(--line-soft); border-radius: 0;
+  padding: 14px 16px; text-align: left; font-weight: 600;
+  justify-content: flex-start; min-height: 0;
+}
+.suggestions button:last-child { border-bottom: none; }
+.suggestions button:active { background: var(--sunken); transform: none; }
+
+/* ============================ data ============================ */
+.deduction {
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 12px;
+  padding: 13px 0; border-bottom: 1px solid var(--line-soft);
+}
+.deduction:last-child { border-bottom: none; }
+.deduction .after { font-variant-numeric: tabular-nums; }
+.arrow { color: var(--muted); }
+
+/* Three across, never wrapping — a stat that drops to its own line reads as a
+   different kind of thing from the two above it. */
+.stat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.stat > div { min-width: 0; }
+.stat .value {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 8vw, 2.3rem);
+  font-weight: 800; letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums; line-height: 0.95;
+  text-transform: uppercase;
+}
+.stat .label { color: var(--muted); margin-top: 6px; display: block; }
+
+.bar { height: 22px; border-radius: var(--r-pill); background: var(--sunken); overflow: hidden; }
+.bar > span {
+  display: block; height: 100%; background: var(--red); border-radius: var(--r-pill);
+  transition: width var(--slow) var(--ease);
+}
+.bar.over > span { background: var(--amber); }
+
+.macro-row {
+  display: grid; grid-template-columns: 66px 1fr auto; gap: 12px;
+  align-items: center; margin-bottom: 12px; font-size: 0.88rem;
+}
+.macro-row .bar { height: 10px; }
+.macro-row .muted { font-variant-numeric: tabular-nums; }
+
+.donut-wrap { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.donut-wrap .legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.donut-wrap .legend li { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--muted); }
+.donut-wrap .legend strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+/*
+ * The seven-day chart.
+ *
+ * `> div` is load-bearing. Written as `.week div` it also matched the bar
+ * inside each column and handed it `flex: 1`, and in a column flex container
+ * flex-grow beats the height property — so every bar filled its track and the
+ * chart drew seven identical bars whatever the numbers were. The heights were
+ * being computed correctly the whole time; flexbox was throwing them away.
+ */
+.week { display: flex; align-items: flex-end; gap: 6px; height: 92px; }
+.week > div {
+  flex: 1; min-width: 0; height: 100%;
+  display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px;
+}
+/* the track the bar grows inside, so the label always sits on the baseline */
+.week .bar-track { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.week .col {
+  width: 100%; background: var(--sunken);
+  border-radius: 4px 4px 0 0; min-height: 3px;
+  transition: height var(--slow) var(--ease);
+}
+.week .col.today { background: var(--red); }
+.week .col.has-data { background: var(--brown); }
+.week .col.today.has-data { background: var(--red); }
+.week span { font-size: 0.62rem; color: var(--muted); font-weight: 700; }
+
+.meal-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin: 26px 0 10px; color: var(--muted);
+}
+.daynav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+.daynav strong {
+  font-family: var(--font-display); text-transform: uppercase;
+  font-weight: 800; font-size: 1.05rem;
+}
+
+/* ============================ feature bits ============================ */
+.scanner-video { width: 100%; border-radius: var(--r-lg); background: #000; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
+
+.ad { border: none; border-radius: var(--r-lg); padding: 16px; margin-bottom: 12px; background: var(--card); }
+.ad-label { color: var(--tan); margin-bottom: 8px; }
+
+.switch-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 15px 0; border-bottom: 1px solid var(--line-soft);
+}
+.switch-row:last-child { border-bottom: none; }
+.switch-row input[type='checkbox'] { width: 24px; height: 24px; }
+
+.goal-grid, .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.goal-grid button, .theme-grid button {
+  background: transparent; color: var(--ink); border: 1.5px solid var(--line);
+  flex-direction: column; gap: 4px; padding: 16px 6px;
+  border-radius: var(--r-lg); font-size: 0.9rem;
+}
+.goal-grid button.active, .theme-grid button.active {
+  border-color: var(--brown); background: var(--brown); color: var(--on-dark);
+}
+.goal-grid .kcal { font-size: 0.72rem; font-weight: 500; opacity: 0.8; }
+.theme-grid .icon { font-size: 1.2rem; }
+
+.reason-note { font-size: 0.82rem; color: var(--red); margin-top: 5px; font-weight: 600; }
+
+.counts-as {
+  background: var(--sunken); border: none;
+  border-radius: var(--r-md); padding: 14px 16px; margin-bottom: 16px; font-size: 0.9rem;
+}
+.counts-as strong { display: block; }
+.counts-as .muted { font-size: 0.82rem; }
+.counts-as label { margin-bottom: 8px; }
+
+.option-picker { margin: 12px 0 4px; display: flex; flex-direction: column; gap: 8px; }
+.option-picker .muted { font-size: 0.8rem; }
+.option-picker button.active { border-color: var(--brown); background: var(--brown); color: var(--on-dark); }
+
+.more-toggle {
+  background: transparent; border: none; color: var(--red);
+  padding: 10px 0; font-size: 0.9rem; font-weight: 700;
+  justify-content: flex-start; width: 100%; min-height: 0;
+}
+.more-toggle .muted { font-weight: 400; }
+.more-panel { border-left: 2px solid var(--line); padding-left: 16px; margin: 4px 0 14px; }
+
+/* ---- shopping list ---- */
+.shop-row { display: flex; align-items: center; gap: 14px; }
+.shop-check { flex-shrink: 0; }
+.shop-name {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  background: transparent; border: none; box-shadow: none; border-radius: 0;
+  padding: 2px 0; color: var(--ink); font-weight: 600; font-size: 1rem;
+  text-align: left; min-height: 0;
+}
+.shop-name .truncate { width: 100%; }
+.shop-why { color: var(--muted); }
+.shop-why.warn { color: var(--amber); }
+
+.waste-row {
+  display: grid; grid-template-columns: 1fr auto; gap: 3px 12px;
+  padding: 13px 0; border-bottom: 1px solid var(--line-soft);
+}
+.waste-row:last-child { border-bottom: none; }
+.waste-reason.wasted { color: var(--danger); }
+.waste-reason.other_person { color: var(--muted); }
+.waste-reason.used_up { color: var(--green); }
+
+/* ---- substitutions ---- */
+.substitutes { margin: 12px 0 4px; padding: 12px; background: var(--sunken); border-radius: var(--r-md); }
+.substitutes > .muted {
+  font-family: var(--font-display); text-transform: uppercase;
+  font-weight: 700; font-size: 0.68rem; letter-spacing: 0.12em;
+  display: block; margin-bottom: 8px;
+}
+.substitute { padding: 5px 0; font-size: 0.9rem; }
+.substitute .muted { font-size: 0.82rem; }
+.substitute .pill { margin-left: 6px; }
+.substitute.tappable {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  text-align: left; background: var(--card); color: var(--ink);
+  border: none; border-radius: var(--r-md);
+  padding: 12px 14px; margin-bottom: 8px; font-weight: 400; min-height: 0;
+}
+.substitute.tappable:last-child { margin-bottom: 0; }
+.substitute.tappable strong { font-weight: 700; }
+.swap-cta {
+  flex-shrink: 0;
+  font-family: var(--font-display); text-transform: uppercase;
+  font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em;
+  color: #fff; background: var(--red);
+  padding: 7px 13px; border-radius: var(--r-pill);
+}
+
+.rating-row { display: flex; gap: 4px; }
+.star {
+  background: transparent; border: none; color: var(--line);
+  padding: 2px 3px; line-height: 0; min-height: 0;
+  transition: transform var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.star.on { color: var(--red); }
+.star:active { transform: scale(1.15); }
+
+.cook-mode {
+  position: fixed; inset: 0; z-index: var(--z-cook);
+  background: var(--bg); color: var(--ink);
+  padding: calc(24px + env(safe-area-inset-top)) 22px calc(24px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column;
+}
+/*
+ * The step used to take flex:1, which grew it to fill the screen and pushed the
+ * timer down against the nav buttons. The step now takes only the room it needs
+ * (scrolling if a step is long), so the timer sits just under the text where
+ * you are already looking, and the nav is held at the bottom by its own margin.
+ */
+.cook-step { font-size: 1.4rem; line-height: 1.5; flex: 0 1 auto; overflow-y: auto; margin-bottom: 20px; }
+.cook-timer {
+  font-family: var(--font-display);
+  font-size: 3rem; font-weight: 800; font-variant-numeric: tabular-nums;
+  display: flex; align-items: center; gap: 14px; margin-bottom: 14px;
+  letter-spacing: -0.02em;
+}
+.cook-nav { display: flex; gap: 10px; margin-top: auto; padding-top: 20px; }
+.cook-nav button { flex: 1; padding: 18px; }
+
+.digest {
+  background: var(--card); border: none;
+  border-radius: var(--r-lg); padding: 18px; margin-bottom: 16px; font-size: 0.98rem;
+}
+.digest strong {
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 1.15rem; line-height: 1.15;
+  display: block; margin-bottom: 4px;
+}
+
+/* ---- recipe method ---- */
+.method { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.method li {
+  counter-increment: step;
+  position: relative; padding-left: 40px; margin-bottom: 16px;
+  line-height: 1.55;
+}
+.method li:last-child { margin-bottom: 0; }
+.method li::before {
+  content: counter(step);
+  position: absolute; left: 0; top: 1px;
+  width: 26px; height: 26px; border-radius: var(--r-pill);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--brown); color: var(--on-dark);
+  font-family: var(--font-display); font-weight: 800; font-size: 0.8rem;
+}
+
+/* ---- consent ---- */
+.consent {
+  background: var(--sunken); border-radius: var(--r-md);
+  padding: 14px 16px; margin: 4px 0 16px;
+}
+.consent-check {
+  display: flex; gap: 12px; align-items: flex-start;
+  margin: 0; text-transform: none; letter-spacing: 0;
+  font-family: var(--font-body); font-size: 0.94rem; font-weight: 500;
+  color: var(--ink); cursor: pointer;
+}
+.consent-check input { margin-top: 1px; }
+.consent-check .btn-ghost {
+  display: inline; padding: 0; min-height: 0; font-size: inherit;
+  text-decoration: underline; text-underline-offset: 2px;
+}
+
+/* ---- the privacy notice ---- */
+.policy { font-size: 0.92rem; line-height: 1.6; }
+.policy h2 {
+  font-size: 1.3rem; margin: 4px 0 10px;
+}
+.policy h3 {
+  font-size: 1rem; margin: 22px 0 8px;
+  padding-top: 14px; border-top: 1px solid var(--line-soft);
+}
+.policy h4 {
+  font-family: var(--font-display); text-transform: uppercase;
+  font-size: 0.8rem; letter-spacing: 0.08em; font-weight: 800;
+  margin: 16px 0 6px; color: var(--muted);
+}
+.policy p { margin: 0 0 10px; }
+.policy-list { margin: 0 0 12px; padding-left: 20px; }
+.policy-list li { margin-bottom: 6px; }
+.policy-table-wrap { overflow-x: auto; margin: 0 0 14px; }
+.policy-table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+.policy-table th, .policy-table td {
+  text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+.policy-table th {
+  font-family: var(--font-display); text-transform: uppercase;
+  font-size: 0.68rem; letter-spacing: 0.08em; color: var(--muted);
+}
+
+/* ---- onboarding ---- */
+.activity-row {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  width: 100%; text-align: left;
+  background: transparent; color: var(--ink);
+  border: 1.5px solid var(--line); border-radius: var(--r-md);
+  padding: 12px 16px; margin-bottom: 8px; font-weight: 500;
+}
+.activity-row:last-child { margin-bottom: 0; }
+.activity-row.active { border-color: var(--brown); background: var(--brown); color: var(--on-dark); }
+.activity-row.active .muted { color: var(--on-dark); opacity: 0.75; }
+.activity-label { font-weight: 700; }
+
+@media (min-width: 640px) {
+  .container { padding: 26px; }
+  h1 { font-size: 2.6rem; }
+}
+
+/* ---- first-launch placeholder ----
+ * Shown only when there is a token but no cached account yet. It mimics the
+ * shape of a loaded screen so the app looks started rather than stalled.
+ */
+.skeleton-card {
+  height: 92px;
+  border-radius: var(--r-lg);
+  background: var(--card);
+  margin-bottom: 14px;
+  animation: skeleton-pulse 1.4s var(--ease) infinite;
+}
+.skeleton-card:nth-child(2) { animation-delay: 0.15s; }
+.skeleton-card:nth-child(3) { animation-delay: 0.3s; }
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.9; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-card { animation: none; }
+}
+
+/* a divider inside the autocomplete, separating your catalogue from the wider
+   product database - the local entry is the one that links to recipes, so it
+   is always listed first */
+.suggest-group {
+  padding: 9px 16px;
+  background: var(--sunken);
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted);
+}

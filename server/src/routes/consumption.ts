@@ -37,7 +37,7 @@ const routes: FastifyPluginAsync = async (app) => {
   app.get('/eat-out/search', async (request) => {
     const { q } = request.query as { q?: string };
     if (!q?.trim()) return { results: [] };
-    return { results: await searchEatOutFoods(q) };
+    return { results: await searchEatOutFoods(q, 12, undefined, request.userId) };
   });
 
   /**

@@ -23,7 +23,7 @@ const routes: FastifyPluginAsync = async (app) => {
   /** Local catalog search — the manual-add autocomplete. */
   app.get('/search', async (request) => {
     const { q = '', limit = '10' } = request.query as { q?: string; limit?: string };
-    const foods = await searchLocalFoods(q, Number(limit) || 10);
+    const foods = await searchLocalFoods(q, Number(limit) || 10, undefined, request.userId);
     return { foods };
   });
 
@@ -100,7 +100,8 @@ const routes: FastifyPluginAsync = async (app) => {
       })
       .parse(request.body);
 
-    const result = await findOrCreateFoodByName(body);
+    // typed by hand, so it belongs to the person who typed it
+    const result = await findOrCreateFoodByName(body, undefined, request.userId);
     return reply.code(result.created ? 201 : 200).send(result);
   });
 
