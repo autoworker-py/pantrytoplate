@@ -64,6 +64,13 @@ export function expiryTag(item: Pick<InventoryItem, 'daysUntilExpiration' | 'exp
   return null;
 }
 
+/** "100 g yogurt": the noun can go when a shelf is too crowded to say it */
+function AmountTag({ label }: { label: string }) {
+  const cut = label.lastIndexOf(' ');
+  if (cut < 0) return <span className="amount">{label}</span>;
+  return <span className="amount">{label.slice(0, cut)}<span className="nn">{'\u00a0'}{label.slice(cut + 1)}</span></span>;
+}
+
 const Art = memo(function Art({ svg, w, h, vw, vh }: { svg: string; w: number; h: number; vw: number; vh: number }) {
   return <svg width={w} height={h} viewBox={`0 0 ${vw} ${vh}`} dangerouslySetInnerHTML={{ __html: svg }} />;
 });
@@ -90,7 +97,6 @@ function Column({
   width,
   objH,
   lit,
-  stagger,
   onItem,
 }: {
   p: Placed;
@@ -98,8 +104,6 @@ function Column({
   width: number;
   objH: number;
   lit?: string;
-  /** a neighbour's tag is already there, so sit this one higher */
-  stagger?: boolean;
   onItem?: (item: InventoryItem) => void;
 }) {
   const tag = expiryTag(p.item);
@@ -110,7 +114,7 @@ function Column({
         <span className="glow" aria-hidden="true" />
         <Art svg={p.svg} w={p.w} h={p.h} vw={p.vw} vh={p.vh} />
         {expired ? <span className="hatch" style={{ width: p.w, height: p.h }} aria-hidden="true" /> : null}
-        {lit ? <span className={`amount${stagger ? ' high' : ''}`}>{lit}</span> : null}
+        {lit ? <AmountTag label={lit} /> : null}
       </div>
       {mode === 'pantry' ? (
         <div className="lab">
@@ -192,26 +196,59 @@ export function Fridge({
   // Tonight: bring the first thing the recipe uses into view
   useEffect(() => {
     if (!scrollToLit || !highlight?.size || !scroller.current) return;
-    const first = scroller.current.querySelector<HTMLElement>('.col.lit');
+    const box = scroller.current;
+    const first = box.querySelector<HTMLElement>('.col.lit');
     if (!first) return;
-    const top = first.offsetTop - 40;
-    scroller.current.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    const top = first.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 40;
+    box.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   }, [highlight, scrollToLit, layout]);
+
+  // Tags on one shelf never touch: neighbours are nudged apart, and a shelf
+  // with more lit than room to say it drops the nouns ("100 g", not "100 g yogurt").
+  useLayoutEffect(() => {
+    const box = scroller.current;
+    if (!box || !highlight?.size) return;
+    const settle = () => {
+      for (const shelf of box.querySelectorAll<HTMLElement>('.items')) {
+        const tags = Array.from(shelf.querySelectorAll<HTMLElement>('.amount'));
+        if (!tags.length) continue;
+        const room = shelf.clientWidth, gap = 6, edge = 10;
+        for (const t of tags) { t.classList.remove('short'); t.style.marginLeft = ''; }
+        const total = () => tags.reduce((sum, t) => sum + t.offsetWidth + gap, -gap);
+        if (total() > room + edge * 2) for (const t of tags) t.classList.add('short');
+        const want = tags.map((t) => {
+          const col = t.closest<HTMLElement>('.col');
+          return col ? col.offsetLeft + col.offsetWidth / 2 : 0;
+        });
+        const half = tags.map((t) => t.offsetWidth / 2);
+        const x = [...want];
+        for (let pass = 0; pass < 24; pass++) {
+          let moved = false;
+          for (let i = 1; i < x.length; i++) {
+            const overlap = x[i - 1] + half[i - 1] + gap - (x[i] - half[i]);
+            if (overlap > 0.5) { x[i - 1] -= overlap / 2; x[i] += overlap / 2; moved = true; }
+          }
+          for (let i = 0; i < x.length; i++) x[i] = Math.min(Math.max(x[i], half[i] - edge), room + edge - half[i]);
+          if (!moved) break;
+        }
+        tags.forEach((t, i) => { const dx = Math.round(x[i] - want[i]); if (dx) t.style.marginLeft = `${dx}px`; });
+      }
+    };
+    settle();
+    let live = true;
+    void document.fonts.ready.then(() => { if (live) settle(); });
+    return () => { live = false; };
+  }, [highlight, layout]);
 
   const renderRow = (row: Placed[], key: string) => {
     const objH = Math.min(Math.max(...row.map((p) => p.h)) + 6, 104 * s);
     const cols = row.map((p) => Math.max(mode === 'pantry' ? 100 : 60, p.w + (mode === 'pantry' ? 18 : 14)));
-    const staggered = new Set<string>();
     return (
       <div className="shelf-row" key={key}>
         <div className="items">
-          {row.map((p, i) => {
-            const lit = highlight?.get(p.item.id);
-            const prevLit = i > 0 && highlight?.has(row[i - 1].item.id);
-            const stagger = Boolean(lit && prevLit && !staggered.has(row[i - 1].item.id));
-            if (stagger) staggered.add(p.item.id);
-            return <Column key={p.item.id} p={p} mode={mode} width={cols[i]} objH={objH} lit={lit} stagger={stagger} onItem={onItem} />;
-          })}
+          {row.map((p, i) => (
+            <Column key={p.item.id} p={p} mode={mode} width={cols[i]} objH={objH} lit={highlight?.get(p.item.id)} onItem={onItem} />
+          ))}
         </div>
         <div className="slab" style={{ top: (mode === 'cook' ? 16 : 12) + objH - 2 }} aria-hidden="true" />
       </div>
@@ -232,7 +269,7 @@ export function Fridge({
             <div className="fridge-empty">{empty}</div>
           ) : (
             <>
-              {layout.shelves.map((row, i) => renderRow(row, `s${i}`))}
+              {layout.shelves.length ? <div className="racks">{layout.shelves.map((row, i) => renderRow(row, `s${i}`))}</div> : null}
               {layout.drawers.length ? (
                 <div className="drawers">
                   {layout.drawers.map((row, i) => (

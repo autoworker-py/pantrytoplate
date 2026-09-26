@@ -1,102 +1,129 @@
-# The current look
+# Night
 
-> Records what ships today. It is a **temporary placeholder**, adopted at the
-> owner's request as a close restyle of the Chipotle app while the real identity
-> is decided. Treat it as a description of the incumbent, not a direction to
-> preserve.
+The design system for Pantry to Plate, as built on the `night-redesign` branch.
+It records what ships, from the code in `web/src`. The previous looks are in
+`backup/` and in git history; neither is a direction to preserve.
 
-Two earlier looks are recoverable — see [../backup/README.md](../backup/README.md).
+## The world
 
-## What this world is
+A black-glass fridge at 6pm. A charcoal room, one warm light, and the food as
+the only colour. The pantry is a place you look into, not a list you read.
 
-Warm off-white ground, pure white cards, almost no shadow. One very dark brown
-carries nearly all the text and every solid button. A single red appears
-sparingly: the active tab, eyebrow labels, page dots. Heavy uppercase display
-type for anything structural; sentence case for body copy.
+- **Cook** (home) shows the fridge with tonight's recipe below it. What the
+  recipe takes lifts off the shelf with a warm glow and its amount; nothing
+  else is hidden.
+- **Pantry** is the same fridge, with Fridge, Cupboard and Freezer as three
+  rooms. Shelves fill from whatever is owned; the shelves scroll inside a fixed
+  frame so the room stays still.
+- **Shopping**, **Eaten**, **Settings** and the sign-in screens use the same
+  surfaces and type; they are lists and sheets, not fridges.
 
-Nothing here reproduces Chipotle's logo, wordmark or mascot, and their display
-face is proprietary — Archivo stands in for it.
+## Colour
 
-## Canvas
+Dark only for now. Every value is a CSS custom property in
+`web/src/styles/base.css`, so a daylight theme is an override of that block,
+not a revisit of every screen.
 
-Frame **393 × 852** (Figma: press `F`, choose iPhone 16).
+| Token | Value | Use |
+|---|---|---|
+| `--bg` | `#0c0d0f` | the room; the iOS launch colour too |
+| `--bg-1` / `--bg-2` / `--bg-3` | `#121416` / `#181a1d` / `#202327` | cards, fields, pressed and secondary buttons |
+| `--line` / `--line-2` | warm white at 7% / 13% | hairlines and outlines |
+| `--ink` | `#efe9df` | text |
+| `--ink-2` / `--ink-3` / `--ink-4` | ink at 68% / 46% / 30% | secondary text, hints, disabled |
+| `--warm` | `#f3c98b` | food due soon, highlights, active tab rule, cooking time |
+| `--red` | `#e2553f` | goes off today or tomorrow, expired, destructive |
+| `--green` | `#86c9a0` | "Ready" |
+| `--blue` | `#9cc3e6` | "Check units", yours, info |
+| `--btn` | `#f3ede3` | primary buttons, toasts |
 
-- 20px padding on the left and right
-- Bottom 76px is the tab bar
-- Top ~60px is the header
-
-## Colour — light
-
-| Role | Hex |
-|---|---|
-| Ground | `#F0EDE8` |
-| Card | `#FFFFFF` |
-| Brown (text, solid buttons) | `#451400` |
-| Red (active tab, eyebrows, accents) | `#A81612` |
-| Tan (quiet labels) | `#AD7B3C` |
-| Muted text | `#7A5C4B` |
-| Hairline | `#DDD8D0` |
-| Sunken / track | `#E6E2DB` |
-
-## Colour — dark
-
-The same world after hours: ground goes roasted brown, ink goes cream.
-
-| Role | Hex |
-|---|---|
-| Ground | `#1A0E07` |
-| Card | `#251610` |
-| Ink | `#F2E7DF` |
-| Red | `#E8635C` |
-| Tan | `#D0A163` |
-| Muted | `#A98B79` |
-
-## Status colours
-
-Drawn from the same five, deliberately — the reference app has no green in its
-chrome, and a lone green chip is what gives a borrowed palette away.
-
-| Meaning | Light |
-|---|---|
-| Ready / ok | `#4A6B35` on `#EAE7D8` |
-| Short / expiring | `#96591A` on `#F7ECD9` |
-| Missing / expired | `#A81612` on `#F6E2DF` |
-
-Safe because **status is never carried by colour alone** — every pill also says
-the word.
+Status is never colour alone: every tag carries a word ("Tomorrow", "Ready",
+"Need 2", "Check units").
 
 ## Type
 
-- **Display** — Archivo 800, UPPERCASE, `line-height: 0.98`, slight negative
-  tracking. Page titles, card titles, tab labels, stat values, buttons in the
-  chrome.
-- **Body** — DM Sans 400/600. Sentence case. Everything a person reads rather
-  than scans.
-- **Eyebrow / section label** — Archivo 700, uppercase, `letter-spacing: 0.14em`,
-  ~0.7rem. Section heads and field labels.
+Red Hat Display for anything read at a glance (titles, figures, tabs, tags),
+Red Hat Text for everything read closely. Both are bundled from Fontsource, not
+fetched, because the app is often used with one bar of signal. Figures are
+tabular. Inputs are at least 16px so iOS does not zoom.
 
-Both from Google Fonts, linked in `index.html`.
+## The fridge (`web/src/fridge`)
 
-A whole sentence is never set in caps. The reference app uses uppercase for
-short headlines; a paragraph in caps reads as shouting.
+- **Frame**: a fixed cabinet opening with walls drawn in one-point perspective
+  (eye just under the ceiling, back wall at 90%), a light strip at the top, and
+  a radial pool of light. Cupboard is warmer with wooden shelf planks; Freezer
+  is colder with frosted drawers.
+- **Shelves**: items are packed left to right by width; glass slabs have a lit
+  top surface and a front edge that catches the light. Produce goes in the
+  crisper drawer; the freezer is all drawers.
+- **Labels** sit under the shelf edge: name (two lines at most), amount, and a
+  tag only when food is due soon or low.
+- **Expired** food carries a red hatch over its drawing as well as its tag.
+- **Door**: black glass that swings open on its left hinge once per visit, the
+  first time a fridge appears. The interior light comes on as it opens.
+- **Lift and glow** (Cook): lit items rise 10px and scale 1.1 with a warm pool
+  on the glass under them and an amount tag above; everything else drops only
+  to 62% opacity. When two neighbours are lit, the second tag sits below its
+  item so the tags never collide.
 
-## Shape
+## Food drawings (`web/src/fridge/art.ts`)
 
-| Thing | Radius |
-|---|---|
-| Buttons, inputs, chips, pills | fully round (999px) |
-| Cards | 18px |
-| Sheets | 24px, top corners only |
+Every food is a soft lit SVG object: gradient shading, a highlight, a soft
+contact shadow, a thin edge.
 
-## Sizes
+- **Specific drawings** exist for the demo staples: a jug of milk, a tub, butter
+  sticks, eggs in a carton, a cheese block and wedge, a meat tray (breasts,
+  fillets, sausages, prawns), sliced meat in a pack, leftovers in a taped box,
+  a leafy bag, a punnet of mushrooms, berries.
+- **Containers by type** cover everything else: jar, bottle, tin, box, sack,
+  carton, loaf, flatbreads, loose produce (round, oval, long, curved, bulb,
+  pepper, big), herb bunch, spice jar.
+- **Matching**: a name rule picks the drawing and the food's colour; a category
+  fallback catches the rest; the packaging colour comes from a hash of the name
+  so two unfamiliar tins are not clones. When a category is set and a name rule
+  would draw something that category cannot be (soup filed under sauces), the
+  category wins.
+- **Quantity**: counted units are drawn one by one (nine eggs are nine eggs);
+  pack units show their fraction (0.6 bag is a bag 60% full); weighed amounts
+  only claim "plenty" or "running low", because the pantry does not store what
+  the pack weighed when full.
 
-- Buttons and inputs: **44px** minimum height
-- Input text: **16px** minimum, or iOS zooms the page
-- Tab labels use `clamp()` — "SHOPPING" is the longest of the five and must fit
-  a fifth of a 375px screen without clipping
+**Foods the app does not know.** Two paths, both explicit:
+1. *Putting food away*: search finds nothing locally or in Open Food Facts, so
+   the list offers "Add 'X' as a new food". The person picks what kind of food
+   it is from tiles that show each kind's drawing, sees a live preview of how
+   it will sit on the shelf, and can add calories off the label. An unknown
+   barcode gets the same sheet plus brand and pack weight, and every later scan
+   of it resolves instantly.
+2. *Importing a recipe*: the link is read first and the ingredients are shown
+   split into "Foods the app knows" and "New to the app" before anything is
+   saved. New ones become the importer's own foods, drawn by type.
 
-## The tab bar
+## Components (`web/src/ui`)
 
-Flat against the bottom, full width, white, one hairline on top. **Words only,
-no icons** — five uppercase labels, active one in red with a 2.5px red rule
-beneath it.
+- `Page`: a three-slot header (left, centre, right) over a scrolling column or
+  a fixed stage.
+- `Sheet`: bottom sheet with a grip, title, optional subtitle and close button;
+  a centred dialog on wide screens.
+- `ToastProvider` / `useToast(message, action?)`: one message above the tabs.
+  Undo lives here, never on the button that caused it, so a double tap cannot
+  cook and then un-cook.
+- Buttons: primary (light), secondary (charcoal), outline, ghost, danger;
+  52px tall by default, 40px small. `icon-btn` and `pill-btn` in headers.
+- Chips, segmented tabs (warm rule under the active one), switches, a stepper,
+  list rows with a 44px drawing thumb, grouped settings rows.
+- Icons (`ui/Icon.tsx`): one family on a 24px grid, 1.7 stroke, round ends.
+
+## Motion
+
+One family of curves: `cubic-bezier(.16, 1, .3, 1)` for arrivals, no bounce.
+Screens settle in over 320ms; sheets rise over 420ms; the door takes 1.4s and
+the light fades up with it; lift and glow is 550ms. Everything honours
+`prefers-reduced-motion`, which also removes the door.
+
+## Layout
+
+Phone first: a 393pt canvas, 18px side gutter, tabs at the foot with the home
+indicator's safe area, headers under the status bar's safe area. The page never
+scrolls; each screen's own column does, so an iOS bounce never reveals the
+native background.

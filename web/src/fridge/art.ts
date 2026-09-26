@@ -175,6 +175,34 @@ const BY_CATEGORY: Record<string, [ArtKind, string, ArtSpec['shape']?]> = {
   Beverages: ['bottle', '#6d8fb0'],
 };
 
+/**
+ * The containers each kind of food can come in. A name guesses the container;
+ * when someone has said what kind of food it is and the guess does not fit that
+ * kind, the kind wins: "Mum's soup" filed under sauces is a jar, not a tin.
+ */
+const ALLOWED: Record<string, ArtKind[]> = {
+  'Dairy & Eggs': ['jug', 'tub', 'butter', 'eggs', 'carton', 'block'],
+  Cheese: ['block', 'wedge', 'tub'],
+  'Meat & Seafood': ['tray', 'sliced', 'tin', 'leftover'],
+  Produce: ['produce', 'long', 'leafy', 'punnet', 'berries', 'bunch', 'sack'],
+  Fruit: ['produce', 'long', 'berries', 'punnet'],
+  Herbs: ['bunch', 'spice', 'leafy'],
+  Bakery: ['loaf', 'flat', 'produce', 'box'],
+  Grains: ['sack', 'box'],
+  Pasta: ['box', 'sack'],
+  Legumes: ['sack', 'tin', 'box', 'produce'],
+  Baking: ['sack', 'box', 'spice', 'bottle', 'jar'],
+  'Canned Goods': ['tin'],
+  Condiments: ['jar', 'bottle', 'carton', 'spice', 'tin'],
+  Sauces: ['jar', 'bottle'],
+  'Oils & Vinegars': ['bottle'],
+  Spices: ['spice', 'jar'],
+  'Nuts & Seeds': ['jar', 'sack'],
+  Snacks: ['box', 'sack', 'jar'],
+  Frozen: ['box', 'sack', 'tray', 'berries', 'produce', 'long'],
+  Beverages: ['bottle', 'carton', 'jug', 'sack', 'box'],
+};
+
 export function artFor(item: ItemLike): ArtSpec {
   const name = item.name.toLowerCase();
   let kind: ArtKind = 'jar';
@@ -186,7 +214,8 @@ export function artFor(item: ItemLike): ArtSpec {
     color = '#8e3d24';
   } else {
     const rule = RULES.find(([pattern]) => pattern.test(name));
-    if (rule) {
+    const allowed = item.category ? ALLOWED[item.category] : undefined;
+    if (rule && (!allowed || allowed.includes(rule[1]))) {
       [, kind, color = color, shape] = rule;
     } else if (item.category && BY_CATEGORY[item.category]) {
       [kind, color, shape] = BY_CATEGORY[item.category];

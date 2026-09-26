@@ -28,11 +28,14 @@
 /* the shelves scroll; the room does not */
 .shelves {
   position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column;
   -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
   padding: 26px 18px 22px;
   mask-image: linear-gradient(180deg, transparent 0, #000 22px, #000 calc(100% - 18px), transparent 100%);
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 22px, #000 calc(100% - 18px), transparent 100%);
 }
+/* the rack takes the spare height, so the crisper sits at the bottom */
+.racks { flex: 1 0 auto; }
 .shelf-row { position: relative; padding-top: 12px; }
 .mode-pantry .shelf-row + .shelf-row { margin-top: 8px; }
 .mode-cook .shelf-row { padding-top: 16px; }
@@ -74,7 +77,8 @@ button.col:active .obj svg { transform: scale(.96); }
   background: #f6efe4; color: #15171a; font-family: var(--display); font-size: 12.5px; font-weight: 700;
   box-shadow: 0 6px 14px -4px rgba(0, 0, 0, .7); animation: amount-in .5s var(--ease) .15s forwards; }
 @keyframes amount-in { to { opacity: 1; transform: translate(-50%, 0); } }
-.obj .amount.high { bottom: auto; top: calc(100% + 14px); }
+.obj .amount.short { padding: 0 9px; }
+.obj .amount.short .nn { display: none; }
 
 /* lift and glow: what the recipe takes rises off the glass; the rest stays in view */
 .dim .col:not(.lit) .obj { opacity: .62; }
