@@ -57,6 +57,7 @@ const routes: FastifyPluginAsync = async (app) => {
       maxGaps?: string;
       tag?: string;
       mine?: string;
+      page?: string;
     };
 
     const result = await searchRecipes(request.userId, {
@@ -67,6 +68,7 @@ const routes: FastifyPluginAsync = async (app) => {
       ...(query.maxCalories ? { maxCaloriesPerServing: Number(query.maxCalories) } : {}),
       ...(query.maxGaps ? { maxGaps: Number(query.maxGaps) } : {}),
       ...(query.tag ? { tag: query.tag } : {}),
+      ...(query.page ? { page: Number(query.page) || 0 } : {}),
     });
 
     return {
@@ -77,6 +79,8 @@ const routes: FastifyPluginAsync = async (app) => {
        */
       dietHidden: result.dietHidden,
       dietTags: result.dietTags,
+      hasMore: result.hasMore,
+      total: result.total,
       recipes: result.recipes.map((recipe) => ({
         id: recipe.id,
         name: recipe.name,

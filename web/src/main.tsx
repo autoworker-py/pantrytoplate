@@ -1,22 +1,25 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import '@fontsource-variable/red-hat-display';
+import '@fontsource-variable/red-hat-text';
 import App from './App';
 import { AuthProvider } from './lib/auth';
-import { ThemeProvider } from './lib/theme';
-import './styles.css';
+import './styles/base.css';
+import './styles/screens.css';
 import { registerServiceWorker } from './lib/notify';
 
 void registerServiceWorker();
 
+/* Night is the only theme for now; say so to the browser before first paint. */
+document.documentElement.setAttribute('data-theme', 'dark');
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </ThemeProvider>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,
 );

@@ -4,8 +4,8 @@
   "description": "Enter your food once. After that, eating it is a tap.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f0ede8",
-  "theme_color": "#a81712",
+  "background_color": "#0c0d0f",
+  "theme_color": "#0c0d0f",
   "orientation": "portrait",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },

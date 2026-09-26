@@ -1,0 +1,121 @@
+/* ---------- the cabinet ---------- */
+
+.frame {
+  --back: #181a1d; --side: #121416; --ceil: #22252a; --floor: #0e1012; --seam: rgba(255, 244, 228, .05);
+  --light-c: 255, 222, 170; --light-a: .3; --source: linear-gradient(180deg, #fff4e0, #f1d39e);
+  position: relative; flex: 1; min-height: 0; margin: 0 10px 10px; border-radius: 26px;
+  perspective: 1600px;
+  box-shadow: 0 0 0 3px #000, 0 0 0 4px rgba(255, 255, 255, .07);
+}
+.frame.zone-pantry {
+  --back: #1b1713; --side: #14110e; --ceil: #221c17; --floor: #100d0b; --seam: rgba(255, 220, 180, .05);
+  --light-c: 255, 206, 140; --light-a: .22; --source: linear-gradient(180deg, #ffe9c4, #e7b777);
+}
+.frame.zone-freezer {
+  --back: #131a21; --side: #0e1318; --ceil: #19212b; --floor: #0b0f13; --seam: rgba(210, 232, 255, .06);
+  --light-c: 205, 230, 255; --light-a: .24; --source: linear-gradient(180deg, #f2f9ff, #bcdcff);
+}
+
+.interior { position: absolute; inset: 0; overflow: hidden; border-radius: 24px; background: var(--back); transition: filter 1s ease .25s; }
+.door-closed .interior { filter: brightness(0); }
+.walls { position: absolute; inset: 0; pointer-events: none; }
+.w-back { fill: var(--back); } .w-side { fill: var(--side); } .w-ceil { fill: var(--ceil); } .w-floor { fill: var(--floor); }
+.w-seam { stroke: var(--seam); stroke-width: 1; fill: none; }
+.light { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(90% 55% at 50% 0%, rgba(var(--light-c), var(--light-a)), rgba(var(--light-c), 0) 78%); transition: opacity var(--slow) ease; }
+.source { position: absolute; left: 30px; right: 30px; top: 0; height: 9px; border-radius: 0 0 6px 6px; background: var(--source); z-index: 2; }
+.zone-pantry .source { left: 42%; right: 42%; height: 12px; border-radius: 0 0 14px 14px; }
+
+/* the shelves scroll; the room does not */
+.shelves {
+  position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  padding: 26px 18px 22px;
+  mask-image: linear-gradient(180deg, transparent 0, #000 22px, #000 calc(100% - 18px), transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 22px, #000 calc(100% - 18px), transparent 100%);
+}
+.shelf-row { position: relative; padding-top: 12px; }
+.mode-pantry .shelf-row + .shelf-row { margin-top: 8px; }
+.mode-cook .shelf-row { padding-top: 16px; }
+.shelf-row .items { position: relative; z-index: 2; display: flex; justify-content: space-around; align-items: flex-start; }
+
+/* glass: a lit top surface and a front edge that catches the light */
+.slab { position: absolute; left: -18px; right: -18px; z-index: 1; height: 13px; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 238, 214, .05), rgba(255, 238, 214, .09)) top / 100% 7px no-repeat,
+    linear-gradient(180deg, rgba(255, 232, 200, .58), rgba(255, 232, 200, .58)) 0 7px / 100% 1px no-repeat,
+    linear-gradient(180deg, rgba(255, 238, 214, .14), rgba(255, 238, 214, .08)) 0 8px / 100% 5px no-repeat;
+  box-shadow: 0 10px 14px -8px rgba(0, 0, 0, .7);
+}
+.zone-pantry .slab {
+  height: 12px;
+  background: linear-gradient(180deg, rgba(255, 220, 170, .14), rgba(255, 220, 170, 0) 3px), linear-gradient(180deg, #6a4f38, #4a3727 70%, #3b2c20);
+  box-shadow: 0 1px 0 rgba(255, 214, 160, .22) inset, 0 12px 16px -8px rgba(0, 0, 0, .75);
+}
+.zone-freezer .slab {
+  background:
+    linear-gradient(180deg, rgba(220, 238, 255, .1), rgba(220, 238, 255, .16)) top / 100% 7px no-repeat,
+    linear-gradient(180deg, rgba(225, 240, 255, .6), rgba(225, 240, 255, .6)) 0 7px / 100% 1px no-repeat,
+    linear-gradient(180deg, rgba(220, 238, 255, .16), rgba(220, 238, 255, .08)) 0 8px / 100% 5px no-repeat;
+}
+
+/* ---------- one thing on a shelf ---------- */
+
+.col { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; border-radius: 14px; padding-bottom: 4px; -webkit-tap-highlight-color: transparent; }
+button.col:active .obj svg { transform: scale(.96); }
+.obj { position: relative; display: flex; align-items: flex-end; justify-content: center; width: 100%; transition: opacity .5s ease, filter .5s ease; }
+.obj svg { overflow: visible; transition: transform .55s var(--ease); transform-origin: 50% 100%; will-change: transform; }
+.obj .hatch { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); pointer-events: none; border-radius: 6px;
+  background: repeating-linear-gradient(135deg, rgba(226, 85, 63, .5) 0 2px, transparent 2px 7px); mix-blend-mode: screen; }
+.obj .glow { position: absolute; left: 50%; bottom: -10px; width: 150%; height: 34px; transform: translateX(-50%) scaleX(.6); opacity: 0; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(255, 214, 150, .75), rgba(255, 214, 150, .18) 55%, rgba(255, 214, 150, 0));
+  transition: opacity .5s ease, transform .6s var(--ease); }
+.obj .amount { position: absolute; left: 50%; bottom: calc(100% + 2px); transform: translate(-50%, 6px); opacity: 0; z-index: 3;
+  height: 25px; padding: 0 10px; border-radius: 13px; display: inline-flex; align-items: center; white-space: nowrap;
+  background: #f6efe4; color: #15171a; font-family: var(--display); font-size: 12.5px; font-weight: 700;
+  box-shadow: 0 6px 14px -4px rgba(0, 0, 0, .7); animation: amount-in .5s var(--ease) .15s forwards; }
+@keyframes amount-in { to { opacity: 1; transform: translate(-50%, 0); } }
+.obj .amount.high { bottom: auto; top: calc(100% + 14px); }
+
+/* lift and glow: what the recipe takes rises off the glass; the rest stays in view */
+.dim .col:not(.lit) .obj { opacity: .62; }
+.col.lit .obj svg { transform: translateY(-10px) scale(1.1); }
+.col.lit .glow { opacity: 1; transform: translateX(-50%) scaleX(1); }
+.dim .light { opacity: .72; }
+
+.lab { width: 100%; padding-top: 16px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.lab .nm { font-family: var(--display); font-size: 13.5px; font-weight: 600; line-height: 1.2; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 100%; }
+.lab .meta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; justify-content: center; font-size: 12.5px; color: var(--ink-2); }
+.lab .tag { height: 19px; padding: 0 6px; font-size: 11.5px; border-radius: 6px; }
+.lab .low { color: var(--warm); font-weight: 600; }
+
+/* ---------- the crisper, and the freezer's drawers ---------- */
+
+.drawers { margin-top: 20px; display: flex; flex-direction: column; gap: 14px; }
+.drawer { position: relative; margin: 0 -6px; padding: 4px 6px 10px; border-radius: 12px 12px 22px 22px; box-shadow: inset 0 0 0 1px rgba(255, 228, 190, .2); background: linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(255, 255, 255, .06)); }
+.drawer .slab { display: none; }
+.drawer::before { content: ''; position: absolute; left: 50%; top: 6px; width: 80px; height: 4px; border-radius: 2px; transform: translateX(-50%); background: rgba(255, 228, 190, .32); }
+.drawer-front { position: absolute; left: 0; right: 0; bottom: 0; height: 38%; border-radius: 0 0 22px 22px; pointer-events: none; background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .02)); box-shadow: inset 0 1px 0 rgba(255, 228, 190, .25); }
+.mode-pantry .drawer-front { display: none; }
+.zone-freezer .drawer { box-shadow: inset 0 0 0 1px rgba(210, 232, 255, .22); background: linear-gradient(180deg, rgba(220, 238, 255, .05), rgba(220, 238, 255, .1)); }
+.zone-freezer .drawer::before { background: rgba(215, 235, 255, .4); }
+
+.fridge-empty { min-height: 100%; display: grid; place-items: center; text-align: center; color: var(--ink-2); padding: 40px 12px; }
+
+/* ---------- the door ---------- */
+
+.door { position: absolute; inset: 0; z-index: 8; border-radius: 24px; transform-origin: left center; pointer-events: none;
+  background: linear-gradient(112deg, rgba(255, 255, 255, .07) 0 16%, rgba(255, 255, 255, 0) 16% 100%), linear-gradient(180deg, #1c1f22, #0a0b0c);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+  transition: transform 1.4s var(--ease), opacity .5s ease .9s; }
+.door i { position: absolute; right: 18px; top: 26%; width: 6px; height: 44%; border-radius: 3px; background: linear-gradient(90deg, #2b2f33, #7a8288 50%, #2b2f33); }
+.door-open .door { transform: rotateY(-100deg); opacity: 0; }
+.door-open .shelves .obj svg { animation: settle .9s var(--ease) both .55s; }
+@keyframes settle { from { opacity: 0; transform: translateY(-5px); } }
+.door-open.mode-cook .shelves .obj svg { animation: none; }
+
+.food-thumb { overflow: visible; }
+
+@media (prefers-reduced-motion: reduce) {
+  .door { display: none; }
+  .interior { transition: none; }
+}

@@ -10,7 +10,7 @@
  */
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
-import { Sheet } from './Sheet';
+import { Sheet } from '../ui/kit';
 
 interface Notice {
   version: string;

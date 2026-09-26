@@ -3,44 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#eae7e0" />
-    <!--
-      Archivo is served from our own origin, not a CDN. This app is used in a
-      shop with one bar of signal, and a typeface fetched over the network is a
-      typeface that is missing exactly then - the identity would fall back to
-      the platform sans at the moment it matters most. One variable file covers
-      every weight, so this costs 35KB and no third-party request.
-    -->
-    <link
-      rel="preload"
-      href="/fonts/archivo-latin.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
+    <meta name="theme-color" content="#0c0d0f" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Pantry" />
     <title>Pantry to Plate</title>
   </head>
   <body>
     <!--
-      THESIS: The pantry as a supermarket shelf rail - count first, small print
-      underneath, a yellow flag on what to use next - refusing the cream-ground
-      recipe app with its rounded cards and photography it does not own.
-      OWN-WORLD: White card stock on a warm grey channel, print black, hairline
-      rules, one 2px corner. Archivo at 800 with tabular figures. Three flags
-      that each carry a word: #a81712 urgent, #f2c200 use first, #0f6b3a ready.
-      STORY: You see what is about to go off before you see anything else, and
-      the number of each thing you own is the largest mark on its ticket.
-      FIRST VIEWPORT: Ruled heading, then a rail of tickets - what expires
-      soonest at the top, count set at 2.3rem on the left, name and unit as
-      small print, flag struck into the right edge.
-      FORM: Shelf Edge, candidate 1 of 7, chosen by the user over the roll.
-      Seed a4e258c4.
+      THESIS: The pantry is a place, not a list: a black-glass fridge at 6pm with
+      one warm light, the food as the only colour. Tonight's recipe lifts what it
+      takes off the shelf with a warm glow; nothing else is hidden.
+      OWN-WORLD: Charcoal room (#0c0d0f), charcoal surfaces in layers, warm-white
+      ink (#efe9df), amber (#f3c98b) for soon, red (#e2553f) only for tomorrow.
+      Food drawn as soft lit objects; anything unknown gets a container by type.
+      Red Hat Display for what is read at a glance, Red Hat Text for the rest.
+      STORY: The door opens once a visit and the light comes on; cooking shows its
+      deduction first and can be undone from the diary or the toast.
+      FIRST VIEWPORT: Cook: the fridge with tonight's recipe lifting what it uses,
+      and the recipe card below it. Four tabs: Cook, Pantry, Shopping, Eaten.
+      FORM: Fridge Light, Night variation, chosen by the user. Seed 8bf790e3.
       FINISH: unreviewed and undocumented is unfinished; this build ends with
       the finish review, the verdict, DESIGN.md, and every shipping raster
       carrying its provenance.

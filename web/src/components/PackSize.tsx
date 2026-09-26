@@ -11,7 +11,7 @@
  */
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
-import { Icon } from './Icon';
+import { Icon } from '../ui/Icon';
 
 export interface Pack {
   foodReferenceId: string;

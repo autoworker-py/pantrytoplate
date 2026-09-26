@@ -16,11 +16,10 @@ const config: CapacitorConfig = {
   webDir: 'dist',
 
   ios: {
-    // Matches the light ground so there is no flash between the splash screen
-    // and the first paint. It cannot follow the theme — it is a native colour
-    // set once at launch — which is the second reason the page itself must not
-    // scroll: in dark mode this would show as a pale bar on every bounce.
-    backgroundColor: '#f0ede8',
+    // The Night room colour, so there is no flash between the splash screen and
+    // the first paint. It is a native colour set once at launch, which is also
+    // why the page itself must not scroll: a bounce would show it.
+    backgroundColor: '#0c0d0f',
     contentInset: 'never',
     /*
      * The shell is a fixed column with its own scrolling region, so the web
@@ -47,13 +46,13 @@ const config: CapacitorConfig = {
     CapacitorHttp: { enabled: true },
     SplashScreen: {
       launchShowDuration: 600,
-      backgroundColor: '#f0ede8',
+      backgroundColor: '#0c0d0f',
       showSpinner: false,
       launchAutoHide: true,
     },
     StatusBar: {
-      style: 'DARK', // dark glyphs, for the light ground
-      backgroundColor: '#f0ede8',
+      style: 'DARK', // light glyphs, for a dark ground
+      backgroundColor: '#0c0d0f',
     },
   },
 };

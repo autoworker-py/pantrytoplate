@@ -311,6 +311,12 @@ export interface RecipeSearchOptions {
   tag?: string;
   /** only the recipes this person imported or wrote */
   mineOnly?: boolean;
+  /**
+   * Which page of the book, 0-based. Page 0 is the curated shortlist; later
+   * pages walk the rest of the book in cheap-rank order, so every recipe can be
+   * reached without evaluating the whole book on every keystroke.
+   */
+  page?: number;
 }
 
 export interface RankedRecipe extends RecipeMatch {
@@ -346,11 +352,18 @@ const OWN_RECIPE_SLOTS = 20;
  * candidates go through to the real evaluation. Cost stays flat as the book
  * grows from twelve recipes to twelve thousand.
  */
+interface Shortlist {
+  /** the curated first page */
+  ids: string[];
+  /** everything else that matched, best first — the source of later pages */
+  overflow: string[];
+}
+
 async function shortlistRecipeIds(
   userId: string,
   opts: RecipeSearchOptions,
   db: Tx,
-): Promise<string[]> {
+): Promise<Shortlist> {
   const trimmed = (opts.query ?? '').trim();
   /**
    * Postgres matches LIKE case-sensitively; SQLite does not. Recipe names are
@@ -400,7 +413,9 @@ async function shortlistRecipeIds(
     return true;
   });
 
-  if (timeFiltered.length <= SHORTLIST_SIZE) return timeFiltered.map((recipe) => recipe.id);
+  if (timeFiltered.length <= SHORTLIST_SIZE) {
+    return { ids: timeFiltered.map((recipe) => recipe.id), overflow: [] };
+  }
 
   const candidateIds = timeFiltered.map((recipe) => recipe.id);
 
@@ -496,7 +511,10 @@ async function shortlistRecipeIds(
     taken.add(recipe.id);
   }
 
-  return chosen.map((recipe) => recipe.id);
+  return {
+    ids: chosen.map((recipe) => recipe.id),
+    overflow: scored.filter((recipe) => !taken.has(recipe.id)).map((recipe) => recipe.id),
+  };
 }
 
 /**
@@ -515,6 +533,13 @@ export interface RecipeSearchResult {
   dietHidden: number;
   /** the diet tags doing the removing, so the UI can name them */
   dietTags: string[];
+  /**
+   * Whether another page exists. The first page is capped at the shortlist,
+   * and a list that silently stops at sixty reads as a book of sixty.
+   */
+  hasMore: boolean;
+  /** how many recipes matched the search before per-recipe filtering */
+  total: number;
 }
 
 export async function searchRecipes(
@@ -529,8 +554,13 @@ export async function searchRecipes(
       ? { query: options, limit: legacyLimit }
       : options;
 
-  const shortlist = await shortlistRecipeIds(userId, opts, db);
-  if (shortlist.length === 0) return { recipes: [], dietHidden: 0, dietTags: [] };
+  const { ids, overflow } = await shortlistRecipeIds(userId, opts, db);
+  const page = Math.max(0, Math.floor(opts.page ?? 0));
+  const shortlist =
+    page === 0 ? ids : overflow.slice((page - 1) * SHORTLIST_SIZE, page * SHORTLIST_SIZE);
+  const hasMore = overflow.length > page * SHORTLIST_SIZE;
+  const total = ids.length + overflow.length;
+  if (shortlist.length === 0) return { recipes: [], dietHidden: 0, dietTags: [], hasMore: false, total };
 
   const [recipes, user] = await Promise.all([
     loadRecipes({ id: { in: shortlist } }, SHORTLIST_SIZE, db),
@@ -597,6 +627,8 @@ export async function searchRecipes(
       .slice(0, opts.limit ?? SHORTLIST_SIZE),
     dietHidden,
     dietTags: diet,
+    hasMore,
+    total,
   };
 }
 
