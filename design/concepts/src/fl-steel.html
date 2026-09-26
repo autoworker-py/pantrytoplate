@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fridge Light: Steel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #121619;
+  --ink-2: #4f5a61;
+  --ink-3: #75818a;
+  --red: #c23a2b;
+  --steel-hi: #eef1f3;
+  --steel: #dde2e6;
+  --steel-lo: #c6cdd2;
+}
+* { box-sizing: border-box; margin: 0; }
+html { background: #1b1f22; -webkit-font-smoothing: antialiased; }
+body { font-family: 'Hanken Grotesk', system-ui, sans-serif; color: var(--ink); font-variant-numeric: tabular-nums; }
+::selection { background: var(--ink); color: #fff; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid #5d8fd6; outline-offset: 2px; }
+button:disabled { cursor: default; }
+
+.stage { min-height: 100vh; padding: 34px 40px 44px; display: flex; flex-direction: column; align-items: center; gap: 26px; background: radial-gradient(120% 70% at 50% 0%, #2b3136 0%, #1b1f22 72%); }
+.intro { width: 834px; max-width: 100%; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; color: #eef1f3; }
+.intro h1 { font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
+.intro p { margin-top: 6px; max-width: 60ch; font-size: 15px; line-height: 1.5; color: rgba(238, 241, 243, .64); }
+.replay { flex: none; height: 40px; padding: 0 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,.2); background: transparent; color: #eef1f3; font-weight: 600; font-size: 14px; }
+.phones { display: flex; flex-wrap: wrap; justify-content: center; gap: 48px; }
+figure { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+figcaption { font-size: 14px; font-weight: 600; color: rgba(238, 241, 243, .55); }
+
+/* the phone is the fridge's own brushed-steel front */
+.phone {
+  position: relative; width: 393px; height: 852px; overflow: hidden; border-radius: 52px;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.22) 0 1px, rgba(0,0,0,.02) 1px 3px), linear-gradient(180deg, #e9edf0 0%, #d7dde1 100%);
+  box-shadow: 0 40px 80px -24px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.1);
+}
+.status { height: 54px; padding: 8px 30px 0 38px; display: flex; align-items: center; justify-content: space-between; font-size: 16px; font-weight: 700; }
+.bar { height: 58px; padding: 0 14px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.bar > :first-child { justify-self: start; }
+.bar > :last-child { justify-self: end; }
+.bar h1 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.knob { width: 42px; height: 42px; border: 0; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(180deg, #fdfdfd, #e3e8eb); box-shadow: 0 1px 2px rgba(0,0,0,.2), 0 4px 10px -4px rgba(0,0,0,.25), inset 0 1px 0 #fff; }
+.pill { height: 40px; padding: 0 15px; border: 0; border-radius: 20px; font-size: 14px; font-weight: 700; background: linear-gradient(180deg, #fdfdfd, #e3e8eb); box-shadow: 0 1px 2px rgba(0,0,0,.2), 0 4px 10px -4px rgba(0,0,0,.25), inset 0 1px 0 #fff; }
+.zones { display: flex; gap: 2px; padding: 3px; border-radius: 13px; background: rgba(18, 22, 25, .08); box-shadow: inset 0 1px 2px rgba(0,0,0,.12); }
+.zone { height: 36px; padding: 0 13px; border: 0; border-radius: 10px; background: none; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.zone.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.14), 0 4px 10px -6px rgba(0,0,0,.3); }
+
+/* the cabinet opening: a dark gasket, then the lit box */
+.frame { position: absolute; left: 10px; right: 10px; border-radius: 24px; perspective: 1500px; box-shadow: 0 0 0 4px #2d3438, 0 0 0 6px #c2c9ce, 0 18px 30px -16px rgba(0,0,0,.45); }
+.fridge { position: relative; overflow: hidden; border-radius: 22px; transition: filter .7s ease .2s; }
+.closed .fridge { filter: brightness(.1); }
+.mid .fridge { filter: brightness(.75); }
+.walls { position: absolute; inset: 0; transition: filter .5s ease; }
+.w-back { fill: #e9eef1; } .w-ceil { fill: #f8fafb; } .w-left, .w-right { fill: #dde4e8; } .w-floor { fill: #d4dce1; }
+.w-seam { stroke: rgba(0,0,0,.07); stroke-width: 1; fill: none; }
+.glass { fill: rgba(206, 229, 231, .5); } .glass-edge { stroke: rgba(255,255,255,.9); stroke-width: 1.2; }
+.trim { fill: #b9c1c6; } .trim-hi { stroke: #f7f9fa; stroke-width: 1.4; } .under { fill: rgba(0,0,0,.05); }
+/* LED strips down both side walls, and the light they throw */
+.light { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(255,255,255,.75) 0, rgba(255,255,255,0) 40px, rgba(255,255,255,0) calc(100% - 40px), rgba(255,255,255,.75) 100%); transition: opacity .5s ease; }
+.light::before, .light::after { content: ''; position: absolute; top: 44px; bottom: 150px; width: 4px; border-radius: 2px; background: #fff; }
+.light::before { left: 7px; } .light::after { right: 7px; }
+.panel { position: absolute; left: 0; right: 0; top: 0; height: 40px; display: grid; place-items: center; background: linear-gradient(180deg, #ffffff, #eef2f4); border-bottom: 1px solid #d3dade; }
+.panel::after { content: ''; position: absolute; left: 40px; right: 40px; bottom: -3px; height: 2px; border-radius: 1px; background: #fff; }
+.panel.slim { height: 32px; }
+.panel.slim img { width: 24px; height: 24px; }
+.panel img { width: 30px; height: 30px; border-radius: 50%; display: block; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+
+.row { position: absolute; display: flex; justify-content: space-between; }
+.col { position: relative; display: flex; flex-direction: column; align-items: center; }
+.obj { display: flex; align-items: flex-end; justify-content: center; transition: opacity .5s ease, filter .5s ease; }
+.obj svg { display: block; overflow: visible; }
+.lab { position: absolute; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 1px; text-align: center; white-space: nowrap; }
+.nm { font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+.meta { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink-2); }
+.soon { font-weight: 700; color: var(--ink); }
+.tag { height: 20px; padding: 0 7px; border-radius: 6px; background: var(--red); color: #fff; font-size: 12.5px; font-weight: 700; display: inline-flex; align-items: center; }
+.drawer { position: absolute; border-radius: 12px 12px 22px 22px; background: linear-gradient(180deg, rgba(236, 243, 245, .55), rgba(214, 226, 230, .7)); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.9), 0 1px 0 rgba(0,0,0,.06); }
+.drawer::before { content: ''; position: absolute; left: 50%; top: 6px; width: 90px; height: 6px; border-radius: 3px; transform: translateX(-50%); background: linear-gradient(180deg, #9aa3a9, #e7ebee); }
+
+.open .obj svg { animation: settle .8s cubic-bezier(.16, 1, .3, 1) both .45s; }
+@keyframes settle { from { transform: translateY(-6px); opacity: 0; } }
+.lvl, .gone-able { transition: transform .9s cubic-bezier(.2, .8, .2, 1), opacity .5s ease; transform-box: fill-box; }
+.lvl { transform-origin: 50% 100%; } .lvlx { transform-origin: 0% 50%; }
+.gone { opacity: 0; transform: translateY(-14px); }
+
+/* the door: stainless, with a bar handle, swinging open on its left hinge */
+.door { position: absolute; inset: 0; z-index: 8; border-radius: 22px; transform-origin: left center; transition: transform 1.25s cubic-bezier(.16, 1, .3, 1), opacity .45s ease .8s;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.25) 0 1px, rgba(0,0,0,.025) 1px 3px), linear-gradient(90deg, #cfd6da, #eef1f3 45%, #c3cace); box-shadow: inset 0 0 0 1px rgba(255,255,255,.6); }
+.door i { position: absolute; right: 20px; top: 150px; width: 12px; height: 300px; border-radius: 6px; background: linear-gradient(90deg, #8f989e, #f4f6f7 45%, #a4adb3); box-shadow: -4px 6px 10px rgba(0,0,0,.25); }
+.open .door { transform: rotateY(-100deg); opacity: 0; pointer-events: none; }
+.mid .door { transform: rotateY(-46deg); }
+.instant .door, .instant .fridge, .instant .obj svg { transition: none !important; animation: none !important; }
+
+/* tonight */
+.dim .walls { filter: brightness(.3) saturate(.55); }
+.dim .light { opacity: .15; }
+.dim .panel { filter: brightness(.55); }
+.dim .col:not(.lit) .obj { opacity: .26; filter: grayscale(.6); }
+.dim .drawer { filter: brightness(.45); }
+.spots { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+.beam { position: absolute; background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,.34)); clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%); mix-blend-mode: screen; }
+.chip { position: absolute; transform: translateX(-50%); height: 26px; padding: 0 10px; border-radius: 13px; background: #fff; color: var(--ink); font-size: 13px; font-weight: 700; display: flex; align-items: center; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,.2), 0 6px 14px -4px rgba(0,0,0,.4); transition: opacity .4s ease; }
+.chip.fade { opacity: 0; }
+.sheet { position: absolute; left: 10px; right: 10px; bottom: 92px; z-index: 7; padding: 20px 20px 16px; border-radius: 24px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.1), 0 18px 36px -18px rgba(0,0,0,.45); }
+.sheet .body { transition: opacity .28s ease, transform .28s ease; }
+.sheet .body.out { opacity: 0; transform: translateX(-18px); }
+.sheet h2 { font-size: 24px; line-height: 1.15; font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
+.why { margin-top: 8px; display: flex; gap: 8px; align-items: baseline; font-size: 15px; font-weight: 600; }
+.why i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--red); transform: translateY(-1px); }
+.facts, .plus { margin-top: 3px; font-size: 15px; color: var(--ink-2); }
+.actions { margin-top: 16px; display: flex; gap: 10px; }
+.go { flex: 1; height: 54px; border: 0; border-radius: 16px; background: var(--ink); color: #fff; font-size: 16px; font-weight: 700; }
+.go:hover:not(:disabled) { background: #283036; }
+.go:disabled { opacity: .45; }
+.alt { width: 116px; height: 54px; border: 0; border-radius: 16px; background: linear-gradient(180deg, #f6f8f9, #e3e8eb); box-shadow: inset 0 0 0 1px #d5dbdf; font-size: 16px; font-weight: 700; }
+.toast { position: absolute; left: 50%; top: 124px; z-index: 9; height: 46px; padding: 0 6px 0 16px; border-radius: 14px; background: var(--ink); color: #fff; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; white-space: nowrap; box-shadow: 0 12px 26px -10px rgba(0,0,0,.6); opacity: 0; transform: translate(-50%, -10px); transition: opacity .35s ease, transform .45s cubic-bezier(.2, .9, .2, 1); }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+.toast button { height: 40px; padding: 0 12px; border: 0; background: none; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
+
+.tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 84px; padding: 8px 12px 0; display: flex; justify-content: space-around; border-top: 1px solid rgba(0,0,0,.08); background: linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,0)); }
+.tab { min-width: 72px; height: 48px; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
+.tab.on { color: var(--ink); }
+.home { position: absolute; left: 50%; bottom: 8px; width: 134px; height: 5px; border-radius: 3px; background: var(--ink); transform: translateX(-50%); }
+
+.spots { transition: opacity .5s ease .9s; }
+.closed .spots, .mid .spots { opacity: 0; transition: none; }
+@media (prefers-reduced-motion: reduce) { .door, .fridge, .obj svg, .lvl, .gone-able, .toast, .sheet .body { transition: none !important; animation: none !important; } }
+@media (max-width: 900px) { .stage { padding: 24px 16px; } .intro { flex-direction: column; align-items: flex-start; } }
+</style>
+</head>
+<body>
+<!--
+THESIS: Fridge Light as a premium built-in appliance. The phone is the fridge's brushed-steel front; opening the app opens the door and the LEDs come on because it opened.
+OWN-WORLD: Brushed stainless, a dark gasket, a white interior drawn in one-point perspective, white LED strips on the side walls, glass shelves with steel trim, a frosted crisper. Food as soft, lit objects. Hanken Grotesk. One red, only for food that goes off tomorrow.
+STORY: Door swings open, light comes on, food settles; tonight's recipe drops the fridge light and beams find what it takes.
+FIRST VIEWPORT: Pantry behind a closed steel door that swings open on its left hinge; zones in the header; the logo lives on the fridge's control strip.
+FORM: Fridge Light variation 1 of 3 (seed 8bf790e3, direction chosen by the user).
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+-->
+<main class="stage">
+  <div class="intro">
+    <div>
+      <h1>Fridge Light: Steel</h1>
+      <p>A built-in stainless fridge. The phone is the fridge's front: open the app and the door swings open, the LEDs come on, and the food settles on glass shelves. Food is drawn as soft, lit objects.</p>
+    </div>
+    <button class="replay" type="button" id="replay">Open the door again</button>
+  </div>
+  <div class="phones">
+    <figure><div class="phone dim" id="tonight"></div><figcaption>What to cook</figcaption></figure>
+    <figure><div class="phone" id="pantry"></div><figcaption>Pantry</figcaption></figure>
+  </div>
+</main>
+
+<script>
+/*@include fl/data.js fl/draw.js fl/engine.js*/
+const LOGO = '__LOGO__';
+const D = makeDraw('soft');
+const PANEL = `<div class="panel"><img alt="Pantry2Plate" src="${LOGO}"></div>`;
+
+function pantry(el) {
+  el.innerHTML = `${FL.status('#121619')}
+    <div class="bar"><button type="button" class="knob" aria-label="Search the pantry">${FL.icon('Search', 20)}</button>
+      <div class="zones" role="tablist"><button type="button" class="zone on" role="tab">Fridge</button><button type="button" class="zone" role="tab">Cupboard</button><button type="button" class="zone" role="tab">Freezer</button></div>
+      <button type="button" class="knob" aria-label="Put food away">${FL.icon('Plus', 20)}</button></div>
+    <div class="frame" style="top:116px;height:648px">
+      ${FL.fridge({ W: 373, H: 648, vpY: 16, k: .9, s: .84, D, labels: true, shelf: 'glass', top: PANEL,
+        rows: [
+          { yf: 176, keys: ['milk', 'yogurt', 'butter'], widths: [150, 106, 85] },
+          { yf: 322, keys: ['egg', 'cheddar', 'parm'], widths: [150, 96, 95] },
+          { yf: 468, keys: ['chicken', 'bacon', 'chilli'], widths: [128, 110, 103] },
+        ],
+        drawer: { y0: 518, y1: 644, keys: ['spinach', 'mush'], itemTop: 6, oh: 66, labelTop: 78, scale: .88 } })}
+      <div class="door"><i></i></div>
+    </div>
+    ${FL.tabs('Pantry')}`;
+}
+
+function tonight(el) {
+  el.innerHTML = `${FL.status('#121619')}
+    <div class="bar"><span></span><h1>Tonight</h1><button type="button" class="pill">All recipes</button></div>
+    <div class="frame" style="top:114px;height:392px">
+      ${FL.fridge({ W: 373, H: 392, vpY: 12, k: .9, s: .62, D, labels: false, shelf: 'glass', top: PANEL.replace('panel', 'panel slim'),
+        rows: [
+          { yf: 128, keys: ['milk', 'yogurt', 'butter'], widths: [150, 106, 85] },
+          { yf: 226, keys: ['egg', 'cheddar', 'parm'], widths: [150, 96, 95] },
+          { yf: 324, keys: ['chicken', 'bacon', 'chilli'], widths: [128, 110, 103] },
+        ],
+        drawer: { y0: 334, y1: 390, keys: ['spinach', 'mush'], itemTop: -2, labelTop: 0, scale: .9 } })}
+      <div class="door"><i></i></div>
+    </div>
+    <div class="spots"></div>
+    <div class="toast" role="status"><span></span><button type="button">Undo</button></div>
+    <section class="sheet"><div class="body"></div><div class="actions"><button type="button" class="go">Cook this</button><button type="button" class="alt">Another</button></div></section>
+    ${FL.tabs('Cook')}`;
+  FL.wireTonight(el);
+}
+
+const T = document.getElementById('tonight'), P = document.getElementById('pantry');
+pantry(P);
+tonight(T);
+FL.boot(T, P);
+document.getElementById('replay').addEventListener('click', () => FL.open([T, P]));
+</script>
+</body>
+</html>

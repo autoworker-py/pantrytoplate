@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fridge Light: Retro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1f2b38;
+  --ink-2: #4a5968;
+  --ink-3: #6d7b88;
+  --red: #c9412f;
+  --enamel: #bfd6e2;
+  --chrome: linear-gradient(180deg, #fbfcfc 0%, #dde2e5 44%, #aeb7bd 56%, #eef1f2 100%);
+}
+* { box-sizing: border-box; margin: 0; }
+html { background: #1d2a33; -webkit-font-smoothing: antialiased; }
+body { font-family: 'Jost', system-ui, sans-serif; color: var(--ink); font-variant-numeric: tabular-nums; }
+::selection { background: var(--ink); color: #fff; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+button:disabled { cursor: default; }
+
+.stage { min-height: 100vh; padding: 34px 40px 44px; display: flex; flex-direction: column; align-items: center; gap: 26px; background: radial-gradient(120% 70% at 50% 0%, #2c3c48 0%, #1d2a33 72%); }
+.intro { width: 834px; max-width: 100%; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; color: #eef3f6; }
+.intro h1 { font-size: 30px; font-weight: 600; letter-spacing: -.01em; }
+.intro p { margin-top: 6px; max-width: 60ch; font-size: 15px; line-height: 1.5; color: rgba(238, 243, 246, .66); }
+.replay { flex: none; height: 40px; padding: 0 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,.22); background: transparent; color: #eef3f6; font-weight: 500; font-size: 15px; }
+.phones { display: flex; flex-wrap: wrap; justify-content: center; gap: 48px; }
+figure { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+figcaption { font-size: 15px; font-weight: 500; color: rgba(238, 243, 246, .55); }
+
+/* the phone is the fridge's rounded enamel body, catching the light down its middle */
+.phone { position: relative; width: 393px; height: 852px; overflow: hidden; border-radius: 52px; background: linear-gradient(90deg, #aec9d7 0%, #c8dce6 28%, #d9e8ef 50%, #c6dae5 72%, #a9c5d4 100%); box-shadow: 0 40px 80px -24px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.2); }
+.status { height: 54px; padding: 8px 30px 0 38px; display: flex; align-items: center; justify-content: space-between; font-size: 16px; font-weight: 600; }
+.bar { height: 58px; padding: 0 14px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.bar > :first-child { justify-self: start; }
+.bar > :last-child { justify-self: end; }
+.bar h1 { font-size: 20px; font-weight: 600; }
+.knob { width: 42px; height: 42px; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--chrome); box-shadow: 0 2px 4px rgba(31,43,56,.25), inset 0 0 0 1px rgba(255,255,255,.7); }
+.pill { height: 40px; padding: 0 16px; border: 0; border-radius: 20px; font-size: 15px; font-weight: 500; background: var(--chrome); box-shadow: 0 2px 4px rgba(31,43,56,.25), inset 0 0 0 1px rgba(255,255,255,.7); }
+.zones { display: flex; gap: 2px; padding: 3px; border-radius: 22px; background: rgba(31,43,56,.1); box-shadow: inset 0 1px 2px rgba(31,43,56,.18); }
+.zone { height: 36px; padding: 0 14px; border: 0; border-radius: 18px; background: none; font-size: 15px; font-weight: 500; color: var(--ink-2); }
+.zone.on { background: #fdfdfc; color: var(--ink); box-shadow: 0 1px 3px rgba(31,43,56,.25); }
+
+/* cabinet: enamel box, a badge plate, the opening */
+.cabinet { position: absolute; border-radius: 30px; background: linear-gradient(90deg, #c3d8e3, #d6e6ee 50%, #c0d6e2); box-shadow: inset 0 0 0 1px rgba(255,255,255,.55), 0 14px 26px -16px rgba(31,43,56,.5); }
+.band { position: absolute; left: 0; right: 0; top: 0; display: grid; place-items: center; }
+.badge { width: 32px; height: 32px; border-radius: 50%; display: block; box-shadow: 0 0 0 3px #e7ebee, 0 0 0 4px #9ea8ae, 0 2px 4px 3px rgba(31,43,56,.2); }
+.frame { position: absolute; border-radius: 24px; perspective: 1400px; box-shadow: 0 0 0 4px #e6ebee, 0 0 0 5px #b3bcc2; }
+.fridge { position: relative; overflow: hidden; border-radius: 22px; transition: filter .8s ease .25s; }
+.closed .fridge { filter: brightness(.12); }
+.mid .fridge { filter: brightness(.8); }
+.walls { position: absolute; inset: 0; transition: filter .5s ease; }
+.w-back { fill: #f4f4f1; } .w-ceil { fill: #fbfbf8; } .w-left, .w-right { fill: #eaebe7; } .w-floor { fill: #e3e5e1; }
+.w-seam { stroke: rgba(31,43,56,.07); stroke-width: 1; fill: none; }
+.rod { stroke: #b9c2c8; stroke-width: 1.5; stroke-linecap: round; }
+.trim { fill: #d7dde0; } .trim-hi { stroke: #fff; stroke-width: 1.2; }
+.light { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(75% 45% at 24% 0%, rgba(255, 236, 200, .6), rgba(255, 236, 200, 0) 72%); transition: opacity .5s ease; }
+.panel { position: absolute; left: 22px; top: 0; width: 74px; height: 17px; border-radius: 0 0 38px 38px; background: linear-gradient(180deg, #fffef8, #f2e9d3); box-shadow: 0 1px 2px rgba(31,43,56,.15); }
+
+.row { position: absolute; display: flex; justify-content: space-between; }
+.col { position: relative; display: flex; flex-direction: column; align-items: center; }
+.obj { display: flex; align-items: flex-end; justify-content: center; transition: opacity .5s ease, filter .5s ease; }
+.obj svg { display: block; overflow: visible; }
+.lab { position: absolute; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 0; text-align: center; white-space: nowrap; z-index: 2; }
+.nm { font-size: 14.5px; font-weight: 600; }
+.meta { display: flex; align-items: center; gap: 5px; font-size: 13.5px; color: var(--ink-2); }
+.soon { font-weight: 600; color: var(--ink); }
+.tag { height: 20px; padding: 0 8px; border-radius: 10px; background: var(--red); color: #fff; font-size: 12.5px; font-weight: 600; display: inline-flex; align-items: center; }
+.drawer { position: absolute; border-radius: 12px 12px 24px 24px; background: linear-gradient(180deg, rgba(191, 214, 226, .3), rgba(191, 214, 226, .62)); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.85); }
+.drawer::before { content: ''; position: absolute; left: 50%; top: 6px; width: 64px; height: 7px; border-radius: 4px; transform: translateX(-50%); background: var(--chrome); box-shadow: 0 1px 2px rgba(31,43,56,.3); }
+
+/* the open door, seen at an angle, with its shelves */
+.door-in { position: absolute; transform-origin: right center; transform: perspective(700px) rotateY(34deg); transition: transform 1.2s cubic-bezier(.16, 1, .3, 1) .45s; z-index: 3; }
+.closed .door-in { transform: perspective(700px) rotateY(90deg); }
+.mid .door-in { transform: perspective(700px) rotateY(72deg); }
+.liner { position: absolute; inset: 0; border-radius: 22px 8px 8px 22px; background: linear-gradient(90deg, #f1f2ef, #fbfbfa 60%, #f3f4f1); box-shadow: 0 0 0 5px #c9dde7, 0 0 0 6px rgba(31,43,56,.12), inset 0 0 0 3px #e2e6e8; transition: filter .5s ease; }
+.lip { position: absolute; left: 8px; right: 8px; height: 26px; z-index: 1; border-radius: 0 0 9px 9px; background: rgba(255,255,255,.62); box-shadow: inset 0 0 0 1.5px rgba(31,43,56,.1); }
+.lip::before { content: ''; position: absolute; left: -2px; right: -2px; top: -2px; height: 5px; border-radius: 3px; background: var(--chrome); }
+
+.door { position: absolute; inset: 0; z-index: 8; border-radius: 22px; transform-origin: left center; transition: transform 1.2s cubic-bezier(.16, 1, .3, 1), opacity .4s ease .7s; background: linear-gradient(90deg, #c3d8e3, #dbe9f0 45%, #bcd3df); box-shadow: inset 0 0 0 1px rgba(255,255,255,.6); }
+.door i { position: absolute; right: 16px; top: 42%; width: 11px; height: 110px; border-radius: 6px; background: linear-gradient(90deg, #aeb7bd, #fbfcfc 45%, #b9c1c6); box-shadow: -3px 5px 8px rgba(31,43,56,.3); }
+.door img { position: absolute; left: 50%; top: 28px; width: 48px; height: 48px; margin-left: -24px; border-radius: 50%; box-shadow: 0 0 0 3px #e7ebee, 0 0 0 4px #9ea8ae; }
+.open .door { transform: rotateY(-100deg); opacity: 0; pointer-events: none; }
+.mid .door { transform: rotateY(-58deg); }
+.open .obj svg { animation: settle .8s cubic-bezier(.16, 1, .3, 1) both .6s; }
+@keyframes settle { from { transform: translateY(-6px); opacity: 0; } }
+.instant .door, .instant .door-in, .instant .fridge, .instant .obj svg { transition: none !important; animation: none !important; }
+.lvl, .gone-able { transition: transform .9s cubic-bezier(.2, .8, .2, 1), opacity .5s ease; transform-box: fill-box; }
+.lvl { transform-origin: 50% 100%; } .lvlx { transform-origin: 0% 50%; }
+.gone { opacity: 0; transform: translateY(-14px); }
+
+/* tonight */
+.dim .walls { filter: brightness(.42) saturate(.7); }
+.dim .liner { filter: brightness(.5); }
+.dim .light { opacity: .2; }
+.dim .col:not(.lit) .obj { opacity: .26; filter: grayscale(.5); }
+.dim .drawer, .dim .lip { filter: brightness(.55); }
+.spots { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+.beam { position: absolute; background: linear-gradient(180deg, rgba(255, 236, 200, 0), rgba(255, 236, 200, .38)); clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%); mix-blend-mode: screen; }
+.chip { position: absolute; transform: translateX(-50%); height: 26px; padding: 0 11px; border-radius: 13px; background: var(--ink); color: #fff; font-size: 13.5px; font-weight: 500; display: flex; align-items: center; white-space: nowrap; box-shadow: 0 6px 14px -4px rgba(0,0,0,.45); transition: opacity .4s ease; }
+.chip.fade { opacity: 0; }
+.sheet { position: absolute; left: 10px; right: 10px; bottom: 92px; z-index: 7; padding: 20px 20px 16px; border-radius: 28px; background: #fdfdfc; box-shadow: inset 0 0 0 1.5px #e3e8eb, 0 18px 34px -16px rgba(31,43,56,.5); }
+.sheet .body { transition: opacity .28s ease, transform .28s ease; }
+.sheet .body.out { opacity: 0; transform: translateX(-18px); }
+.sheet h2 { font-size: 25px; line-height: 1.12; font-weight: 600; letter-spacing: -.01em; text-wrap: balance; }
+.why { margin-top: 8px; display: flex; gap: 8px; align-items: baseline; font-size: 15.5px; font-weight: 500; }
+.why i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--red); transform: translateY(-1px); }
+.facts, .plus { margin-top: 3px; font-size: 15.5px; color: var(--ink-2); }
+.actions { margin-top: 16px; display: flex; gap: 10px; }
+.go { flex: 1; height: 54px; border: 0; border-radius: 27px; background: var(--ink); color: #fff; font-size: 17px; font-weight: 500; }
+.go:hover:not(:disabled) { background: #2c3b4b; }
+.go:disabled { opacity: .45; }
+.alt { width: 118px; height: 54px; border: 0; border-radius: 27px; background: var(--chrome); box-shadow: inset 0 0 0 1px rgba(255,255,255,.7), 0 1px 3px rgba(31,43,56,.25); font-size: 17px; font-weight: 500; }
+.toast { position: absolute; left: 50%; top: 122px; z-index: 9; height: 46px; padding: 0 6px 0 18px; border-radius: 23px; background: var(--ink); color: #fff; display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500; white-space: nowrap; box-shadow: 0 12px 26px -10px rgba(0,0,0,.55); opacity: 0; transform: translate(-50%, -10px); transition: opacity .35s ease, transform .45s cubic-bezier(.2, .9, .2, 1); }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+.toast button { height: 40px; padding: 0 12px; border: 0; background: none; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+
+.tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 84px; padding: 8px 12px 0; display: flex; justify-content: space-around; }
+.tab { min-width: 72px; height: 48px; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 13px; font-weight: 500; color: rgba(31,43,56,.5); }
+.tab.on { color: var(--ink); }
+.home { position: absolute; left: 50%; bottom: 8px; width: 134px; height: 5px; border-radius: 3px; background: var(--ink); transform: translateX(-50%); }
+
+.spots { transition: opacity .5s ease .9s; }
+.closed .spots, .mid .spots { opacity: 0; transition: none; }
+@media (prefers-reduced-motion: reduce) { .door, .door-in, .fridge, .obj svg, .lvl, .gone-able, .toast, .sheet .body { transition: none !important; animation: none !important; } }
+@media (max-width: 900px) { .stage { padding: 24px 16px; } .intro { flex-direction: column; align-items: flex-start; } }
+</style>
+</head>
+<body>
+<!--
+THESIS: Fridge Light as a 1950s enamel fridge: the door stays open at your side with milk, butter and eggs in it, the way you actually stand at a fridge.
+OWN-WORLD: Pastel blue enamel, chrome knobs, rails and badge plate, a white interior in one-point perspective lit by a warm bulb, chrome wire shelves, a tinted crisper. Food as refined flat illustration with a navy line. Jost.
+STORY: The enamel door swings open and settles at your side with its shelves; the bulb warms up; tonight's recipe dims the bulb and warm beams find what it takes, door shelves included.
+FIRST VIEWPORT: Pantry with the open door foreshortened on the left, the cabinet with its badge plate on the right; chrome search and add knobs either side of the zone switch.
+FORM: Fridge Light variation 2 of 3 (seed 8bf790e3, direction chosen by the user).
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+-->
+<main class="stage">
+  <div class="intro">
+    <div>
+      <h1>Fridge Light: Retro</h1>
+      <p>A 1950s enamel fridge in pastel blue and chrome. The door stays open at your side with the milk, butter and eggs in its shelves, the way you actually stand at a fridge. A warm bulb, wire shelves, and food drawn as refined flat illustration.</p>
+    </div>
+    <button class="replay" type="button" id="replay">Open the door again</button>
+  </div>
+  <div class="phones">
+    <figure><div class="phone dim" id="tonight"></div><figcaption>What to cook</figcaption></figure>
+    <figure><div class="phone" id="pantry"></div><figcaption>Pantry</figcaption></figure>
+  </div>
+</main>
+
+<script>
+/*@include fl/data.js fl/draw.js fl/engine.js*/
+const LOGO = '__LOGO__';
+const D = makeDraw('flat');
+const BULB = '<div class="panel"></div>';
+
+/* the door's inside face: three balconies, drawn flat, then turned in 3D */
+function doorShelves(o) {
+  return `<div class="door-in" style="left:${o.hinge - o.w}px;top:${o.top}px;width:${o.w}px;height:${o.h}px">
+    <div class="liner"></div>
+    ${o.shelves.map((b) => `<div class="row" style="top:${b.top}px;left:0;right:0;justify-content:center">${FL.col(b.key, { D, s: b.s, w: o.w, oh: b.oh, labels: o.labels, labelTop: b.lip + 32 - b.top, split: true, variant: 'door' })}</div><div class="lip" style="top:${b.lip}px"></div>`).join('')}
+  </div>`;
+}
+
+function cabinet(o) {
+  return `<div class="cabinet" style="left:${o.left}px;right:8px;top:${o.top}px;height:${o.h}px">
+    <div class="band" style="height:${o.band}px"><img class="badge" alt="Pantry2Plate" src="${LOGO}" style="width:${o.badge}px;height:${o.badge}px"></div>
+    <div class="frame" style="left:7px;right:7px;top:${o.band + 4}px;height:${o.fh}px">
+      ${FL.fridge(o.fridge)}
+      <div class="door"><img alt="" src="${LOGO}"><i></i></div>
+    </div>
+  </div>`;
+}
+
+function pantry(el) {
+  el.innerHTML = `${FL.status('#1f2b38')}
+    <div class="bar"><button type="button" class="knob" aria-label="Search the pantry">${FL.icon('Search', 20)}</button>
+      <div class="zones" role="tablist"><button type="button" class="zone on" role="tab">Fridge</button><button type="button" class="zone" role="tab">Cupboard</button><button type="button" class="zone" role="tab">Freezer</button></div>
+      <button type="button" class="knob" aria-label="Put food away">${FL.icon('Plus', 20)}</button></div>
+    ${doorShelves({ hinge: 100, w: 116, top: 140, h: 596, labels: true, shelves: [
+      { key: 'egg', top: 56, oh: 60, s: .72, lip: 100 },
+      { key: 'butter', top: 214, oh: 56, s: .86, lip: 256 },
+      { key: 'milk', top: 372, oh: 100, s: .98, lip: 452 },
+    ] })}
+    ${cabinet({ left: 100, top: 116, h: 648, band: 40, badge: 32, fh: 597, fridge: { W: 271, H: 597, vpY: 14, k: .9, s: .72, D, labels: true, shelf: 'wire', top: BULB,
+      rows: [
+        { yf: 156, keys: ['yogurt', 'chilli'], widths: [122, 122] },
+        { yf: 290, keys: ['cheddar', 'parm'], widths: [122, 122] },
+        { yf: 424, keys: ['chicken', 'bacon'], widths: [128, 116] },
+      ],
+      drawer: { y0: 476, y1: 594, keys: ['spinach', 'mush'], itemTop: 2, oh: 62, labelTop: 68, scale: .9 } } })}
+    ${FL.tabs('Pantry')}`;
+}
+
+function tonight(el) {
+  el.innerHTML = `${FL.status('#1f2b38')}
+    <div class="bar"><span></span><h1>Tonight</h1><button type="button" class="pill">All recipes</button></div>
+    ${doorShelves({ hinge: 88, w: 90, top: 126, h: 372, labels: false, shelves: [
+      { key: 'egg', top: 34, oh: 36, s: .5, lip: 60 },
+      { key: 'butter', top: 134, oh: 34, s: .6, lip: 158 },
+      { key: 'milk', top: 236, oh: 66, s: .64, lip: 290 },
+    ] })}
+    ${cabinet({ left: 88, top: 112, h: 396, band: 32, badge: 24, fh: 354, fridge: { W: 283, H: 354, vpY: 10, k: .9, s: .56, D, labels: false, shelf: 'wire', top: BULB,
+      rows: [
+        { yf: 112, keys: ['yogurt', 'chilli'], widths: [128, 128] },
+        { yf: 202, keys: ['cheddar', 'parm'], widths: [128, 128] },
+        { yf: 292, keys: ['chicken', 'bacon'], widths: [134, 122] },
+      ],
+      drawer: { y0: 304, y1: 352, keys: ['spinach', 'mush'], itemTop: -6, oh: 46, labelTop: 0, scale: .9 } } })}
+    <div class="spots"></div>
+    <div class="toast" role="status"><span></span><button type="button">Undo</button></div>
+    <section class="sheet"><div class="body"></div><div class="actions"><button type="button" class="go">Cook this</button><button type="button" class="alt">Another</button></div></section>
+    ${FL.tabs('Cook')}`;
+  FL.wireTonight(el);
+}
+
+const T = document.getElementById('tonight'), P = document.getElementById('pantry');
+pantry(P);
+tonight(T);
+FL.boot(T, P);
+document.getElementById('replay').addEventListener('click', () => FL.open([T, P]));
+</script>
+</body>
+</html>

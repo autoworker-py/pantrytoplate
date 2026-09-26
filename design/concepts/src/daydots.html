@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day Dots</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --steel: #e8ebec;
+  --steel-2: #dde1e3;
+  --label: #ffffff;
+  --ink: #1b1f22;
+  --ink-2: #545c62;
+  --ink-3: #737c82;
+  --line: #d2d7d9;
+  --mon: #2b63c6; --tue: #f2c230; --wed: #d8392b; --thu: #7a4b2b; --fri: #2e8c46; --sat: #f0851d; --sun: #1d1d1f;
+}
+* { box-sizing: border-box; margin: 0; }
+html { background: #cfd4d6; -webkit-font-smoothing: antialiased; }
+body { font-family: 'Barlow', system-ui, sans-serif; color: var(--ink); font-variant-numeric: tabular-nums; }
+::selection { background: var(--tue); color: var(--ink); }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--mon); outline-offset: 2px; }
+button:disabled { cursor: default; }
+
+.stage { min-height: 100vh; padding: 34px 40px 44px; display: flex; flex-direction: column; align-items: center; gap: 26px; background: radial-gradient(120% 70% at 50% 0%, #eef1f2 0%, #cfd4d6 75%); }
+.intro { width: 834px; max-width: 100%; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
+.intro h1 { font-family: 'Barlow Condensed'; font-size: 40px; line-height: 1; font-weight: 800; display: flex; align-items: center; gap: 12px; }
+.intro p { margin-top: 8px; max-width: 60ch; font-size: 16px; line-height: 1.45; color: var(--ink-2); }
+.replay { flex: none; height: 40px; padding: 0 16px; border-radius: 20px; border: 1px solid #b9c0c3; background: rgba(255,255,255,.5); font-weight: 700; font-size: 15px; }
+.phones { display: flex; flex-wrap: wrap; justify-content: center; gap: 48px; }
+figure { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+figcaption { font-size: 15px; font-weight: 700; color: var(--ink-3); }
+
+.phone { position: relative; width: 393px; height: 852px; overflow: hidden; border-radius: 52px; background: var(--steel); box-shadow: 0 40px 80px -30px rgba(40, 50, 55, .55), 0 0 0 1px rgba(0,0,0,.06); }
+.status { height: 54px; padding: 8px 30px 0 38px; display: flex; align-items: center; justify-content: space-between; font-size: 16px; font-weight: 700; }
+.bar { height: 60px; padding: 0 16px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.bar > :first-child { justify-self: start; }
+.bar > :last-child { justify-self: end; }
+.logo { width: 48px; height: 48px; display: block; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.18)); }
+.btn-ink { height: 42px; padding: 0 16px 0 14px; border: 0; border-radius: 21px; background: var(--ink); color: #fff; font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }
+.btn-ink:hover { background: #2d3338; }
+.icon { width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid #c4cacd; background: transparent; display: grid; place-items: center; }
+.link { height: 44px; border: 0; background: none; font-size: 16px; font-weight: 700; color: var(--ink-2); }
+
+/* the sticker: a flat, matte day dot with its day printed on it */
+.dot {
+  --s: 38px;
+  flex: none; width: var(--s); height: var(--s); border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--c); color: var(--on, #fff);
+  font: 800 13px/1 'Barlow Condensed', sans-serif; letter-spacing: .03em;
+  transform: rotate(var(--r, 0deg));
+  box-shadow: 0 1px 1px rgba(0,0,0,.16);
+}
+.dot.tint { background: #fde7d2; color: #b35a06; box-shadow: none; }
+.slap .dot { animation: slap .4s cubic-bezier(.16, 1, .3, 1) both; animation-delay: calc(var(--i, 0) * 50ms + 250ms); }
+@keyframes slap { from { transform: scale(1.5) rotate(var(--r, 0deg)); opacity: 0; } }
+
+/* pantry */
+.rail { margin: 4px 16px 0; padding: 14px 8px 12px; border-radius: 18px; background: var(--label); display: flex; justify-content: space-between; box-shadow: 0 1px 1px rgba(0,0,0,.05), 0 10px 22px -16px rgba(0,0,0,.3); }
+.day { width: 44px; display: flex; flex-direction: column; align-items: center; gap: 7px; border: 0; background: none; padding: 0; }
+.day .dot { --s: 42px; font-size: 12.5px; }
+.day b { font-size: 15px; font-weight: 800; line-height: 1; }
+.day b.quiet { font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.lead { margin: 18px 20px 6px; display: flex; justify-content: space-between; align-items: baseline; }
+.lead h2 { font-family: 'Barlow Condensed'; font-size: 26px; font-weight: 800; }
+.lead span { font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.items { margin: 0 20px; }
+.it { display: grid; grid-template-columns: 38px 1fr auto; gap: 14px; align-items: center; min-height: 58px; border-bottom: 1px solid var(--line); cursor: pointer; transition: opacity .4s ease; }
+.it .nm { font-size: 17px; font-weight: 650; line-height: 1.15; }
+.it .sub { font-size: 14px; font-weight: 500; color: var(--ink-2); }
+.it .q { font-size: 16px; font-weight: 650; text-align: right; }
+.it.used { opacity: .35; }
+.it.used .dot { animation: peel .7s cubic-bezier(.5, 0, .7, .4) forwards; }
+@keyframes peel { 30% { transform: rotate(-18deg) translate(2px, -4px) scale(1.06); } 100% { transform: rotate(-60deg) translate(40px, -70px) scale(.5); opacity: 0; } }
+.later { width: calc(100% - 40px); margin: 0 20px; min-height: 56px; padding: 0; border: 0; background: none; display: flex; align-items: center; justify-content: space-between; font-size: 16px; font-weight: 650; color: var(--ink-2); }
+
+/* tonight */
+.head { margin: 0 20px; }
+.head h2 { font-family: 'Barlow Condensed'; font-size: 34px; line-height: 1; font-weight: 800; }
+.slot { height: 4px; margin: 16px 14px 0; border-radius: 2px; background: #aab2b6; box-shadow: inset 0 1px 1px rgba(0,0,0,.35), 0 1px 0 #fff; position: relative; z-index: 2; }
+.feed { margin: -2px 18px 0; padding: 0 2px 14px; overflow: hidden; }
+.label { position: relative; background: var(--label); border-radius: 0 0 14px 14px; padding: 20px 18px 12px; box-shadow: 0 1px 1px rgba(0,0,0,.06), 0 10px 24px -14px rgba(0,0,0,.3); }
+.printing .label { animation: feed .9s steps(9, end) both .15s; }
+@keyframes feed { from { transform: translateY(-101%); } }
+.label h3 { font-size: 25px; line-height: 1.1; font-weight: 800; letter-spacing: -.005em; padding-right: 58px; text-wrap: balance; }
+.label .why { margin-top: 6px; font-size: 15px; font-weight: 600; color: var(--ink-2); padding-right: 20px; }
+.label .why b { color: var(--ink); }
+.label .facts { margin-top: 4px; font-size: 15px; font-weight: 500; color: var(--ink-2); }
+.stick { position: absolute; top: 16px; right: 16px; }
+.stick .dot { --s: 52px; --r: 7deg; font-size: 14px; }
+.printing .stick .dot { animation: slap .45s cubic-bezier(.16, 1, .3, 1) both 1.1s; }
+.takes { margin-top: 12px; border-top: 1.5px solid var(--ink); padding-top: 4px; }
+.take { display: flex; justify-content: space-between; align-items: center; min-height: 32px; font-size: 16px; font-weight: 600; }
+.take span:last-child { color: var(--ink-2); font-weight: 650; transition: color .3s ease; }
+.take.done span:last-child { color: var(--ink); font-weight: 800; }
+.acts { margin: 2px 16px 0; display: flex; gap: 10px; }
+.go { flex: 1; height: 56px; border: 0; border-radius: 16px; background: var(--ink); color: #fff; font-size: 18px; font-weight: 800; transition: opacity .2s ease; }
+.go:hover:not(:disabled) { background: #2d3338; }
+.go:disabled { opacity: .5; }
+.alt { width: 116px; height: 56px; border: 0; border-radius: 16px; background: var(--steel-2); font-size: 17px; font-weight: 700; }
+.also { margin: 22px 20px 0; transition: opacity .3s ease; }
+.also.out { opacity: 0; }
+.also h4 { font-family: 'Barlow Condensed'; font-size: 20px; font-weight: 800; margin-bottom: 2px; }
+.opt { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; min-height: 60px; border-bottom: 1px solid var(--line); }
+.opt .pair { display: flex; gap: 4px; }
+.opt .pair .dot { --s: 32px; font-size: 11px; }
+.opt .nm { font-size: 16px; font-weight: 650; line-height: 1.15; }
+.opt .sub { font-size: 14px; color: var(--ink-2); font-weight: 500; }
+.opt .small { height: 36px; padding: 0 12px; border-radius: 12px; border: 1.5px solid var(--ink); background: none; font-size: 14px; font-weight: 700; }
+
+.toast { position: absolute; left: 16px; right: 16px; bottom: 94px; height: 54px; padding: 0 8px 0 18px; border-radius: 16px; background: var(--ink); color: #fff; display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 650; box-shadow: 0 16px 30px -12px rgba(0,0,0,.45); transform: translateY(140%); opacity: 0; transition: transform .45s cubic-bezier(.2, .9, .2, 1), opacity .3s ease; z-index: 3; }
+.toast.on { transform: none; opacity: 1; }
+.toast button { height: 44px; padding: 0 12px; border: 0; background: none; color: var(--tue); font-weight: 800; }
+
+.tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 82px; padding: 10px 10px 0; display: flex; justify-content: space-around; background: var(--steel); border-top: 1px solid var(--line); z-index: 2; }
+.tab { min-width: 76px; height: 44px; border: 0; background: none; font-size: 14px; font-weight: 650; color: var(--ink-3); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.tab::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: transparent; }
+.tab.on { color: var(--ink); font-weight: 800; }
+.tab.on::before { background: var(--sat); }
+.home { position: absolute; left: 50%; bottom: 8px; width: 134px; height: 5px; border-radius: 3px; background: var(--ink); transform: translateX(-50%); z-index: 3; }
+
+@media (prefers-reduced-motion: reduce) {
+  .slap .dot, .printing .label, .printing .stick .dot, .it.used .dot { animation: none; }
+  .toast, .also { transition: none; }
+}
+@media (max-width: 900px) { .stage { padding: 24px 16px; } .intro { flex-direction: column; align-items: flex-start; } }
+</style>
+</head>
+<body>
+<!--
+THESIS: Every food wears the colour of the day it must be used by, the rotation system professional kitchens run on. The pantry becomes a week; tonight's cooking works through the colours nearest today. Refuses generic "2 days left" pills and category lists.
+OWN-WORLD: Stainless-steel grey, white printed labels, and the seven standard day-dot colours as the only colour. Stickers are flat and matte with their day printed on them; tomorrow reads TMRW. Barlow and Barlow Condensed, the voice of a label printer.
+STORY: You see the week at a glance and what each day asks of you; tapping a food you finished peels its dot; tonight's recipe prints like a prep label with the dot of the food it uses stuck to it, and cooking says plainly what is left and when it is still due.
+FIRST VIEWPORT: Pantry opens on a white rotation board of seven day dots with counts, then the week's food in use-by order, each row with its sticker. Search left, logo centred, Add food right.
+FORM: Impeccable's pick, grounded direction 1 of 7, the day-dot rotation system. Seed 8bf790e3. Critique round 1 applied.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+-->
+<main class="stage">
+  <div class="intro">
+    <div>
+      <h1><span class="dot" style="--c:var(--sat);--s:34px">SAT</span>Day Dots</h1>
+      <p>Every food wears the colour of the day it has to be used by: the rotation system professional kitchens run on. Your pantry becomes a week, and tonight's cooking works through the colours closest to today.</p>
+    </div>
+    <button class="replay" type="button" id="replay">Replay</button>
+  </div>
+  <div class="phones">
+    <figure><div class="phone" id="tonight"></div><figcaption>What to cook</figcaption></figure>
+    <figure><div class="phone" id="pantry"></div><figcaption>Pantry</figcaption></figure>
+  </div>
+</main>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="logo-tint" color-interpolation-filters="sRGB">
+    <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 4 0 -1.8" result="text"/>
+    <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -6.6 0 0 0 3.3" result="line"/>
+    <feFlood flood-color="#ffffff" result="ground"/>
+    <feFlood flood-color="#c3c9cc"/><feComposite in2="line" operator="in" result="l"/>
+    <feFlood flood-color="#1b1f22"/><feComposite in2="text" operator="in" result="t"/>
+    <feMerge><feMergeNode in="ground"/><feMergeNode in="l"/><feMergeNode in="t"/></feMerge>
+  </filter>
+</svg>
+
+<script>
+const LOGO = '__LOGO__';
+const C = { SAT: 'var(--sat)', SUN: 'var(--sun)', MON: 'var(--mon)', TUE: 'var(--tue)', WED: 'var(--wed)', THU: 'var(--thu)', FRI: 'var(--fri)' };
+/* tomorrow is a word, not a weekday to decode */
+const LABEL = { SUN: 'TMRW' };
+const dot = (d, i = 0, extra = '') => `<span class="dot ${extra}" style="--c:${C[d]};--i:${i};${d === 'TUE' ? '--on:#1b1f22;' : ''}">${LABEL[d] || d}</span>`;
+
+const STATUS = `<div class="status"><span>6:04</span><svg width="70" height="12" viewBox="0 0 70 12" fill="#1b1f22" aria-hidden="true"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="6" width="3" height="6" rx="1"/><rect x="10" y="3.5" width="3" height="8.5" rx="1"/><rect x="15" y="1" width="3" height="11" rx="1"/><path d="M31 11.5l2.4-2.6a3.4 3.4 0 0 0-4.8 0zM26.4 6.8a6.5 6.5 0 0 1 9.2 0l-1.6 1.7a4.2 4.2 0 0 0-6 0zM24 4.3a10 10 0 0 1 14 0l-1.6 1.7a7.7 7.7 0 0 0-10.8 0z"/><rect x="44.5" y=".5" width="22" height="11" rx="3.5" fill="none" stroke="#1b1f22" stroke-opacity=".4"/><rect x="46.5" y="2.5" width="16" height="7" rx="2"/><rect x="67.5" y="4" width="1.8" height="4" rx=".9" fill-opacity=".4"/></svg></div>`;
+const LOGO_SVG = `<svg class="logo" viewBox="0 0 40 40" role="img" aria-label="Pantry2Plate"><defs><clipPath id="disc"><circle cx="20" cy="20" r="20"/></clipPath></defs><image href="${LOGO}" width="40" height="40" filter="url(#logo-tint)" clip-path="url(#disc)"/></svg>`;
+const TABS = (on) => `<nav class="tabs">${['Cook', 'Pantry', 'Shopping', 'Eaten'].map((t) => `<button type="button" class="tab ${t === on ? 'on' : ''}">${t}</button>`).join('')}</nav><div class="home"></div>`;
+const PLUS = `<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+const SEARCH = `<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="7.5" cy="7.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11.8 11.8 16 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+const CHEVRON = `<svg width="9" height="14" viewBox="0 0 9 14" aria-hidden="true"><path d="M1.5 1.5 7 7l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+/* Saturday 26 September; the demo pantry's use-by dates, as seeded. */
+const WEEK = [['SAT', 0], ['SUN', 1], ['MON', 1], ['TUE', 1], ['WED', 1], ['THU', 1], ['FRI', 3]];
+const ITEMS = [
+  ['SUN', 'spinach', 'Baby spinach', '142 g', 'Fridge'],
+  ['MON', 'milk', 'Whole milk', '1 gal', 'Fridge'],
+  ['TUE', 'chicken', 'Chicken breast', '3', 'Fridge'],
+  ['WED', 'banana', 'Bananas', '4', 'Cupboard'],
+  ['THU', 'bread', 'Whole wheat bread', '12 slices', 'Cupboard'],
+  ['FRI', 'bacon', 'Streaky bacon', '8 slices', 'Fridge'],
+  ['FRI', 'mush', 'Mushrooms', '250 g', 'Fridge'],
+  ['FRI', 'tomato', 'Roma tomatoes', '4', 'Cupboard'],
+];
+
+function pantry(el) {
+  el.innerHTML = `${STATUS}
+    <div class="bar"><button type="button" class="icon" aria-label="Search the pantry">${SEARCH}</button>${LOGO_SVG}<button type="button" class="btn-ink">${PLUS}Add food</button></div>
+    <div class="rail slap" role="list" aria-label="This week">${WEEK.map(([d, n], i) => `<button type="button" class="day" role="listitem">${d === 'SAT' ? dot(d, i, 'tint') : dot(d, i)}<b class="${d === 'SAT' ? 'quiet' : ''}">${d === 'SAT' ? 'Today' : n}</b></button>`).join('')}</div>
+    <div class="lead"><h2>Use this week</h2><span>8 of 48 foods</span></div>
+    <div class="items slap">${ITEMS.map(([d, k, name, q, where], i) => `<div class="it" data-k="${k}" role="button" tabindex="0">${dot(d, i + 7)}<div><div class="nm">${name}</div><div class="sub">${where}</div></div><div class="q">${q}</div></div>`).join('')}</div>
+    <button type="button" class="later"><span>40 more, nothing due this week</span>${CHEVRON}</button>
+    ${TABS('Pantry')}`;
+  el.querySelectorAll('.it').forEach((row) => row.addEventListener('click', () => row.classList.toggle('used')));
+}
+
+function tonight(el) {
+  el.innerHTML = `${STATUS}
+    <div class="bar"><span></span>${LOGO_SVG}<button type="button" class="link">All recipes</button></div>
+    <div class="head"><h2>Tonight</h2></div>
+    <div class="slot"></div>
+    <div class="feed printing"><article class="label">
+      <h3>Spinach and Cheddar Scramble</h3>
+      <p class="why">Uses the spinach, which goes off tomorrow.</p>
+      <p class="facts">9 min · serves 1 · 390 kcal</p>
+      <div class="stick">${dot('SUN')}</div>
+      <div class="takes">
+        <div class="take"><span>Baby spinach</span><span>60 g of 142 g</span></div>
+        <div class="take"><span>Eggs</span><span>3 of 12</span></div>
+        <div class="take"><span>Cheddar</span><span>30 g of 250 g</span></div>
+        <div class="take"><span>Olive oil, salt</span><span>a little</span></div>
+      </div>
+    </article></div>
+    <div class="acts"><button type="button" class="go">Cook it</button><button type="button" class="alt">Another</button></div>
+    <div class="also"><h4>Also uses this week's food</h4>
+      <div class="opt"><span class="pair">${dot('MON')}${dot('WED')}</span><div><div class="nm">Banana Oatmeal</div><div class="sub">The milk and a banana · 10 min</div></div><span></span></div>
+      <div class="opt"><span class="pair">${dot('MON')}${dot('TUE')}</span><div><div class="nm">Chicken Fried Steak-Style Cutlets</div><div class="sub">The milk and 2 chicken breasts · 40 min</div></div><span></span></div>
+    </div>
+    <div class="toast" role="status"><span></span><button type="button">Undo</button></div>
+    ${TABS('Cook')}`;
+  el.querySelector('.go').addEventListener('click', () => cook(el));
+}
+
+/* Cooking tells the truth: 60 g does not finish a 142 g bag, so the dot stays. */
+function cook(el) {
+  const go = el.querySelector('.go');
+  if (go.dataset.done) return;
+  go.dataset.done = 1;
+  go.disabled = true;
+  const left = ['82 g left', '9 left', '220 g left', 'plenty left'];
+  el.querySelectorAll('.take').forEach((t, i) => setTimeout(() => { t.lastElementChild.textContent = left[i]; t.classList.add('done'); }, 120 * i));
+  setTimeout(() => {
+    el.querySelector('.label .why').innerHTML = '<b>Cooked.</b> 82 g spinach left, still due tomorrow.';
+    const spinach = document.querySelector('#pantry .it[data-k="spinach"] .q');
+    if (spinach) spinach.textContent = '82 g';
+    const t = el.querySelector('.toast');
+    t.querySelector('span').textContent = '390 kcal logged to today';
+    t.classList.add('on');
+    const also = el.querySelector('.also');
+    also.classList.add('out');
+    setTimeout(() => {
+      also.innerHTML = `<h4>Finish the spinach by tomorrow</h4>
+        <div class="opt"><span class="pair">${dot('SUN')}</span><div><div class="nm">Spinach and Feta Scrambled Eggs</div><div class="sub">Needs feta · 11 min</div></div><button type="button" class="small">Add feta</button></div>`;
+      also.classList.remove('out');
+    }, 300);
+  }, 650);
+  // the button that cooked never becomes the button that undoes
+  setTimeout(() => { go.textContent = 'Next recipe'; go.disabled = false; }, 1500);
+}
+
+function render() {
+  pantry(document.getElementById('pantry'));
+  tonight(document.getElementById('tonight'));
+}
+render();
+document.getElementById('replay').addEventListener('click', render);
+const still = new URLSearchParams(location.search).get('still');
+if (still !== null) document.querySelectorAll('.slap, .printing').forEach((n) => n.classList.remove('slap', 'printing'));
+if (still === 'cooked') cook(document.getElementById('tonight'));
+</script>
+</body>
+</html>

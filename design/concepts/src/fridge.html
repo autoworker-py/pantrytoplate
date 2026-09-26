@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fridge Light</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --night: #0f1519;
+  --on-night: #f3f6f7;
+  --on-night-2: rgba(243, 246, 247, .56);
+  --ink: #15212a;
+  --ink-2: #4c5b65;
+  --ink-3: #6f7e87;
+  --red: #c3261c;
+  --glass: #8ec1ba;
+  --well: #edf2f4;
+}
+* { box-sizing: border-box; margin: 0; }
+html { background: #15191c; -webkit-font-smoothing: antialiased; }
+body { font-family: 'Lexend', system-ui, sans-serif; color: var(--ink); font-variant-numeric: tabular-nums; }
+::selection { background: var(--red); color: #fff; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid #7fc4ba; outline-offset: 2px; }
+button:disabled { cursor: default; }
+
+/* presentation stage, not part of the app */
+.stage { min-height: 100vh; padding: 34px 40px 44px; display: flex; flex-direction: column; align-items: center; gap: 26px; background: radial-gradient(120% 70% at 50% 0%, #262d32 0%, #15191c 72%); }
+.intro { width: 834px; max-width: 100%; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; color: #eef2f3; }
+.intro h1 { font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
+.intro p { margin-top: 6px; max-width: 58ch; font-size: 15px; line-height: 1.5; font-weight: 400; color: rgba(238, 242, 243, .64); }
+.replay { flex: none; height: 40px; padding: 0 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,.18); background: transparent; color: #eef2f3; font-weight: 600; font-size: 14px; }
+.replay:hover { background: rgba(255,255,255,.06); }
+.phones { display: flex; flex-wrap: wrap; justify-content: center; gap: 48px; }
+figure { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+figcaption { font-size: 14px; font-weight: 600; color: rgba(238, 242, 243, .55); }
+
+/* the phone */
+.phone { position: relative; width: 393px; height: 852px; overflow: hidden; border-radius: 52px; background: var(--night); box-shadow: 0 40px 80px -24px rgba(0, 0, 0, .65), 0 0 0 1px rgba(255, 255, 255, .07); }
+.status { height: 54px; padding: 8px 30px 0 38px; display: flex; align-items: center; justify-content: space-between; color: #fff; font-size: 16px; font-weight: 600; }
+.bar { height: 60px; padding: 0 16px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.bar > :first-child { justify-self: start; }
+.bar > :last-child { justify-self: end; }
+.logo { width: 48px; height: 48px; border-radius: 50%; display: block; }
+.pill { height: 42px; padding: 0 16px 0 14px; border-radius: 21px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.04); color: var(--on-night); font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+.icon { width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.04); color: var(--on-night); display: grid; place-items: center; }
+.pill:hover, .icon:hover { background: rgba(255,255,255,.09); }
+
+/* the lit interior */
+.fridge {
+  position: absolute; left: 10px; right: 10px; top: 114px; bottom: 82px; border-radius: 28px; overflow: hidden;
+  background: linear-gradient(180deg, #fafcfd 0%, #eef3f5 42%, #dfe7ea 100%);
+  box-shadow: inset 24px 0 30px -24px rgba(0, 0, 0, .16), inset -24px 0 30px -24px rgba(0, 0, 0, .16), inset 0 -30px 40px -30px rgba(0, 0, 0, .12);
+}
+.fridge::before { content: ''; position: absolute; left: 50%; top: -90px; width: 360px; height: 200px; transform: translateX(-50%); background: radial-gradient(closest-side, rgba(255,255,255,1), rgba(255,255,255,0)); pointer-events: none; }
+.fridge.dark { filter: brightness(.14) saturate(.3); }
+.fridge.lit { animation: bulb 1.1s cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes bulb {
+  0% { filter: brightness(.14) saturate(.3); }
+  14% { filter: brightness(1.04) saturate(1); }
+  22% { filter: brightness(.5) saturate(.7); }
+  34% { filter: brightness(1.02) saturate(1); }
+  100% { filter: brightness(1) saturate(1); }
+}
+
+.zones { position: relative; margin: 14px 14px 0; height: 46px; padding: 4px; display: flex; gap: 4px; border-radius: 15px; background: rgba(205, 218, 223, .55); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .1); }
+.zone { flex: 1; border: 0; border-radius: 11px; background: transparent; font-size: 15px; font-weight: 600; color: var(--ink-2); display: flex; align-items: center; justify-content: center; gap: 6px; }
+.zone b { font-weight: 500; color: var(--ink-3); }
+.zone.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .12), 0 6px 12px -6px rgba(0, 0, 0, .18); }
+
+.row { position: relative; padding: 0 14px; }
+.cols { position: relative; display: flex; justify-content: space-between; }
+.col { position: relative; display: flex; flex-direction: column; align-items: center; }
+.obj { display: flex; align-items: flex-end; justify-content: center; }
+.obj svg { display: block; overflow: visible; }
+.shelf { position: absolute; left: 4px; right: 4px; height: 8px; background: linear-gradient(180deg, rgba(255,255,255,.95) 0 1px, rgba(176, 214, 209, .55) 1px 5px, var(--glass) 5px 8px); box-shadow: 0 8px 12px -6px rgba(0, 0, 0, .14); }
+.lab { padding-top: 13px; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.nm { font-size: 14px; font-weight: 600; white-space: nowrap; letter-spacing: -.01em; }
+.meta { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.soon { font-weight: 700; color: var(--ink); }
+.tag { height: 20px; padding: 0 7px; border-radius: 5px; background: var(--red); color: #fff; font-size: 12.5px; font-weight: 600; display: inline-flex; align-items: center; }
+
+.drawer { position: relative; margin: 8px 10px 0; padding: 20px 4px 6px; border-radius: 10px 10px 24px 24px; border: 1.5px solid rgba(132, 184, 177, .85); background: linear-gradient(180deg, rgba(214, 236, 233, .18), rgba(186, 220, 216, .42)); }
+.drawer::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 13px; border-radius: 9px 9px 0 0; background: rgba(255,255,255,.62); border-bottom: 1px solid rgba(132, 184, 177, .55); }
+.drawer::after { content: ''; position: absolute; top: 3px; left: 50%; width: 66px; height: 6px; border-radius: 3px; background: rgba(21, 33, 42, .16); transform: translateX(-50%); }
+
+/* items settle with gravity, the one physical law in this world */
+.settle .obj svg { animation: drop .7s cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes drop { from { transform: translateY(-10px); opacity: 0; } to { transform: none; opacity: 1; } }
+.lvl, .gone-able { transition: transform .9s cubic-bezier(.2, .8, .2, 1), opacity .5s ease; transform-box: fill-box; }
+.lvl { transform-origin: 50% 100%; }
+.lvlx { transform-origin: 0% 50%; }
+.gone { opacity: 0; transform: translateY(-14px); }
+
+/* tonight: the fridge light drops and only what the recipe takes stays lit */
+.dimmer { position: absolute; inset: 0; background: rgba(7, 14, 20, .8); z-index: 2; pointer-events: none; }
+.col.lit { z-index: 3; }
+.col.lit .obj svg { filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .4)); }
+.chip { position: absolute; transform: translateX(-50%); height: 26px; padding: 0 10px; border-radius: 13px; background: #fff; color: var(--ink); font-size: 13px; font-weight: 700; display: flex; align-items: center; white-space: nowrap; box-shadow: 0 4px 12px -2px rgba(0,0,0,.45); z-index: 4; transition: opacity .4s ease; }
+.chip.fade { opacity: 0; }
+
+.sheet { position: absolute; left: 20px; right: 20px; bottom: 94px; z-index: 5; padding: 22px 20px 16px; border-radius: 26px; background: #fff; box-shadow: 0 -10px 30px -12px rgba(0, 0, 0, .55); }
+.sheet .body { transition: opacity .28s ease, transform .28s ease; }
+.sheet .body.out { opacity: 0; transform: translateX(-18px); }
+.sheet h2 { font-size: 24px; line-height: 1.15; font-weight: 700; letter-spacing: -.025em; text-wrap: balance; }
+.why { margin-top: 8px; display: flex; gap: 8px; align-items: baseline; font-size: 15px; font-weight: 600; }
+.why i { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--red); transform: translateY(-1px); }
+.facts { margin-top: 4px; font-size: 15px; color: var(--ink-2); }
+.plus { margin-top: 2px; font-size: 15px; color: var(--ink-2); }
+.actions { margin-top: 16px; display: flex; gap: 10px; }
+.btn { height: 54px; border: 0; border-radius: 17px; font-size: 16px; font-weight: 700; transition: background .2s ease, opacity .2s ease; }
+.btn.go { flex: 1; background: var(--ink); color: #fff; }
+.btn.go:hover:not(:disabled) { background: #22323d; }
+.btn.go:disabled { opacity: .45; }
+.btn.alt { width: 116px; background: var(--well); color: var(--ink); }
+.btn.alt:hover { background: #e2e9ec; }
+
+.toast { position: absolute; left: 50%; top: 128px; z-index: 6; height: 48px; padding: 0 6px 0 16px; border-radius: 14px; background: #fff; color: var(--ink); display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; white-space: nowrap; box-shadow: 0 12px 28px -8px rgba(0,0,0,.55); opacity: 0; transform: translate(-50%, -10px); transition: opacity .35s ease, transform .45s cubic-bezier(.2, .9, .2, 1); pointer-events: none; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.toast button { height: 40px; padding: 0 12px; border: 0; background: none; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
+
+.tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 82px; padding: 12px 10px 0; display: flex; justify-content: space-around; }
+.tab { min-width: 76px; height: 44px; border: 0; background: transparent; color: var(--on-night-2); font-size: 13px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+.tab::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.14); }
+.tab.on { color: #fff; }
+.tab.on::before { background: #fff; }
+.home { position: absolute; left: 50%; bottom: 8px; width: 134px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.86); transform: translateX(-50%); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fridge.lit, .settle .obj svg { animation: none; }
+  .lvl, .gone-able, .sheet .body, .toast { transition: none; }
+}
+@media (max-width: 900px) { .stage { padding: 24px 16px; } .intro { flex-direction: column; align-items: flex-start; } }
+</style>
+</head>
+<body>
+<!--
+THESIS: The pantry is a place, not a list. Opening the app is opening the fridge at 6pm: the light comes on and you see what is there and how much is left, the way you actually check. Refuses the list-of-rows-with-expiry-pills pantry and the photo-card recipe grid.
+OWN-WORLD: A lit, cool-white fridge interior framed by a dark kitchen. Green-edged glass shelves, a clear crisper drawer, packaging drawn cut-away so contents and levels show. One red, the logo's, only for food that goes off tomorrow. Lexend, a face drawn for reading ease, because the kitchen is read from across the room.
+STORY: You see your food as objects with levels; tonight's recipe darkens the fridge and lights only what it will take, with the amount on each item; Cook drains exactly those, and Undo lives apart from the button you just pressed.
+FIRST VIEWPORT: Pantry opens dark, the bulb flickers on, items settle onto shelves. Zone switch at the top of the interior; search left, logo centred, Put away right.
+FORM: Grounded direction 5 of 7, the fridge interior. Seed 8bf790e3. Raises: viewfinder (state never by colour alone), streetwear (zones named literally), gravity garden (one physical law for motion). Critique round 1 applied.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+-->
+<main class="stage">
+  <div class="intro">
+    <div>
+      <h1>Fridge Light</h1>
+      <p>Your pantry is a place, not a list. Open the app and the light comes on: everything you have, where it lives, and how much is left, at a glance. Tonight's recipe darkens the fridge and lights up exactly what it will take.</p>
+    </div>
+    <button class="replay" type="button" id="replay">Replay the light</button>
+  </div>
+  <div class="phones">
+    <figure><div class="phone" id="tonight"></div><figcaption>What to cook</figcaption></figure>
+    <figure><div class="phone" id="pantry"></div><figcaption>Pantry</figcaption></figure>
+  </div>
+</main>
+
+<script>
+const LOGO = '__LOGO__';
+let uid = 0;
+const id = (p) => `${p}${++uid}`;
+/* eggs leave the front row first, right to left, the way you would take them */
+const EGG_ORDER = [5, 4, 3, 2, 1, 0, 11, 10, 9, 8, 7, 6];
+const eggsGone = (n) => new Set(EGG_ORDER.slice(0, 12 - n));
+const O = 'stroke="#15212a" stroke-opacity=".5" stroke-width="1.3" stroke-linejoin="round"';
+
+/* Packaging, drawn cut-away so what is inside and how much is left always shows. */
+const DRAW = {
+  jug(it) {
+    const c = id('c');
+    const body = 'M16 9H28V15H40Q52 15 55 25L57 32V82Q57 90 49 90H11Q3 90 3 82V32Q3 22 11 18L16 15Z';
+    const hole = 'M36 21H47Q51 21 51 25V30Q51 34 47 34H36Q33 34 33 30V24Q33 21 36 21Z';
+    return { w: 60, h: 92, svg: `
+      <defs><clipPath id="${c}"><path d="${body}"/></clipPath></defs>
+      <path d="${body}" fill="#e3eaed" fill-opacity=".8"/>
+      <g clip-path="url(#${c})"><g class="lvl" style="transform:scaleY(${it.level})"><rect x="0" y="30" width="60" height="62" fill="#fff"/><rect x="0" y="30" width="60" height="1.5" fill="#cfd8dc"/></g></g>
+      <path d="${body} ${hole}" fill="none" ${O}/><path d="${hole}" fill="#eef3f5"/>
+      <rect x="14" y="2" width="16" height="8" rx="2" fill="#c8322a" ${O}/>` };
+  },
+  tub(it) {
+    const c = id('c');
+    const body = 'M5 11H57L53 49Q53 51 51 51H11Q9 51 9 49Z';
+    return { w: 62, h: 52, svg: `
+      <defs><clipPath id="${c}"><path d="${body}"/></clipPath></defs>
+      <path d="${body}" fill="#f1f5f6" fill-opacity=".85"/>
+      <g clip-path="url(#${c})"><g class="lvl" style="transform:scaleY(${it.level})"><rect x="0" y="14" width="62" height="38" fill="#f4eedf"/></g><rect x="0" y="26" width="62" height="11" fill="#2f5e9e" fill-opacity=".92"/></g>
+      <path d="${body}" fill="none" ${O}/><rect x="2" y="3" width="58" height="9" rx="3" fill="#2f5e9e" ${O}/>` };
+  },
+  butter(it) {
+    let s = '';
+    for (let i = 0; i < 2; i++) {
+      const y = 30 - i * 14;
+      s += `<g class="gone-able ${i >= it.n ? 'gone' : ''}"><rect x="2" y="${y}" width="66" height="12" rx="2" fill="#f5e4a3" ${O}/><rect x="2" y="${y + 4}" width="66" height="3" fill="#e2c86a" fill-opacity=".8"/></g>`;
+    }
+    return { w: 70, h: 44, svg: s };
+  },
+  eggs(it) {
+    let back = '', front = '';
+    const out = eggsGone(it.n);
+    for (let i = 0; i < 6; i++) back += `<ellipse class="gone-able ${out.has(6 + i) ? 'gone' : ''}" data-egg="${6 + i}" cx="${16 + i * 18}" cy="20" rx="8" ry="10.5" fill="#e9dbc4" ${O}/>`;
+    for (let i = 0; i < 6; i++) front += `<ellipse class="gone-able ${out.has(i) ? 'gone' : ''}" data-egg="${i}" cx="${10 + i * 19}" cy="27" rx="8.5" ry="11" fill="#f5e9d6" ${O}/>`;
+    return { w: 122, h: 52, svg: `${back}${front}
+      <path d="M2 30H120L115 50H7Z" fill="#b9c5c8" ${O}/>
+      <path d="M2 30Q7.5 36 13 30T24 30T35 30T46 30T57 30T68 30T79 30T90 30T101 30T112 30T120 30" fill="none" ${O}/>` };
+  },
+  cheddar(it) {
+    return { w: 74, h: 42, svg: `<g class="lvl lvlx" style="transform:scaleX(${it.level})">
+      <path d="M2 14L11 5H72L63 14Z" fill="#f1bf5d" ${O}/><rect x="2" y="14" width="61" height="26" fill="#e6a43a" ${O}/><path d="M63 14L72 5V31L63 40Z" fill="#cc8a2a" ${O}/></g>` };
+  },
+  wedge(it) {
+    return { w: 64, h: 40, svg: `<g class="lvl lvlx" style="transform:scaleX(${it.level})">
+      <path d="M2 38H62V22Q38 6 6 3Q2 3 2 8Z" fill="#ecdfb4" ${O}/><path d="M2 8Q2 3 6 3Q38 6 62 22V27Q38 12 5 9Q2 9 2 12Z" fill="#c9a563"/></g>` };
+  },
+  tray(it) {
+    let p = '';
+    for (let i = 0; i < 3; i++) {
+      const x = 6 + i * 38;
+      p += `<g class="gone-able ${i >= it.n ? 'gone' : ''}"><path d="M${x} 21Q${x} 11 ${x + 15} 10Q${x + 33} 9 ${x + 35} 16Q${x + 33} 26 ${x + 16} 27Q${x} 28 ${x} 21Z" fill="#efc4b6" ${O}/><path d="M${x + 8} 15Q${x + 18} 12 ${x + 28} 14" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.5" stroke-linecap="round"/></g>`;
+    }
+    return { w: 124, h: 40, svg: `${p}<path d="M2 20H122L117 38H7Z" fill="#dfe5e8" ${O}/><path d="M5 20.5H119" stroke="#fff" stroke-width="1.5"/>` };
+  },
+  bacon(it) {
+    let r = '';
+    for (let i = 0; i < 8; i++) {
+      const y = 19 + i * 4;
+      r += `<g class="gone-able ${i >= it.n ? 'gone' : ''}"><path d="M9 ${y}q10 -2.2 20 0t20 0t20 0t18 0" fill="none" stroke="#c65a50" stroke-width="3.2"/><path d="M9 ${y + 1.6}q10 -2.2 20 0t20 0t20 0t18 0" fill="none" stroke="#f5d8cb" stroke-width="1.1"/></g>`;
+    }
+    return { w: 96, h: 58, svg: `<rect x="2" y="2" width="92" height="54" rx="4" fill="#fbfbfb" ${O}/><rect x="2" y="2" width="92" height="10" rx="4" fill="#3b5b7a"/><rect x="7" y="15" width="82" height="37" rx="3" fill="#f7e3d9"/>${r}` };
+  },
+  bag(it) {
+    const c = id('c');
+    const leaves = [[20, 58, -30, '#4f8b4c'], [38, 60, 20, '#65a05a'], [58, 58, -15, '#3f7440'], [72, 56, 35, '#5a9651'], [26, 44, 40, '#65a05a'], [46, 46, -40, '#4f8b4c'], [66, 42, 10, '#3f7440'], [34, 30, -20, '#5a9651'], [54, 28, 30, '#65a05a'], [20, 28, 15, '#4f8b4c'], [70, 28, -30, '#5a9651']];
+    const shape = 'M6 10Q44 4 82 10L86 66Q44 74 2 66Z';
+    return { w: 88, h: 74, svg: `
+      <defs><clipPath id="${c}"><path d="${shape}"/></clipPath></defs>
+      <g clip-path="url(#${c})"><g class="lvl" style="transform:scaleY(${it.level})">${leaves.map(([x, y, a, f]) => `<ellipse cx="${x}" cy="${y}" rx="13" ry="8" transform="rotate(${a} ${x} ${y})" fill="${f}"/>`).join('')}</g></g>
+      <path d="${shape}" fill="#fff" fill-opacity=".22" ${O}/>
+      <path d="M6 10Q44 4 82 10" fill="none" stroke="#15212a" stroke-opacity=".35" stroke-width="4" stroke-dasharray="1.5 2.5"/>` };
+  },
+  punnet(it) {
+    const pos = [[58, 14], [16, 22], [36, 18], [56, 21], [76, 18], [26, 27], [46, 26], [66, 27], [86, 25], [10, 26]];
+    let caps = '';
+    pos.forEach(([x, y], i) => {
+      caps += `<g class="gone-able ${i >= it.n ? 'gone' : ''}"><rect x="${x - 3}" y="${y - 1}" width="6" height="9" rx="2" fill="#efe6d8" ${O}/><path d="M${x - 11} ${y + 1}Q${x - 11} ${y - 10} ${x} ${y - 10}Q${x + 11} ${y - 10} ${x + 11} ${y + 1}Z" fill="${i % 2 ? '#c29a73' : '#a97f59'}" ${O}/><path d="M${x - 9} ${y + 1}H${x + 9}" stroke="#7d5c3f" stroke-width="1.2"/></g>`;
+    });
+    return { w: 96, h: 50, svg: `${caps}<path d="M3 27H93L87 48H9Z" fill="#3f6fa6" ${O}/><path d="M4 27.5H92" stroke="#fff" stroke-opacity=".45"/>` };
+  },
+  box(it) {
+    const c = id('c');
+    const beans = [[14, 34], [24, 38], [36, 33], [46, 39], [52, 31], [20, 29], [42, 29]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="2.6" ry="1.8" fill="#c26a45"/>`).join('');
+    return { w: 64, h: 46, svg: `
+      <defs><clipPath id="${c}"><rect x="3" y="12" width="58" height="32" rx="5"/></clipPath></defs>
+      <rect x="3" y="12" width="58" height="32" rx="5" fill="#f1f5f6" fill-opacity=".7"/>
+      <g clip-path="url(#${c})"><g class="lvl" style="transform:scaleY(${it.level})"><rect x="0" y="16" width="64" height="30" fill="#8e3d24"/>${beans}</g></g>
+      <rect x="3" y="12" width="58" height="32" rx="5" fill="none" ${O}/>
+      <rect x="1" y="6" width="62" height="8" rx="3" fill="#dce6ea" ${O}/>
+      <g transform="rotate(-4 31 25)"><rect x="13" y="20" width="36" height="10" rx="1" fill="#efe2b3"/><path d="M17 25.5q3-2.4 6 0t6 0M32 25h11" stroke="#2a2f33" stroke-width="1.1" fill="none" stroke-linecap="round"/></g>` };
+  },
+};
+
+/* The demo account's fridge as seeded, plus one container of leftovers. */
+const FOOD = {
+  milk:    { name: 'Whole milk', q: '1 gal', days: 2, draw: 'jug', level: .94 },
+  yogurt:  { name: 'Greek yogurt', q: '500 g', days: 10, draw: 'tub', level: .8 },
+  butter:  { name: 'Butter', q: '227 g', days: 45, draw: 'butter', n: 2 },
+  egg:     { name: 'Eggs', q: '12', days: 18, draw: 'eggs', n: 12 },
+  cheddar: { name: 'Cheddar', q: '250 g', days: 21, draw: 'cheddar', level: .56 },
+  parm:    { name: 'Parmesan', q: '100 g', days: 40, draw: 'wedge', level: .5 },
+  chicken: { name: 'Chicken breast', q: '3', days: 3, draw: 'tray', n: 3 },
+  bacon:   { name: 'Bacon', q: '8 slices', days: 6, draw: 'bacon', n: 8 },
+  chilli:  { name: 'Chilli', q: '2 servings', days: 4, draw: 'box', level: .55 },
+  spinach: { name: 'Baby spinach', q: '142 g', days: 1, draw: 'bag', level: 1 },
+  mush:    { name: 'Mushrooms', q: '250 g', days: 6, draw: 'punnet', n: 10 },
+};
+const ROWS = [['milk', 'yogurt', 'butter'], ['egg', 'cheddar', 'parm'], ['chicken', 'bacon', 'chilli']];
+const WIDTHS = [[150, 106, 88], [150, 94, 92], [128, 108, 100]];
+const DRAWER = ['spinach', 'mush'];
+
+const RECIPES = [
+  { name: 'Spinach and Cheddar Scramble', why: 'Uses the spinach, which goes off tomorrow.', urgent: true, facts: '9 min · 390 kcal · serves 1',
+    plus: 'Plus olive oil and salt from the cupboard.',
+    badge: { egg: '3 eggs', spinach: '2 cups spinach', cheddar: '30 g cheddar' },
+    after: { egg: { n: 9, q: '9' }, spinach: { level: .58, q: '82 g' }, cheddar: { level: .5, q: '220 g' } },
+    done: 'Cooked. 9 eggs, 82 g spinach and 220 g cheddar left.', kcal: 390 },
+  { name: 'Chicken Fried Steak-Style Cutlets', why: 'Uses the milk before Monday.', facts: '40 min · 587 kcal · serves 4',
+    plus: 'Plus flour, oil and spices from the cupboard.',
+    badge: { chicken: '2 breasts', milk: '1½ cups', egg: '2 eggs' } },
+  { name: 'Bacon Carbonara', why: 'Nothing to buy.', facts: '23 min · 1,155 kcal · serves 2',
+    plus: 'Plus spaghetti and black pepper.',
+    badge: { bacon: '6 slices', egg: '3 eggs', parm: '60 g parmesan' } },
+];
+
+const STATUS = `<div class="status"><span>6:04</span><svg width="70" height="12" viewBox="0 0 70 12" fill="#fff" aria-hidden="true"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="6" width="3" height="6" rx="1"/><rect x="10" y="3.5" width="3" height="8.5" rx="1"/><rect x="15" y="1" width="3" height="11" rx="1"/><path d="M31 11.5l2.4-2.6a3.4 3.4 0 0 0-4.8 0zM26.4 6.8a6.5 6.5 0 0 1 9.2 0l-1.6 1.7a4.2 4.2 0 0 0-6 0zM24 4.3a10 10 0 0 1 14 0l-1.6 1.7a7.7 7.7 0 0 0-10.8 0z"/><rect x="44.5" y=".5" width="22" height="11" rx="3.5" fill="none" stroke="#fff" stroke-opacity=".45"/><rect x="46.5" y="2.5" width="16" height="7" rx="2"/><rect x="67.5" y="4" width="1.8" height="4" rx=".9" fill-opacity=".45"/></svg></div>`;
+const TABS = (on) => `<nav class="tabs">${['Cook', 'Pantry', 'Shopping', 'Eaten'].map((t) => `<button type="button" class="tab ${t === on ? 'on' : ''}">${t}</button>`).join('')}</nav><div class="home"></div>`;
+const LOGO_IMG = `<img class="logo" alt="Pantry2Plate" src="${LOGO}">`;
+const PLUS = `<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+const SEARCH = `<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="7.5" cy="7.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11.8 11.8 16 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+
+function item(key, s, opts) {
+  const f = FOOD[key];
+  const d = DRAW[f.draw](f);
+  const when = f.days === 1 ? '<span class="tag">Tomorrow</span>' : f.days <= 3 ? `<span class="soon">· ${f.days} days left</span>` : '';
+  return `<div class="col" data-k="${key}" style="width:${opts.w}px">
+    <div class="obj" style="height:${opts.oh}px"><svg width="${d.w * s}" height="${d.h * s}" viewBox="0 0 ${d.w} ${d.h}">${d.svg}</svg></div>
+    ${opts.labels ? `<div class="lab"><span class="nm">${f.name}</span><span class="meta"><span data-q>${f.q}</span>${when}</span></div>` : ''}
+  </div>`;
+}
+
+function interior(s, labels) {
+  const oh = Math.round(92 * s);
+  const rows = ROWS.map((r, i) => `<div class="row" style="margin-top:${labels ? 4 : 22}px">
+      <div class="cols">${r.map((k, j) => item(k, s, { w: WIDTHS[i][j], oh, labels })).join('')}</div>
+      <div class="shelf" style="top:${oh}px"></div></div>`).join('');
+  const drawer = `<div class="drawer"><div class="cols" style="justify-content:space-around">${DRAWER.map((k) => item(k, labels ? s : s * .85, { w: 160, oh: Math.round(76 * s), labels })).join('')}</div></div>`;
+  return rows + drawer;
+}
+
+function pantry(el) {
+  el.innerHTML = `${STATUS}
+    <div class="bar"><button type="button" class="icon" aria-label="Search the pantry">${SEARCH}</button>${LOGO_IMG}<button type="button" class="pill">${PLUS}Put away</button></div>
+    <section class="fridge dark" aria-label="Fridge">
+      <div class="zones" role="tablist"><button type="button" class="zone on" role="tab">Fridge <b>11</b></button><button type="button" class="zone" role="tab">Cupboard <b>38</b></button><button type="button" class="zone" role="tab">Freezer <b>0</b></button></div>
+      <div style="height:6px"></div>
+      ${interior(.85, true)}
+    </section>
+    ${TABS('Pantry')}`;
+}
+
+let current = 0;
+function tonight(el) {
+  el.innerHTML = `${STATUS}
+    <div class="bar"><span></span>${LOGO_IMG}<button type="button" class="pill">All recipes</button></div>
+    <section class="fridge dark" aria-label="What tonight's recipe takes">
+      <div style="height:14px"></div>
+      ${interior(.72, false)}
+      <div class="dimmer"></div>
+    </section>
+    <div class="toast" role="status"><span></span><button type="button">Undo</button></div>
+    <section class="sheet">
+      <div class="body"></div>
+      <div class="actions"><button type="button" class="btn go">Cook this</button><button type="button" class="btn alt">Another</button></div>
+    </section>
+    ${TABS('Cook')}`;
+  showRecipe(el, 0, true);
+  el.querySelector('.alt').addEventListener('click', () => showRecipe(el, (current + 1) % RECIPES.length));
+  el.querySelector('.go').addEventListener('click', () => (el.dataset.cooked ? showRecipe(el, (current + 1) % RECIPES.length) : cook(el)));
+}
+
+function spotlight(el, r) {
+  el.querySelectorAll('.fridge .col').forEach((c) => {
+    const k = c.dataset.k;
+    c.classList.toggle('lit', k in r.badge);
+    c.querySelector('.chip')?.remove();
+    if (!(k in r.badge)) return;
+    const svg = c.querySelector('svg');
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.textContent = r.badge[k];
+    chip.style.top = `${parseFloat(c.querySelector('.obj').style.height) - svg.getAttribute('height') - 32}px`;
+    chip.style.left = `${c.offsetWidth / 2}px`;
+    c.appendChild(chip);
+  });
+}
+
+function showRecipe(el, i, instant) {
+  current = i;
+  delete el.dataset.cooked;
+  el.querySelector('.toast').classList.remove('on');
+  const r = RECIPES[i];
+  const body = el.querySelector('.sheet .body');
+  const paint = () => {
+    body.innerHTML = `<h2>${r.name}</h2><p class="why">${r.urgent ? '<i></i>' : ''}${r.why}</p><p class="facts">${r.facts}</p><p class="plus">${r.plus}</p>`;
+    const go = el.querySelector('.go');
+    go.textContent = 'Cook this';
+    go.disabled = false;
+    spotlight(el, r);
+    body.classList.remove('out');
+  };
+  if (instant) return paint();
+  body.classList.add('out');
+  setTimeout(paint, 260);
+}
+
+function cook(el) {
+  const r = RECIPES[current];
+  const go = el.querySelector('.go');
+  if (!r.after) return;
+  el.dataset.cooked = 1;
+  go.disabled = true;
+  el.querySelectorAll('.chip').forEach((c) => { c.textContent = `−${c.textContent}`; });
+  setTimeout(() => {
+    for (const [k, v] of Object.entries(r.after)) {
+      document.querySelectorAll(`.col[data-k="${k}"]`).forEach((col) => {
+        if (v.n !== undefined) {
+          const out = eggsGone(v.n);
+          col.querySelectorAll('[data-egg]').forEach((egg, j) => setTimeout(() => egg.classList.toggle('gone', out.has(+egg.dataset.egg)), j * 40));
+        }
+        if (v.level !== undefined) col.querySelectorAll('.lvl').forEach((g) => { g.style.transform = g.classList.contains('lvlx') ? `scaleX(${v.level})` : `scaleY(${v.level})`; });
+        const q = col.querySelector('[data-q]');
+        if (q) q.textContent = v.q;
+      });
+    }
+  }, 350);
+  setTimeout(() => {
+    el.querySelector('.why').textContent = r.done;
+    const t = el.querySelector('.toast');
+    t.querySelector('span').textContent = `${r.kcal} kcal logged to today`;
+    t.classList.add('on');
+  }, 1100);
+  // the button that cooked never becomes the button that undoes
+  setTimeout(() => { go.textContent = 'Next recipe'; go.disabled = false; }, 1800);
+  setTimeout(() => el.querySelectorAll('.chip').forEach((c) => c.classList.add('fade')), 2200);
+}
+
+function lightUp() {
+  document.querySelectorAll('.fridge').forEach((f) => {
+    f.classList.remove('lit', 'settle');
+    f.classList.add('dark');
+    void f.offsetWidth;
+    setTimeout(() => { f.classList.remove('dark'); f.classList.add('lit', 'settle'); }, 260);
+  });
+}
+
+pantry(document.getElementById('pantry'));
+tonight(document.getElementById('tonight'));
+const still = new URLSearchParams(location.search).get('still');
+if (still !== null) {
+  document.querySelectorAll('.fridge').forEach((f) => f.classList.remove('dark'));
+  if (still === 'cooked') cook(document.getElementById('tonight'));
+} else {
+  lightUp();
+}
+document.getElementById('replay').addEventListener('click', lightUp);
+</script>
+</body>
+</html>
