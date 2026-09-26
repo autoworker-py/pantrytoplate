@@ -6,6 +6,7 @@ import { formatDateInput } from '../lib/format';
 import { useToast } from '../components/Toast';
 import { UnitSelect } from '../components/UnitSelect';
 import { Sheet } from '../components/Sheet';
+import { CountsAs } from '../components/CountsAs';
 import { PackSize, usePack, type Pack } from '../components/PackSize';
 
 // the scanner pulls in the whole decoder; only load it on the scan tab
@@ -237,14 +238,41 @@ function ManualForm() {
           required
         />
         {linked ? (
-          <p className="muted" style={{ marginTop: 6 }}>
-            Linked to <strong>{linked.name}</strong> in your catalog
-            {linked.caloriesPerUnit !== null ? ` · ${linked.caloriesPerUnit} kcal per ${linked.defaultUnit}` : ' · no nutrition data'}
-            .{' '}
-            <button type="button" className="btn-ghost btn-sm" onClick={() => setLinked(null)}>
-              change
-            </button>
-          </p>
+          <div className="confirm-food">
+            <div className="row">
+              <div className="grow">
+                <span className="ticket-name">{linked.name}</span>
+                <span className="ticket-print">
+                  {linked.caloriesPerUnit !== null
+                    ? `${linked.caloriesPerUnit} kcal per ${linked.defaultUnit}`
+                    : 'No nutrition data'}
+                  {linked.barcode ? ' · scanned' : ''}
+                </span>
+              </div>
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setLinked(null)}>
+                Not this
+              </button>
+            </div>
+
+            {/*
+              * A scanned jar is a particular product; a recipe asks for the
+              * ingredient. The app infers which ingredient this is, and that
+              * inference is shown here to be confirmed or corrected before the
+              * thing is added - rather than found out weeks later when a recipe
+              * insists you have no olive oil while you are holding a bottle.
+              */}
+            {linked.barcode ? (
+              <CountsAs
+                food={linked}
+                autoOpen
+                onChanged={(next) =>
+                  setLinked((current) =>
+                    current ? { ...current, countsAs: next ? { ...next, source: 'user' } : null } : current,
+                  )
+                }
+              />
+            ) : null}
+          </div>
         ) : suggestions.length > 0 || external.length > 0 || lookingUp ? (
           <div className="suggestions">
             {suggestions.map((food) => (

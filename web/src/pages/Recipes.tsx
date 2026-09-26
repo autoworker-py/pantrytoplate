@@ -145,18 +145,26 @@ export default function Recipes() {
           {useItUp.length > 0 ? (
             <>
               <h2>Use it up first</h2>
-              {useItUp.map((recipe) => (
-                <RecipeCard key={recipe.id} recipe={recipe} />
-              ))}
+              <div className="card">
+                <div className="list">
+                  {useItUp.map((recipe) => (
+                    <RecipeCard key={recipe.id} recipe={recipe} />
+                  ))}
+                </div>
+              </div>
             </>
           ) : null}
 
           {ready.length > 0 ? (
             <>
               <h2 style={{ marginTop: useItUp.length > 0 ? 20 : 0 }}>You can make these now</h2>
-              {ready.map((recipe) => (
-                <RecipeCard key={recipe.id} recipe={recipe} />
-              ))}
+              <div className="card">
+                <div className="list">
+                  {ready.map((recipe) => (
+                    <RecipeCard key={recipe.id} recipe={recipe} />
+                  ))}
+                </div>
+              </div>
             </>
           ) : null}
 
@@ -202,9 +210,13 @@ export default function Recipes() {
           {rest.length > 0 ? (
             <>
               <h2 style={{ marginTop: 20 }}>Missing three or more</h2>
-              {rest.map((recipe) => (
-                <RecipeCard key={recipe.id} recipe={recipe} />
-              ))}
+              <div className="card">
+                <div className="list">
+                  {rest.map((recipe) => (
+                    <RecipeCard key={recipe.id} recipe={recipe} />
+                  ))}
+                </div>
+              </div>
             </>
           ) : null}
         </>
@@ -239,8 +251,9 @@ export function MineBadge() {
 }
 
 function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
+  // the time has its own slot on the ticket now, so repeating it here would
+  // just be the same fact twice
   const meta = [
-    recipe.totalMinutes ? `${recipe.totalMinutes} min` : null,
     recipe.nutrition?.caloriesPerServing ? `${recipe.nutrition.caloriesPerServing} kcal` : null,
     recipe.nutrition?.proteinPerServing ? `${recipe.nutrition.proteinPerServing}g protein` : null,
   ].filter(Boolean);
@@ -248,34 +261,36 @@ function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
   return (
     <Link
       to={`/recipes/${recipe.id}`}
-      className="card"
-      style={{ display: 'block', color: 'inherit', textDecoration: 'none' }}
+      className="ticket recipe-ticket"
+      style={{ color: 'inherit', textDecoration: 'none' }}
     >
-      <div className="row top">
-        <div className="grow">
-          <h3 style={{ marginBottom: 2 }}>
-            {recipe.name}
-            {recipe.isMine ? <MineBadge /> : null}
-          </h3>
-          <p className="muted" style={{ margin: 0 }}>
-            {meta.join(' · ')}
-          </p>
-        </div>
-        <span className={`pill ${recipe.canMakeNow ? '' : recipe.gaps <= 2 ? 'warn' : 'danger'}`}>
-          {recipe.canMakeNow ? 'Ready' : `Need ${recipe.gaps}`}
+      {/* the time is what you are actually choosing on at 6pm, so it takes the
+          figure slot the pantry gives a count */}
+      <span className="ticket-figure" aria-hidden="true">
+        <span className="ticket-count">{recipe.totalMinutes ?? '—'}</span>
+        {recipe.totalMinutes ? <span className="ticket-unit">min</span> : null}
+      </span>
+      <div className="grow ticket-body">
+        <span className="ticket-name">
+          {recipe.name}
+          {recipe.isMine ? <MineBadge /> : null}
         </span>
+        <span className="ticket-print">{meta.join(' · ')}</span>
+        {recipe.usesExpiring.length > 0 ? (
+          <span className="ticket-print reason-note">
+            Uses {recipe.usesExpiring.join(', ')} before it goes off
+          </span>
+        ) : null}
+        {!recipe.canMakeNow && recipe.missing.length > 0 ? (
+          <span className="ticket-print">
+            Missing: {recipe.missing.slice(0, 3).join(', ')}
+            {recipe.missing.length > 3 ? `, +${recipe.missing.length - 3} more` : ''}
+          </span>
+        ) : null}
       </div>
-
-      {recipe.usesExpiring.length > 0 ? (
-        <div className="reason-note">Uses {recipe.usesExpiring.join(', ')} before it goes off</div>
-      ) : null}
-
-      {!recipe.canMakeNow && recipe.missing.length > 0 ? (
-        <p className="muted" style={{ margin: '8px 0 0' }}>
-          Missing: {recipe.missing.slice(0, 4).join(', ')}
-          {recipe.missing.length > 4 ? `, +${recipe.missing.length - 4} more` : ''}
-        </p>
-      ) : null}
+      <span className={`pill ${recipe.canMakeNow ? 'ready' : recipe.gaps <= 2 ? 'warn' : 'danger'}`}>
+        {recipe.canMakeNow ? 'Ready' : `Need ${recipe.gaps}`}
+      </span>
     </Link>
   );
 }

@@ -1,954 +1,778 @@
-/*
- * Pantry-to-Plate — Chipotle-styled build.
- *
- * A deliberate 1:1 restyle in the visual language of the Chipotle app, at the
- * owner's request, as a temporary placeholder while the real identity is
- * decided. Nothing here reproduces their logo, wordmark, mascot or licensed
- * typeface — the display face is Archivo, the closest free match to their
- * squarish grotesque.
- *
- * The world, as read off the reference screens:
- *   - warm off-white ground, pure white cards, no gradients, almost no shadow
- *   - one very dark brown carrying nearly all the text and every solid button
- *   - a single red used sparingly: active tab, eyebrow labels, page dots
- *   - HEAVY UPPERCASE display type, tight leading, for anything structural
- *   - small uppercase letterspaced labels as section headers and eyebrows
- *   - sentence case, regular weight, for body and for buttons inside content
- *   - fully-round pill buttons; generous white space; text-only tab bar with an
- *     underline on the active item
- */
+/* ============================================================================
+   SHELF EDGE
+   ----------------------------------------------------------------------------
+   The graphic language of the supermarket shelf rail: a white ticket, ink-black
+   print, the number set larger than anything around it, and the small print
+   doing real work underneath. It is the one system designed to be read standing
+   up, at arm's length, in bad light, by someone already moving - which is three
+   for three on where this app is actually used.
 
-/* ============================ tokens ============================ */
+   The yellow flag is not decoration. A shop puts a yellow sticker on food near
+   its date, and so does this: USE FIRST means the same thing on a shelf and in
+   your fridge.
+
+   Nothing here is rounded, floating or soft. Tickets have edges because card
+   stock has edges.
+   ========================================================================== */
+
+/* Self-hosted, so the identity survives the aisle with one bar of signal.
+   Archivo is variable across 100-900: one file, every weight. */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/archivo-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/archivo-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 :root {
-  /* the three colours that do all the work */
-  --brown: #451400;
-  --brown-2: #6b3a22;
-  --red: #a81712;
-  --tan: #ad7b3c;
+  /* ---- ink and stock ----
+     A shop floor is bright, and so is a kitchen counter at the moment you are
+     putting shopping away. Light is the default because that is the scene. */
+  --stock: #ffffff;        /* the ticket itself */
+  --rail: #eae7e0;         /* the channel the tickets sit in */
+  --rail-deep: #ded9d0;    /* the shadow inside the channel */
+  --ink: #16130f;          /* print black */
+  --ink-soft: #5b544a;     /* small print; 7.0:1 on stock */
+  --ink-faint: #8a8276;    /* the least important line on a ticket */
+  --line: #d3cec4;         /* hairline rules */
+  --rule: #16130f;         /* the heavy rule under a heading */
 
-  /* surfaces */
-  --bg: #f0ede8;
-  --card: #ffffff;
-  --raised: #ffffff;
-  --sunken: #e6e2db;
-  --line: #ddd8d0;
-  --line-soft: #eae6e0;
+  /* ---- the flags ----
+     Each one carries a word as well as a colour, because a flag that is only a
+     colour is a flag half the people in a kitchen cannot read. */
+  --brand: #a81712;        /* the logo red. Fixed. */
+  --brand-ink: #ffffff;
+  --soon: #f2c200;         /* the reduced sticker: use this first */
+  --soon-ink: #16130f;
+  --ready: #0f6b3a;        /* it is in stock and you can cook it now */
+  --ready-ink: #ffffff;
 
-  /* text */
-  --ink: var(--brown);
-  --ink-2: #5c3823;
-  --muted: #7a5c4b;
-  --on-dark: #ffffff;
+  --focus: #0b5bd3;        /* keyboard focus, deliberately not a flag colour */
 
-  /*
-   * Status, drawn from the same five colours as everything else — the
-   * reference app has no green anywhere in its chrome, and a lone green chip
-   * is the thing that gives a borrowed palette away.
-   *
-   * Safe to do here because status is never carried by colour alone: every
-   * pill also says the word (READY, SHORT, MISSING), so the three only have to
-   * be distinguishable, not independently meaningful.
-   */
-  --green: #4a6b35;        /* "ready" — olive, the greenest thing in the world */
-  --green-soft: #eae7d8;
-  --amber: #96591a;        /* "short", "expiring" — the tan, darkened to read */
-  --amber-soft: #f7ecd9;
-  --danger: #a81612;       /* "missing", "expired" — the brand red */
-  --danger-soft: #f6e2df;
-  --mine: #6b3a22;         /* "yours" — mid brown */
-  --mine-soft: #ece3dc;
+  /* ---- measure ----
+     One 4px module. Tickets align to it, and so does everything else. */
+  --u: 4px;
+  --pad: 16px;
+  --edge: 2px;             /* the only corner radius in the system */
 
-  /* shape: pills and softly-rounded cards, nothing sharp */
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 18px;
-  --r-xl: 24px;
-  --r-pill: 999px;
-  --radius: var(--r-lg);
+  --font: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
-  /* depth is almost absent in this world; keep it barely there */
-  --shadow-sm: 0 1px 2px rgba(69, 20, 0, 0.05);
-  --shadow-md: 0 2px 10px rgba(69, 20, 0, 0.07);
-  --shadow-lg: 0 10px 34px rgba(69, 20, 0, 0.16);
-  --shadow: var(--shadow-sm);
-
-  --gap: 12px;
-  --pad: 20px;
-  --tap: 44px;
-
-  --font-display: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-
-  --ease: cubic-bezier(0.32, 0.72, 0, 1);
-  --fast: 140ms;
-  --slow: 260ms;
-
-  /* ---- layer scale ----
-   * Anything above the shell must also be rendered through <Overlay>, which
-   * portals it out of the scrolling region. Inside that region these numbers
-   * are meaningless on iOS: the scroller traps fixed children, so an overlay
-   * painted "above" the tab bar still ends up beneath it. Number and portal
-   * go together; neither works alone.
-   */
   --z-topbar: 20;
   --z-tabbar: 30;
   --z-sheet: 50;
   --z-toast: 60;
   --z-cook: 80;
+
+  /* motion: fast, mechanical, like a ticket being pushed into a rail */
+  --slot: 220ms;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  color-scheme: light;
 }
 
-/*
- * The reference app is light-only. A dark kitchen at night is a real part of
- * this product though, so dark stays — as the same world after hours rather
- * than a different one: the ground goes to roasted brown, the ink to cream.
- */
+/* Night. The aisle after hours: the stock goes dark, the print goes pale, and
+   the flags keep their meaning. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --brown: #f2e7df;
-    --brown-2: #d9c3b4;
-    --red: #e8635c;
-    --tan: #d0a163;
-
-    --bg: #1a0e07;
-    --card: #251610;
-    --raised: #2e1c14;
-    --sunken: #1f120b;
-    --line: #3d271c;
-    --line-soft: #312016;
-
-    --ink: var(--brown);
-    --ink-2: #d9c3b4;
-    --muted: #a98b79;
-    --on-dark: #1a0e07;
-
-    --green: #a8bf7e;
-    --green-soft: #262a1a;
-    --amber: #d9a05a;
-    --amber-soft: #2d2113;
-    --danger: #e8635c;
-    --danger-soft: #33191a;
-    --mine: #d9b89e;
-    --mine-soft: #2b1d15;
-
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-    --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 10px 34px rgba(0, 0, 0, 0.6);
+    --stock: #1c1a16;
+    --rail: #100f0d;
+    --rail-deep: #0a0908;
+    --ink: #f4f1ea;
+    --ink-soft: #a9a193;
+    --ink-faint: #7d7668;
+    --line: #322e28;
+    --rule: #f4f1ea;
+    --brand-ink: #ffffff;
+    --soon: #f2c200;
+    --soon-ink: #16130f;
+    --ready: #2f9c62;
+    --focus: #6ea8ff;
+    color-scheme: dark;
   }
 }
-
 :root[data-theme='dark'] {
-  --brown: #f2e7df;
-  --brown-2: #d9c3b4;
-  --red: #e8635c;
-  --tan: #d0a163;
-
-  --bg: #1a0e07;
-  --card: #251610;
-  --raised: #2e1c14;
-  --sunken: #1f120b;
-  --line: #3d271c;
-  --line-soft: #312016;
-
-  --ink: var(--brown);
-  --ink-2: #d9c3b4;
-  --muted: #a98b79;
-  --on-dark: #1a0e07;
-
-  --green: #a8bf7e;
-  --green-soft: #262a1a;
-  --amber: #d9a05a;
-  --amber-soft: #2d2113;
-  --danger: #e8635c;
-  --danger-soft: #33191a;
-  --mine: #d9b89e;
-  --mine-soft: #2b1d15;
-
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 10px 34px rgba(0, 0, 0, 0.6);
+  --stock: #1c1a16;
+  --rail: #100f0d;
+  --rail-deep: #0a0908;
+  --ink: #f4f1ea;
+  --ink-soft: #a9a193;
+  --ink-faint: #7d7668;
+  --line: #322e28;
+  --rule: #f4f1ea;
+  --brand-ink: #ffffff;
+  --soon: #f2c200;
+  --soon-ink: #16130f;
+  --ready: #2f9c62;
+  --focus: #6ea8ff;
+  color-scheme: dark;
 }
 
-/* ============================ base ============================ */
-* { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+/* The logo red is fixed, but red *text* on a near-black ground fails contrast.
+   The fill stays exactly #a81712 everywhere it is a field; only type that would
+   otherwise be unreadable lifts to a tint of the same hue. */
+:root { --brand-type: #a81712; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) { --brand-type: #ff6a5e; }
+}
+:root[data-theme='dark'] { --brand-type: #ff6a5e; }
 
-/*
- * The page never scrolls; a scroll area inside it does.
- *
- * On iOS a page-level scroll rubber-bands past its bounds, dragging the whole
- * document off the web view and showing the native background behind it — a
- * pale bar at the top and bottom that no CSS on the page can colour, because at
- * that moment the page is not there. Pinning the document and scrolling a child
- * keeps the bounce inside a box that does have a background.
- *
- * `html` carries the ground colour too, so anything that does overscroll shows
- * the current theme rather than white.
- */
+/* ============================ base ============================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
 html {
-  background: var(--bg);
+  background: var(--rail);
   height: 100%;
   overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--ink);
   height: 100%;
   overscroll-behavior: none;
-  font-family: var(--font-body);
-  font-size: 16px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
-}
-
-/*
- * Headings are the loudest thing in this world: heavy, uppercase, set tight
- * enough that two lines lock together as a block.
- */
-h1, h2, h3 {
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 0.98;
-  margin: 0 0 0.35em;
+  background: var(--rail);
   color: var(--ink);
-}
-h1 { font-size: 2.2rem; }
-h2 { font-size: 1.3rem; letter-spacing: 0; }
-h3 { font-size: 1.02rem; letter-spacing: 0; line-height: 1.15; }
-p { margin: 0 0 0.8em; }
-a { color: var(--red); text-decoration: none; font-weight: 600; }
-
-/* the small letterspaced uppercase label used as an eyebrow or a section head */
-.meal-head, .ad-label, .stat .label, .waste-reason, .shop-why {
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  font-size: 0.7rem;
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
 }
 
-::selection { background: var(--red); color: #fff; }
-:focus-visible { outline: 2.5px solid var(--red); outline-offset: 2px; border-radius: 4px; }
+/* The surfaces nobody draws still belong to the design. */
+::selection { background: var(--soon); color: var(--soon-ink); }
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 0;
+}
+:where(input, textarea) { caret-color: var(--brand-type); }
+.scroll-area { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.scroll-area::-webkit-scrollbar { width: 10px; }
+.scroll-area::-webkit-scrollbar-thumb { background: var(--line); border: 3px solid var(--rail); }
 
-/* ============================ layout ============================ */
-/*
- * Header, scroller, tab bar — a column that exactly fills the screen. The
- * header and the bar are siblings of the scroll area rather than floating over
- * it, so neither can be dragged out of place.
- */
+img { max-width: 100%; display: block; }
+
+/* ============================ shell ============================ */
+
 .app {
   height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--rail);
 }
-.scroll-area {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  /* a bounce here must not propagate to the document behind it */
-  overscroll-behavior-y: contain;
-  background: var(--bg);
+
+.topbar {
+  flex-shrink: 0;
+  z-index: var(--z-topbar);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding: 10px var(--pad);
+  padding-top: calc(10px + env(safe-area-inset-top));
+  background: var(--stock);
+  border-bottom: 2px solid var(--rule);
 }
-.container { max-width: 720px; margin: 0 auto; padding: var(--pad); }
+
+.topbar .brand { display: inline-flex; align-items: center; color: var(--ink); min-width: 0; }
+.brand-word {
+  font-weight: 800;
+  font-size: 1.16rem;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.brand-word span { color: var(--brand-type); }
 
 /*
- * Pages that stand alone — sign-in, onboarding, the consent gate.
- *
- * Two things they have to do for themselves. They carry the safe-area inset,
- * because there is no header above them to absorb the notch. And they scroll
- * themselves: the document is pinned so the app shell can own its own
- * scrolling, which leaves nothing to scroll these unless they bring a scroller
- * with them. Onboarding is taller than a phone, so without this its lower half
- * is simply unreachable.
+ * Only this scrolls. The header and tab bar sit outside it, so a rubber-band
+ * bounce moves the list inside its own box rather than dragging the page off
+ * the web view and showing the native background behind it.
  */
-.container.safe-top {
-  height: 100dvh;
-  overflow-y: auto;
+.scroll-area {
+  flex: 1; min-height: 0;
+  overflow-y: auto; overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
+  background: var(--rail);
+}
+
+.container { padding: var(--pad); padding-bottom: 28px; max-width: 720px; margin: 0 auto; }
+.container.safe-top {
+  height: 100dvh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;
   padding-top: calc(env(safe-area-inset-top) + 28px);
   padding-bottom: calc(env(safe-area-inset-bottom) + 32px);
 }
 
-.topbar {
-  flex-shrink: 0; z-index: var(--z-topbar);
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 12px var(--pad);
-  padding-top: calc(12px + env(safe-area-inset-top));
-  background: var(--bg);
-}
-/*
- * The brand in the header: the wordmark alone.
- *
- * The logo was tried here as a 30px disc beside the words and it did not
- * survive the shrink - the wordmark drawn inside the circle turned to noise at
- * that size, which reads as a smudge rather than a logo. The mark keeps its
- * detail where it has room: the sign-in screen and the app icon.
- *
- * Set in title case rather than shouted in capitals, because that is how the
- * logo draws it - "Pantry2Plate", with the 2 carrying the red.
- */
-.topbar .brand {
-  display: inline-flex; align-items: center;
-  color: var(--ink); min-width: 0;
-}
-.brand-word {
-  font-family: var(--font-display);
-  font-weight: 800; letter-spacing: -0.02em;
-  font-size: 1.2rem; line-height: 1;
-  white-space: nowrap;
-}
-.brand-word span { color: var(--red); }
-
-/* the sign-in screen is the one place the mark gets room to be the logo */
-.auth-hero { text-align: center; margin-bottom: 26px; }
-.auth-logo {
-  width: 148px; height: 148px; display: block; margin: 0 auto 14px;
-  border-radius: 50%;
-}
-.auth-hero h1 { margin: 0 0 6px; letter-spacing: -0.02em; }
-.auth-hero h1 span { color: var(--red); }
-.auth-hero p { margin: 0; }
-
-/*
- * Text-only tab bar with an underline on the active item, flat against the
- * bottom of the screen. No icons: the reference app carries these five words
- * alone, and the words are what people read anyway.
- */
+/* The tab bar is the rail at the bottom of the shelf: icons cut from the same
+   stencil as everything else, each over its own word. */
 .tabbar {
-  flex-shrink: 0; z-index: var(--z-tabbar);
+  flex-shrink: 0;
+  z-index: var(--z-tabbar);
   display: grid; grid-template-columns: repeat(5, 1fr);
-  background: var(--card);
-  border-top: 1px solid var(--line);
+  background: var(--stock);
+  border-top: 2px solid var(--rule);
   padding-bottom: env(safe-area-inset-bottom);
 }
 .tabbar a {
-  position: relative;
-  display: flex; align-items: center; justify-content: center;
-  min-height: 56px; padding: 6px 2px;
-  font-family: var(--font-display);
-  text-transform: uppercase; font-weight: 800;
-  /* "SHOPPING" is the longest of the five and sets the ceiling: at a fifth of a
-     375px screen it has to fit without clipping or ellipsis */
-  font-size: clamp(0.62rem, 2.9vw, 0.8rem);
-  letter-spacing: -0.02em;
-  color: var(--ink); text-decoration: none; white-space: nowrap;
-  -webkit-tap-highlight-color: transparent;
-  transition: color var(--fast) var(--ease);
-}
-.tabbar a.active { color: var(--red); }
-.tabbar a.active::after {
-  content: ''; position: absolute; bottom: 12px; left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 26px); max-width: 74px; height: 2.5px;
-  background: var(--red);
-}
-.tabbar a:active { opacity: 0.6; }
-.tabbar .icon { display: none; }
-.tabbar .badge {
-  position: absolute; top: 8px; left: 50%; margin-left: 18px;
-  background: var(--red); color: #fff; border-radius: var(--r-pill);
-  font-family: var(--font-body);
-  font-size: 0.58rem; font-weight: 700; padding: 1px 5px; min-width: 15px; text-align: center;
-}
-
-/* ============================ cards & lists ============================ */
-.card {
-  background: var(--card);
-  border: none;
-  border-radius: var(--r-lg);
-  padding: var(--pad);
-  margin-bottom: var(--gap);
-  box-shadow: var(--shadow-sm);
-}
-.card.tight { padding: 14px 16px; }
-
-.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.row.top { align-items: flex-start; }
-.stack { display: flex; flex-direction: column; gap: 3px; }
-.grow { flex: 1; min-width: 0; }
-.muted { color: var(--muted); font-size: 0.9rem; }
-.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.list { list-style: none; margin: 0; padding: 0; }
-.list > li { border-bottom: 1px solid var(--line-soft); padding: 15px 0; }
-.list > li:first-child { padding-top: 3px; }
-.list > li:last-child { border-bottom: none; padding-bottom: 3px; }
-
-/* ============================ pills ============================ */
-.pill {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 4px 11px; border-radius: var(--r-pill);
-  font-family: var(--font-display);
-  text-transform: uppercase; font-weight: 700;
-  font-size: 0.68rem; letter-spacing: 0.06em; white-space: nowrap;
-  background: var(--green-soft); color: var(--green);
-}
-.pill.warn { background: var(--amber-soft); color: var(--amber); }
-.pill.danger { background: var(--danger-soft); color: var(--danger); }
-.pill.neutral { background: var(--sunken); color: var(--muted); }
-.pill.mine { background: var(--mine-soft); color: var(--mine); }
-
-/* ============================ buttons ============================ */
-/*
- * Two shapes only, both fully round: a solid brown one that carries the page's
- * action, and a hairline-outlined one for everything secondary.
- */
-button, .btn, .btn-secondary, .btn-ghost, .btn-danger, .btn-sm, .btn-lg, .btn-block, .chip {
-  font-family: var(--font-body);
-  font-size: 0.97rem; font-weight: 700; letter-spacing: 0;
-  border-radius: var(--r-pill);
-  border: 1.5px solid transparent;
-  padding: 12px 24px; min-height: var(--tap);
-  cursor: pointer;
-  background: var(--brown); color: var(--on-dark);
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px;
+  min-height: 52px; padding: 7px 2px 8px;
+  color: var(--ink-soft);
   text-decoration: none;
-  transition: opacity var(--fast) var(--ease), transform var(--fast) var(--ease);
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
+  font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.07em; text-transform: uppercase;
+  border-top: 3px solid transparent;
+  margin-top: -2px;
 }
-button:active:not(:disabled), .btn:active { transform: scale(0.975); opacity: 0.9; }
-/* low enough to read as unavailable, high enough that the label is still
-   legible — 0.35 on a cream button over roasted brown went muddy */
-button:disabled { opacity: 0.45; cursor: not-allowed; }
+.tabbar a svg { width: 21px; height: 21px; }
+.tabbar a.active { color: var(--ink); border-top-color: var(--brand); }
+
+/* ============================ type ============================ */
+
+h1, h2, h3, h4 {
+  margin: 0 0 8px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+h1 { font-size: 1.85rem; }
+h2 {
+  /* A section heading on a shelf is a header card: small, hard, ruled off. */
+  font-size: 0.8rem; font-weight: 800;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding-bottom: 6px; margin: 28px 0 10px;
+  border-bottom: 2px solid var(--rule);
+}
+h2:first-child { margin-top: 0; }
+h3 { font-size: 1.05rem; }
+p { margin: 0 0 10px; }
+
+.muted { color: var(--ink-soft); }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grow { flex: 1; min-width: 0; }
+.tight { margin-bottom: 4px; }
+/* A column, not stacked margins: an inline child (a span, a strong) ignores
+   margin-top entirely, which ran two lines of the measurements summary
+   together into "born 1995Burning about...". */
+.stack { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
+
+/* the small print: the line on a ticket that tells you the unit and the date */
+.label, .ad-label, .activity-label, .suggest-group, .legend {
+  font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* ============================ the ticket ============================ */
+
+.card {
+  background: var(--stock);
+  border: 1px solid var(--line);
+  border-radius: var(--edge);
+  padding: 14px var(--pad);
+  margin-bottom: 10px;
+  /* the lip of the rail the ticket sits in */
+  box-shadow: 0 1px 0 var(--rail-deep);
+}
+
+.row { display: flex; align-items: center; gap: 12px; }
+.row.top { align-items: flex-start; }
+.btn-row, .chip-row, .field-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.field-row > * { flex: 1; min-width: 0; }
+
+/* A rail of tickets: one channel, hairline-separated, no gaps between them. */
+.list {
+  background: var(--stock);
+  border: 1px solid var(--line);
+  border-radius: var(--edge);
+  box-shadow: 0 1px 0 var(--rail-deep);
+  overflow: hidden;
+}
+.list > * {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px var(--pad);
+  border-bottom: 1px solid var(--line);
+  min-height: 56px;
+}
+.list > *:last-child { border-bottom: none; }
+
+/*
+ * A rail inside a ticket is still one ticket. Where a list sits in a card the
+ * card already supplies the stock and the edge, so the list drops its own and
+ * bleeds its rules to the card's full width - otherwise you get a box drawn
+ * inside a box, which is the tell of a layout assembled rather than designed.
+ */
+.card .list {
+  background: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  margin: -4px calc(var(--pad) * -1) -14px;
+}
+.card .list > * { padding-left: var(--pad); padding-right: var(--pad); }
+.card .list > *:last-child { border-bottom: none; }
+
+/* The count is the hero of a shelf ticket; everything else is small print. */
+.value, .big {
+  font-weight: 800;
+  font-size: 1.9rem;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+/*
+ * A row of figures, the way a shelf ticket sets its numbers: the quantity
+ * large and hard left, its unit underneath in small print. Auto-fit rather
+ * than three fixed columns so a long category name wraps to its own row
+ * instead of crushing the two beside it.
+ */
+.stat {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 16px 14px;
+}
+.stat > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.stat .value { font-size: 2.05rem; }
+
+/* ---- the ticket row ----
+   Figure hard left at ticket scale, name and small print beside it, flag
+   struck into the outer edge. This is the arrangement the whole world rests
+   on: what you own is the biggest mark, and everything else is annotation. */
+.ticket { align-items: flex-start; gap: 13px; text-align: left; }
+.ticket-figure {
+  flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: flex-start;
+  min-width: 46px;
+  padding-top: 1px;
+}
+.ticket-count {
+  font-size: 1.62rem; font-weight: 800;
+  line-height: 0.96; letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+.ticket-unit {
+  font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-soft); margin-top: 3px;
+}
+.ticket-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ticket-name {
+  font-weight: 700; font-size: 0.97rem; line-height: 1.25;
+  /* two lines before it gives up, so "Chestnut Mushrooms" survives */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ticket-print {
+  font-size: 0.72rem; font-weight: 600;
+  color: var(--ink-soft); line-height: 1.35;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* ---- flags ----
+   Hard-edged, never rounded, and every one carries a word. */
+.pill, .chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-radius: var(--edge);
+  font-size: 0.66rem; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--rail); color: var(--ink);
+  border: 1px solid var(--line);
+}
+.pill.warn, .pill.soon { background: var(--soon); color: var(--soon-ink); border-color: #c79f00; }
+.pill.success, .pill.ready { background: var(--ready); color: var(--ready-ink); border-color: transparent; }
+.pill.error, .pill.danger { background: var(--brand); color: var(--brand-ink); border-color: transparent; }
+.pill.neutral, .pill.info { background: var(--rail); color: var(--ink-soft); }
+.pill.mine { background: var(--ink); color: var(--stock); border-color: transparent; }
+
+/* ---- shelf talker ----
+   The sign clipped to the rail that tells you something about the aisle. */
+/* A shelf talker is a square card with a printed rule across its head. The
+   2px radius everything else carries fights that rule, so these lose it. */
+.banner, .digest, .prompt-card, .ad, .info, .empty {
+  background: var(--stock);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--rule);
+  padding: 14px var(--pad);
+  margin-bottom: 12px;
+}
+.banner.warn, .digest { border-top-color: var(--soon); }
+.banner.error { border-top-color: var(--brand); }
+.banner.success { border-top-color: var(--ready); }
+.empty {
+  text-align: center; color: var(--ink-soft);
+  padding: 30px var(--pad);
+  border-top-color: var(--line);
+}
+
+.error { color: var(--brand-type); }
+.error.card, .card.error { color: var(--ink); }
+
+/* ============================ controls ============================ */
+
+button, .btn {
+  font-family: inherit;
+  font-size: 0.92rem; font-weight: 800;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  border: none; border-radius: var(--edge);
+  padding: 14px 18px;
+  min-height: 48px;
+  background: var(--brand); color: var(--brand-ink);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  transition: filter 120ms var(--ease), transform 90ms var(--ease);
+}
+button:hover:not(:disabled) { filter: brightness(1.08); }
+button:active:not(:disabled) { transform: translateY(1px); }
+button:disabled { opacity: 0.42; cursor: not-allowed; }
 
 .btn-secondary {
-  background: transparent; color: var(--ink); border-color: var(--brown);
-  box-shadow: none;
-}
-.btn-secondary.active, .btn-secondary[aria-pressed='true'] {
-  background: var(--brown); color: var(--on-dark);
+  background: var(--stock); color: var(--ink);
+  border: 2px solid var(--rule);
 }
 .btn-ghost {
-  background: transparent; color: var(--red); border-color: transparent;
-  padding: 8px 10px; min-height: 0; font-weight: 700;
+  background: transparent; color: var(--ink-soft);
+  border: none; padding: 10px 12px; min-height: 44px;
+  text-transform: none; letter-spacing: 0; font-weight: 700;
 }
-.btn-danger { background: var(--red); color: #fff; border-color: var(--red); }
-.btn-sm { padding: 8px 16px; font-size: 0.86rem; min-height: 38px; }
-.btn-lg { padding: 16px 28px; font-size: 1.02rem; }
+.btn-sm {
+  font-size: 0.72rem; padding: 9px 12px; min-height: 40px;
+  letter-spacing: 0.06em;
+}
 .btn-block { width: 100%; }
-.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.icon-btn { padding: 10px; min-width: 44px; }
+.tappable { cursor: pointer; }
 
-.icon-btn {
-  background: transparent; color: var(--ink); border: none;
-  padding: 8px; min-height: var(--tap); min-width: var(--tap);
-  border-radius: var(--r-pill);
+/* a strip of hard-edged options, like the tabs on a price gun */
+.segmented {
+  display: flex;
+  border: 2px solid var(--rule);
+  border-radius: var(--edge);
+  overflow: hidden;
+  margin-bottom: 14px;
 }
-.inline-icon { display: inline-flex; vertical-align: middle; }
+.segmented button {
+  flex: 1; border-radius: 0; min-height: 46px;
+  background: var(--stock); color: var(--ink-soft);
+  border-right: 1px solid var(--line);
+  font-size: 0.76rem;
+}
+.segmented button:last-child { border-right: none; }
+.segmented button.active { background: var(--ink); color: var(--stock); }
 
-.chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-.chip {
-  background: transparent; color: var(--ink); border: 1.5px solid var(--line);
-  padding: 9px 17px; font-size: 0.88rem; min-height: 38px; font-weight: 600;
+.filters { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; }
+.filters button {
+  min-height: 40px; padding: 8px 13px; font-size: 0.7rem;
+  background: var(--stock); color: var(--ink-soft);
+  border: 1px solid var(--line); white-space: nowrap;
 }
-.chip-on { background: var(--brown); color: var(--on-dark); border-color: var(--brown); }
+.filters button.active { background: var(--ink); color: var(--stock); border-color: var(--ink); }
 
-/* ============================ forms ============================ */
-label {
-  display: block;
-  font-family: var(--font-display);
-  text-transform: uppercase; font-weight: 700;
-  font-size: 0.7rem; letter-spacing: 0.12em;
-  color: var(--muted); margin-bottom: 7px;
+/* ============================ fields ============================ */
+
+.field { margin-bottom: 14px; }
+.field > label, .label {
+  display: block; margin-bottom: 5px;
+  font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--ink-soft);
 }
+
 input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
-select,
-textarea {
-  font-family: var(--font-body); width: 100%;
-  font-size: max(16px, 1rem);
-  padding: 13px 16px; min-height: var(--tap);
-  border: 1.5px solid var(--line); border-radius: var(--r-pill);
-  background: var(--card); color: var(--ink);
-  transition: border-color var(--fast) var(--ease);
-  -webkit-appearance: none; appearance: none;
+select, textarea {
+  width: 100%;
+  font-family: inherit;
+  font-size: 16px; /* below this, iOS zooms the page on focus */
+  font-weight: 600;
+  padding: 13px 14px;
+  min-height: 48px;
+  color: var(--ink);
+  background: var(--stock);
+  border: 2px solid var(--line);
+  border-radius: var(--edge);
 }
-textarea { border-radius: var(--r-md); }
-select {
-  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
-                    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-  background-position: calc(100% - 20px) calc(50% + 2px), calc(100% - 15px) calc(50% + 2px);
-  background-size: 5px 5px, 5px 5px;
-  background-repeat: no-repeat;
-  padding-right: 40px;
-}
-input:not([type='checkbox']):not([type='radio']):not([type='range']):focus,
-select:focus, textarea:focus {
-  outline: none; border-color: var(--brown);
-}
-input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.7; }
-.field { margin-bottom: 16px; }
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-input[type='range'] { width: 100%; accent-color: var(--red); padding: 0; min-height: 0; border: none; background: none; }
-input[type='checkbox'] {
-  accent-color: var(--brown);
-  width: 22px; height: 22px; min-height: 0; flex-shrink: 0;
-  border-radius: 5px; padding: 0; margin: 0;
-  -webkit-appearance: auto; appearance: auto;
-}
+input:focus, select:focus, textarea:focus { border-color: var(--ink); outline-offset: 1px; }
+input::placeholder, textarea::placeholder { color: var(--ink-faint); font-weight: 500; }
 
-.prompt-card {
-  background: var(--card); border: 1.5px solid var(--line);
-  border-radius: var(--r-lg); padding: 18px; margin-bottom: 16px;
+input[type='checkbox'], input[type='radio'] {
+  width: 22px; height: 22px; min-height: 0;
+  accent-color: var(--brand);
+  flex-shrink: 0;
 }
-.prompt-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
-.prompt-icon { font-size: 1.3rem; line-height: 1.2; }
-.prompt-head strong {
-  display: block; font-family: var(--font-display);
-  text-transform: uppercase; font-weight: 800; font-size: 1rem; line-height: 1.05;
-}
-.prompt-head .muted { margin: 4px 0 0; font-size: 0.86rem; }
-.prompt-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-.prompt-row input { flex: 1; }
-.prompt-row button { flex-shrink: 0; }
-.unit-suffix { color: var(--muted); font-weight: 700; font-size: 0.9rem; }
+.switch-row, .consent-check, .shop-check { display: flex; align-items: center; gap: 11px; }
+.unit-suffix { color: var(--ink-soft); font-weight: 700; }
 
-/* ============================ feedback ============================ */
-.banner {
-  padding: 14px 16px; border-radius: var(--r-md); margin-bottom: 14px;
-  font-size: 0.92rem; border: none;
-}
-.banner.error { background: var(--danger-soft); color: var(--danger); }
-.banner.success { background: var(--green-soft); color: var(--green); }
-.banner.info { background: var(--amber-soft); color: var(--amber); }
-.banner a, .banner button { color: inherit; }
-.banner button { background: transparent; border-color: currentColor; }
+/* ============================ overlays ============================ */
 
-.toast {
-  position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom));
-  transform: translateX(-50%);
-  z-index: var(--z-toast); max-width: min(90vw, 460px);
-  background: var(--brown); color: var(--on-dark);
-  padding: 13px 22px; border-radius: var(--r-pill);
-  font-size: 0.9rem; font-weight: 600; text-align: center;
-  box-shadow: var(--shadow-lg);
-  animation: toast-in var(--slow) var(--ease);
-}
-@keyframes toast-in {
-  from { opacity: 0; transform: translate(-50%, 10px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
-}
-
-/*
- * The empty state is a headline, not an apology: the reference app answers
- * "you haven't ordered before?" with "we can fix that" and one round button.
- */
-.empty { text-align: center; color: var(--ink); padding: 56px 20px; }
-.empty .big { font-size: 2.6rem; margin-bottom: 10px; }
-.empty p {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.45rem; line-height: 1.1; letter-spacing: -0.01em;
-  margin: 0 auto 18px; max-width: 20ch;
-}
-
-/* ============================ sheets ============================ */
 .sheet-backdrop {
   position: fixed; inset: 0; z-index: var(--z-sheet);
-  background: rgba(30, 12, 4, 0.45);
+  background: rgba(10, 8, 6, 0.55);
   display: flex; align-items: flex-end; justify-content: center;
-  animation: fade-in var(--fast) var(--ease);
+  animation: fade-in 150ms var(--ease);
 }
-@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 .sheet {
-  background: var(--card); width: 100%; max-width: 560px;
-  border-radius: var(--r-xl) var(--r-xl) 0 0;
-  padding: 10px 20px calc(22px + env(safe-area-inset-bottom));
-  max-height: 90dvh; overflow-y: auto; -webkit-overflow-scrolling: touch;
-  box-shadow: var(--shadow-lg);
-  animation: sheet-up var(--slow) var(--ease);
-}
-@keyframes sheet-up { from { transform: translateY(16px); } to { transform: translateY(0); } }
-.sheet::before {
-  content: ''; display: block;
-  width: 40px; height: 4px; border-radius: var(--r-pill);
-  background: var(--line); margin: 0 auto 14px;
+  background: var(--stock);
+  border-top: 3px solid var(--rule);
+  padding: var(--pad);
+  padding-bottom: calc(var(--pad) + env(safe-area-inset-bottom));
+  width: 100%; max-width: 720px;
+  max-height: 88vh; overflow-y: auto;
+  animation: slot-up 260ms var(--ease);
 }
 @media (min-width: 640px) {
   .sheet-backdrop { align-items: center; }
-  .sheet { border-radius: var(--r-xl); }
+  .sheet { border-radius: 0; max-width: 520px; border: 3px solid var(--rule); }
 }
 
-/* ============================ controls ============================ */
-.segmented {
-  display: flex; gap: 0; background: transparent;
-  border-bottom: 1.5px solid var(--line);
-  padding: 0; margin-bottom: 18px;
-}
-.segmented button {
-  flex: 1; background: transparent; color: var(--muted);
-  font-family: var(--font-display);
-  text-transform: uppercase; font-weight: 800; font-size: 0.85rem;
-  padding: 12px 8px; min-height: 44px; border-radius: 0;
-  border-bottom: 2.5px solid transparent; margin-bottom: -1.5px;
-}
-.segmented button.active { color: var(--ink); border-bottom-color: var(--red); }
-
-.filters {
-  display: flex; gap: 8px; overflow-x: auto;
-  padding: 2px 2px 10px; margin: 0 -2px 14px;
-  scrollbar-width: none; -ms-overflow-style: none;
-}
-.filters::-webkit-scrollbar { display: none; }
-.filters button {
-  background: transparent; color: var(--ink); border: 1.5px solid var(--line);
-  border-radius: var(--r-pill); padding: 9px 18px; font-size: 0.87rem;
-  white-space: nowrap; min-height: 40px; flex-shrink: 0; font-weight: 600;
-}
-.filters button.active { background: var(--brown); color: var(--on-dark); border-color: var(--brown); }
-
-.suggestions {
-  border: 1.5px solid var(--line); border-radius: var(--r-lg);
-  margin-top: 8px; overflow: hidden;
-}
-.suggestions button {
-  width: 100%; background: var(--card); color: var(--ink); border: none;
-  border-bottom: 1px solid var(--line-soft); border-radius: 0;
-  padding: 14px 16px; text-align: left; font-weight: 600;
-  justify-content: flex-start; min-height: 0;
-}
-.suggestions button:last-child { border-bottom: none; }
-.suggestions button:active { background: var(--sunken); transform: none; }
-
-/* ============================ data ============================ */
-.deduction {
-  display: grid; grid-template-columns: 1fr auto; gap: 4px 12px;
-  padding: 13px 0; border-bottom: 1px solid var(--line-soft);
-}
-.deduction:last-child { border-bottom: none; }
-.deduction .after { font-variant-numeric: tabular-nums; }
-.arrow { color: var(--muted); }
-
-/* Three across, never wrapping — a stat that drops to its own line reads as a
-   different kind of thing from the two above it. */
-.stat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.stat > div { min-width: 0; }
-.stat .value {
-  font-family: var(--font-display);
-  font-size: clamp(1.6rem, 8vw, 2.3rem);
-  font-weight: 800; letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums; line-height: 0.95;
-  text-transform: uppercase;
-}
-.stat .label { color: var(--muted); margin-top: 6px; display: block; }
-
-.bar { height: 22px; border-radius: var(--r-pill); background: var(--sunken); overflow: hidden; }
-.bar > span {
-  display: block; height: 100%; background: var(--red); border-radius: var(--r-pill);
-  transition: width var(--slow) var(--ease);
-}
-.bar.over > span { background: var(--amber); }
-
-.macro-row {
-  display: grid; grid-template-columns: 66px 1fr auto; gap: 12px;
-  align-items: center; margin-bottom: 12px; font-size: 0.88rem;
-}
-.macro-row .bar { height: 10px; }
-.macro-row .muted { font-variant-numeric: tabular-nums; }
-
-.donut-wrap { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
-.donut-wrap .legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.donut-wrap .legend li { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--muted); }
-.donut-wrap .legend strong { color: var(--ink); font-variant-numeric: tabular-nums; }
-.swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
-
-/*
- * The seven-day chart.
- *
- * `> div` is load-bearing. Written as `.week div` it also matched the bar
- * inside each column and handed it `flex: 1`, and in a column flex container
- * flex-grow beats the height property — so every bar filled its track and the
- * chart drew seven identical bars whatever the numbers were. The heights were
- * being computed correctly the whole time; flexbox was throwing them away.
- */
-.week { display: flex; align-items: flex-end; gap: 6px; height: 92px; }
-.week > div {
-  flex: 1; min-width: 0; height: 100%;
-  display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px;
-}
-/* the track the bar grows inside, so the label always sits on the baseline */
-.week .bar-track { flex: 1; width: 100%; display: flex; align-items: flex-end; }
-.week .col {
-  width: 100%; background: var(--sunken);
-  border-radius: 4px 4px 0 0; min-height: 3px;
-  transition: height var(--slow) var(--ease);
-}
-.week .col.today { background: var(--red); }
-.week .col.has-data { background: var(--brown); }
-.week .col.today.has-data { background: var(--red); }
-.week span { font-size: 0.62rem; color: var(--muted); font-weight: 700; }
-
-.meal-head {
-  display: flex; align-items: baseline; justify-content: space-between;
-  margin: 26px 0 10px; color: var(--muted);
-}
-.daynav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
-.daynav strong {
-  font-family: var(--font-display); text-transform: uppercase;
-  font-weight: 800; font-size: 1.05rem;
+.toast {
+  position: fixed; left: 50%; bottom: calc(78px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: var(--z-toast); max-width: min(90vw, 440px);
+  background: var(--ink); color: var(--stock);
+  padding: 13px 18px; border-radius: var(--edge);
+  font-weight: 700; font-size: 0.9rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  animation: slot-up 200ms var(--ease);
 }
 
-/* ============================ feature bits ============================ */
-.scanner-video { width: 100%; border-radius: var(--r-lg); background: #000; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
-
-.ad { border: none; border-radius: var(--r-lg); padding: 16px; margin-bottom: 12px; background: var(--card); }
-.ad-label { color: var(--tan); margin-bottom: 8px; }
-
-.switch-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 14px;
-  padding: 15px 0; border-bottom: 1px solid var(--line-soft);
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slot-up {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
-.switch-row:last-child { border-bottom: none; }
-.switch-row input[type='checkbox'] { width: 24px; height: 24px; }
+.sheet { animation-name: sheet-up; }
+@keyframes sheet-up { from { transform: translateY(14px); } to { transform: translateY(0); } }
 
-.goal-grid, .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.goal-grid button, .theme-grid button {
-  background: transparent; color: var(--ink); border: 1.5px solid var(--line);
-  flex-direction: column; gap: 4px; padding: 16px 6px;
-  border-radius: var(--r-lg); font-size: 0.9rem;
-}
-.goal-grid button.active, .theme-grid button.active {
-  border-color: var(--brown); background: var(--brown); color: var(--on-dark);
-}
-.goal-grid .kcal { font-size: 0.72rem; font-weight: 500; opacity: 0.8; }
-.theme-grid .icon { font-size: 1.2rem; }
-
-.reason-note { font-size: 0.82rem; color: var(--red); margin-top: 5px; font-weight: 600; }
-
-.counts-as {
-  background: var(--sunken); border: none;
-  border-radius: var(--r-md); padding: 14px 16px; margin-bottom: 16px; font-size: 0.9rem;
-}
-.counts-as strong { display: block; }
-.counts-as .muted { font-size: 0.82rem; }
-.counts-as label { margin-bottom: 8px; }
-
-.option-picker { margin: 12px 0 4px; display: flex; flex-direction: column; gap: 8px; }
-.option-picker .muted { font-size: 0.8rem; }
-.option-picker button.active { border-color: var(--brown); background: var(--brown); color: var(--on-dark); }
-
-.more-toggle {
-  background: transparent; border: none; color: var(--red);
-  padding: 10px 0; font-size: 0.9rem; font-weight: 700;
-  justify-content: flex-start; width: 100%; min-height: 0;
-}
-.more-toggle .muted { font-weight: 400; }
-.more-panel { border-left: 2px solid var(--line); padding-left: 16px; margin: 4px 0 14px; }
-
-/* ---- shopping list ---- */
-.shop-row { display: flex; align-items: center; gap: 14px; }
-.shop-check { flex-shrink: 0; }
-.shop-name {
-  flex: 1; min-width: 0;
-  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
-  background: transparent; border: none; box-shadow: none; border-radius: 0;
-  padding: 2px 0; color: var(--ink); font-weight: 600; font-size: 1rem;
-  text-align: left; min-height: 0;
-}
-.shop-name .truncate { width: 100%; }
-.shop-why { color: var(--muted); }
-.shop-why.warn { color: var(--amber); }
-
-.waste-row {
-  display: grid; grid-template-columns: 1fr auto; gap: 3px 12px;
-  padding: 13px 0; border-bottom: 1px solid var(--line-soft);
-}
-.waste-row:last-child { border-bottom: none; }
-.waste-reason.wasted { color: var(--danger); }
-.waste-reason.other_person { color: var(--muted); }
-.waste-reason.used_up { color: var(--green); }
-
-/* ---- substitutions ---- */
-.substitutes { margin: 12px 0 4px; padding: 12px; background: var(--sunken); border-radius: var(--r-md); }
-.substitutes > .muted {
-  font-family: var(--font-display); text-transform: uppercase;
-  font-weight: 700; font-size: 0.68rem; letter-spacing: 0.12em;
-  display: block; margin-bottom: 8px;
-}
-.substitute { padding: 5px 0; font-size: 0.9rem; }
-.substitute .muted { font-size: 0.82rem; }
-.substitute .pill { margin-left: 6px; }
-.substitute.tappable {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  text-align: left; background: var(--card); color: var(--ink);
-  border: none; border-radius: var(--r-md);
-  padding: 12px 14px; margin-bottom: 8px; font-weight: 400; min-height: 0;
-}
-.substitute.tappable:last-child { margin-bottom: 0; }
-.substitute.tappable strong { font-weight: 700; }
-.swap-cta {
-  flex-shrink: 0;
-  font-family: var(--font-display); text-transform: uppercase;
-  font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em;
-  color: #fff; background: var(--red);
-  padding: 7px 13px; border-radius: var(--r-pill);
-}
-
-.rating-row { display: flex; gap: 4px; }
-.star {
-  background: transparent; border: none; color: var(--line);
-  padding: 2px 3px; line-height: 0; min-height: 0;
-  transition: transform var(--fast) var(--ease), color var(--fast) var(--ease);
-}
-.star.on { color: var(--red); }
-.star:active { transform: scale(1.15); }
+/* ============================ cook mode ============================ */
 
 .cook-mode {
   position: fixed; inset: 0; z-index: var(--z-cook);
-  background: var(--bg); color: var(--ink);
-  padding: calc(24px + env(safe-area-inset-top)) 22px calc(24px + env(safe-area-inset-bottom));
+  background: var(--stock); color: var(--ink);
+  padding: calc(22px + env(safe-area-inset-top)) var(--pad) calc(22px + env(safe-area-inset-bottom));
   display: flex; flex-direction: column;
 }
-/*
- * The step used to take flex:1, which grew it to fill the screen and pushed the
- * timer down against the nav buttons. The step now takes only the room it needs
- * (scrolling if a step is long), so the timer sits just under the text where
- * you are already looking, and the nav is held at the bottom by its own margin.
- */
-.cook-step { font-size: 1.4rem; line-height: 1.5; flex: 0 1 auto; overflow-y: auto; margin-bottom: 20px; }
+.cook-step { font-size: 1.38rem; line-height: 1.45; flex: 0 1 auto; overflow-y: auto; margin-bottom: 20px; font-weight: 600; }
 .cook-timer {
-  font-family: var(--font-display);
-  font-size: 3rem; font-weight: 800; font-variant-numeric: tabular-nums;
+  font-size: 3.2rem; font-weight: 800; font-variant-numeric: tabular-nums;
   display: flex; align-items: center; gap: 14px; margin-bottom: 14px;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.04em;
 }
 .cook-nav { display: flex; gap: 10px; margin-top: auto; padding-top: 20px; }
 .cook-nav button { flex: 1; padding: 18px; }
 
-.digest {
-  background: var(--card); border: none;
-  border-radius: var(--r-lg); padding: 18px; margin-bottom: 16px; font-size: 0.98rem;
-}
-.digest strong {
-  font-family: var(--font-display);
-  font-weight: 800; font-size: 1.15rem; line-height: 1.15;
-  display: block; margin-bottom: 4px;
-}
+/* ============================ data ============================ */
 
-/* ---- recipe method ---- */
-.method { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+/*
+ * The deduction: a printed receipt of exactly what the app is about to take.
+ * It is the product's central promise, so it is set like a till roll and it
+ * prints rather than fades in.
+ */
+.deduction {
+  display: grid; grid-template-columns: 1fr auto; gap: 3px 12px;
+  padding: 11px 0; border-bottom: 1px dashed var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.deduction:last-child { border-bottom: none; }
+.deduction .after { color: var(--ink-soft); font-weight: 700; }
+
+.week { display: flex; align-items: flex-end; gap: 6px; height: 132px; margin-top: 12px; }
+.week > div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.bar-track {
+  width: 100%; flex: 1;
+  display: flex; align-items: flex-end;
+  background: var(--rail);
+  border-radius: var(--edge);
+  overflow: hidden;
+}
+.bar-track > div { width: 100%; background: var(--brand); border-radius: var(--edge) var(--edge) 0 0; }
+
+.macro-row { display: flex; gap: 14px; flex-wrap: wrap; }
+.donut-wrap { display: flex; align-items: center; gap: 16px; }
+.swatch { width: 12px; height: 12px; border-radius: 0; flex-shrink: 0; }
+
+.method { padding-left: 0; list-style: none; counter-reset: step; }
 .method li {
   counter-increment: step;
-  position: relative; padding-left: 40px; margin-bottom: 16px;
-  line-height: 1.55;
+  display: grid; grid-template-columns: 30px 1fr; gap: 12px;
+  padding: 11px 0; border-bottom: 1px solid var(--line);
 }
-.method li:last-child { margin-bottom: 0; }
+.method li:last-child { border-bottom: none; }
 .method li::before {
   content: counter(step);
-  position: absolute; left: 0; top: 1px;
-  width: 26px; height: 26px; border-radius: var(--r-pill);
+  font-weight: 800; font-size: 0.86rem;
+  color: var(--stock); background: var(--ink);
+  width: 26px; height: 26px; border-radius: var(--edge);
   display: flex; align-items: center; justify-content: center;
-  background: var(--brown); color: var(--on-dark);
-  font-family: var(--font-display); font-weight: 800; font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
 }
 
-/* ---- consent ---- */
-.consent {
-  background: var(--sunken); border-radius: var(--r-md);
-  padding: 14px 16px; margin: 4px 0 16px;
+.suggestions {
+  border: 2px solid var(--rule); border-radius: var(--edge);
+  margin-top: 8px; overflow: hidden; background: var(--stock);
 }
-.consent-check {
-  display: flex; gap: 12px; align-items: flex-start;
-  margin: 0; text-transform: none; letter-spacing: 0;
-  font-family: var(--font-body); font-size: 0.94rem; font-weight: 500;
-  color: var(--ink); cursor: pointer;
+.suggestions button {
+  width: 100%; background: var(--stock); color: var(--ink);
+  border: none; border-bottom: 1px solid var(--line); border-radius: 0;
+  padding: 14px var(--pad); text-align: left;
+  justify-content: flex-start; min-height: 0;
+  text-transform: none; letter-spacing: 0; font-weight: 700;
 }
-.consent-check input { margin-top: 1px; }
-.consent-check .btn-ghost {
-  display: inline; padding: 0; min-height: 0; font-size: inherit;
-  text-decoration: underline; text-underline-offset: 2px;
-}
-
-/* ---- the privacy notice ---- */
-.policy { font-size: 0.92rem; line-height: 1.6; }
-.policy h2 {
-  font-size: 1.3rem; margin: 4px 0 10px;
-}
-.policy h3 {
-  font-size: 1rem; margin: 22px 0 8px;
-  padding-top: 14px; border-top: 1px solid var(--line-soft);
-}
-.policy h4 {
-  font-family: var(--font-display); text-transform: uppercase;
-  font-size: 0.8rem; letter-spacing: 0.08em; font-weight: 800;
-  margin: 16px 0 6px; color: var(--muted);
-}
-.policy p { margin: 0 0 10px; }
-.policy-list { margin: 0 0 12px; padding-left: 20px; }
-.policy-list li { margin-bottom: 6px; }
-.policy-table-wrap { overflow-x: auto; margin: 0 0 14px; }
-.policy-table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
-.policy-table th, .policy-table td {
-  text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line-soft);
-  vertical-align: top;
-}
-.policy-table th {
-  font-family: var(--font-display); text-transform: uppercase;
-  font-size: 0.68rem; letter-spacing: 0.08em; color: var(--muted);
-}
-
-/* ---- onboarding ---- */
-.activity-row {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
-  width: 100%; text-align: left;
-  background: transparent; color: var(--ink);
-  border: 1.5px solid var(--line); border-radius: var(--r-md);
-  padding: 12px 16px; margin-bottom: 8px; font-weight: 500;
-}
-.activity-row:last-child { margin-bottom: 0; }
-.activity-row.active { border-color: var(--brown); background: var(--brown); color: var(--on-dark); }
-.activity-row.active .muted { color: var(--on-dark); opacity: 0.75; }
-.activity-label { font-weight: 700; }
-
-@media (min-width: 640px) {
-  .container { padding: 26px; }
-  h1 { font-size: 2.6rem; }
-}
-
-/* ---- first-launch placeholder ----
- * Shown only when there is a token but no cached account yet. It mimics the
- * shape of a loaded screen so the app looks started rather than stalled.
- */
-.skeleton-card {
-  height: 92px;
-  border-radius: var(--r-lg);
-  background: var(--card);
-  margin-bottom: 14px;
-  animation: skeleton-pulse 1.4s var(--ease) infinite;
-}
-.skeleton-card:nth-child(2) { animation-delay: 0.15s; }
-.skeleton-card:nth-child(3) { animation-delay: 0.3s; }
-@keyframes skeleton-pulse {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 0.9; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .skeleton-card { animation: none; }
-}
-
-/* a divider inside the autocomplete, separating your catalogue from the wider
-   product database - the local entry is the one that links to recipes, so it
-   is always listed first */
+.suggestions button:last-child { border-bottom: none; }
+.suggestions button:active { background: var(--rail); transform: none; }
 .suggest-group {
-  padding: 9px 16px;
-  background: var(--sunken);
-  border-bottom: 1px solid var(--line-soft);
-  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em;
-  text-transform: uppercase; color: var(--muted);
+  padding: 8px var(--pad);
+  background: var(--rail);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+
+.skeleton-card {
+  height: 86px; border-radius: var(--edge);
+  background: var(--stock); border: 1px solid var(--line);
+  margin-bottom: 10px;
+  animation: pulse 1.5s var(--ease) infinite;
+}
+.skeleton-card:nth-child(2) { animation-delay: 0.12s; }
+.skeleton-card:nth-child(3) { animation-delay: 0.24s; }
+@keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+.policy { line-height: 1.6; }
+.policy-table-wrap { overflow-x: auto; margin-bottom: 14px; }
+.policy-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.policy-table th, .policy-table td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; }
+.policy-table th { background: var(--rail); font-weight: 800; }
+.policy-list { padding-left: 20px; }
+
+.auth-hero { text-align: center; margin-bottom: 26px; }
+.auth-logo { width: 148px; height: 148px; display: block; margin: 0 auto 14px; border-radius: 50%; }
+
+.inline-icon { display: inline-flex; vertical-align: -2px; margin-right: 5px; }
+.arrow { margin-left: 4px; }
+.reason-note, .shop-why { font-size: 0.82rem; color: var(--ink-soft); }
+/*
+ * Confirming what was scanned. Set as its own ticket rather than a line of
+ * muted text, because this is a decision the person is being asked to make,
+ * not a note about one already taken.
+ */
+.confirm-food {
+  margin-top: 8px;
+  background: var(--stock);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--rule);
+  padding: 13px var(--pad);
+}
+.confirm-food .ticket-name { display: block; font-weight: 700; }
+.confirm-food .ticket-print { display: block; }
+.counts-as {
+  margin-top: 11px;
+  padding-top: 11px;
+  border-top: 1px dashed var(--line);
+}
+.counts-as .ticket-name { display: block; font-weight: 700; font-size: 0.92rem; }
+.counts-as .ticket-print { display: block; }
+.counts-as label {
+  display: block; margin-bottom: 5px;
+  font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.substitutes { margin-top: 10px; }
+.substitute { padding: 9px 0; border-bottom: 1px solid var(--line); }
+.substitute:last-child { border-bottom: none; }
+/*
+ * Picking one of three is a selection, not a call to action. Left on the
+ * default button style every option arrived as a solid red block, which both
+ * shouts and hides which one is actually chosen. Unchosen options are plain
+ * stock; the chosen one is filled in ink, the same mark the segmented control
+ * uses, so selection reads the same way everywhere.
+ */
+.goal-grid, .theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.goal-grid button, .theme-grid button {
+  width: 100%; min-width: 0;
+  padding: 13px 6px;
+  font-size: 0.72rem; letter-spacing: 0.04em;
+  background: var(--stock); color: var(--ink-soft);
+  border: 2px solid var(--line);
+  flex-direction: column; gap: 5px;
+}
+.goal-grid button strong { font-weight: 800; }
+.goal-grid button.active, .theme-grid button.active {
+  background: var(--ink); color: var(--stock); border-color: var(--ink);
+}
+.daynav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.meal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.scanner-video { width: 100%; border-radius: var(--edge); border: 2px solid var(--rule); }
+/* A disclosure, not a call to action: the global button style was making this
+   a solid red block with unreadable muted text sitting on top of it. */
+.more-toggle {
+  width: 100%;
+  justify-content: flex-start;
+  background: none; color: var(--ink);
+  border: none; border-top: 1px solid var(--line); border-radius: 0;
+  padding: 15px 0 5px; margin-top: 6px; min-height: 0;
+  text-transform: none; letter-spacing: 0; font-weight: 700;
+}
+.more-toggle:hover:not(:disabled) { filter: none; text-decoration: underline; }
+.more-toggle .muted { font-weight: 600; }
+.more-panel { padding-top: 10px; }
+.option-picker { display: grid; gap: 8px; }
+.prompt-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.prompt-icon { flex-shrink: 0; color: var(--brand-type); }
+.rating-row { display: flex; gap: 6px; }
+.waste-row, .shop-row { display: flex; align-items: center; gap: 12px; }
+.shop-name { flex: 1; min-width: 0; }
+.swap-cta { margin-top: 8px; }
+
+/*
+ * One authored moment, not an entrance on every element: a ticket being pushed
+ * into the rail. It runs once, on the rail itself, from an already-visible
+ * default so nothing is ever hidden by animation timing.
+ */
+@keyframes slot-in {
+  from { opacity: 0.35; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.list > *, .card { animation: slot-in var(--slot) var(--ease) both; }
+.list > *:nth-child(1) { animation-delay: 0ms; }
+.list > *:nth-child(2) { animation-delay: 26ms; }
+.list > *:nth-child(3) { animation-delay: 52ms; }
+.list > *:nth-child(4) { animation-delay: 78ms; }
+.list > *:nth-child(n + 5) { animation-delay: 100ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

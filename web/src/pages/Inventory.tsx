@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiError, api } from '../lib/api';
 import type { Food, InventoryItem, MealSlot, RecipesForFood, RemovalReason } from '../lib/types';
-import { expiryLabel, formatAmount } from '../lib/format';
+import { expiryLabel, formatAmount, amountParts, expiryFlag } from '../lib/format';
 import { ExpiryPill } from '../components/StatusPill';
 import { Sheet } from '../components/Sheet';
 import { useToast } from '../components/Toast';
@@ -135,31 +135,37 @@ export default function Inventory() {
 }
 
 function ItemRow({ item, onSelect }: { item: InventoryItem; onSelect: (item: InventoryItem) => void }) {
+  const amount = amountParts(item.quantity, item.unit);
   return (
     <li>
       <button
         type="button"
-        className="btn-ghost row"
+        className="btn-ghost row ticket"
         style={{ width: '100%', padding: 0, color: 'inherit' }}
         onClick={() => onSelect(item)}
       >
-        <div className="grow stack" style={{ textAlign: 'left' }}>
-          <div className="truncate">
+        {/* how much you have is the thing you came to read, so it is set like
+            the figure on a shelf ticket rather than buried in a run-on line */}
+        <span className="ticket-figure" aria-hidden="true">
+          <span className="ticket-count">{amount.figure}</span>
+          {amount.unit ? <span className="ticket-unit">{amount.unit}</span> : null}
+        </span>
+        <div className="grow ticket-body">
+          <span className="ticket-name">
             {item.isLeftover ? <Icon name="bowl" size={15} className="inline-icon" /> : null}
             {item.food.name}
             {item.food.brand ? <span className="muted"> · {item.food.brand}</span> : null}
-          </div>
-          <div className="muted">
-            {formatAmount(item.quantity, item.unit)}
+          </span>
+          <span className="ticket-print">
+            <span className="sr-only">{formatAmount(item.quantity, item.unit)}. </span>
+            {expiryLabel(item.daysUntilExpiration, item.expiryStatus)}
             {item.storageLocation !== 'pantry' ? ` · ${item.storageLocation}` : ''}
-            {item.caloriesRemaining !== null ? ` · ${item.caloriesRemaining} kcal left` : ''}
-          </div>
-          {item.food.countsAs ? (
-            <div className="reason-note">Counts as {item.food.countsAs.name}</div>
-          ) : null}
-          {item.isLowStock ? <div className="reason-note">Running low</div> : null}
+            {item.caloriesRemaining !== null ? ` · ${item.caloriesRemaining} kcal` : ''}
+            {item.food.countsAs ? ` · counts as ${item.food.countsAs.name}` : ''}
+            {item.isLowStock ? ' · running low' : ''}
+          </span>
         </div>
-        <ExpiryPill status={item.expiryStatus} label={expiryLabel(item.daysUntilExpiration, item.expiryStatus)} />
+        <ExpiryPill status={item.expiryStatus} label={expiryFlag(item.daysUntilExpiration, item.expiryStatus)} />
       </button>
     </li>
   );

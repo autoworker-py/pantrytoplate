@@ -3,17 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#f0ede8" />
+    <meta name="theme-color" content="#eae7e0" />
     <!--
-      Archivo stands in for the reference app's proprietary display face: the
-      same squarish grotesque built for heavy uppercase. DM Sans carries body
-      copy. preconnect first so the first paint is not held up by DNS.
+      Archivo is served from our own origin, not a CDN. This app is used in a
+      shop with one bar of signal, and a typeface fetched over the network is a
+      typeface that is missing exactly then - the identity would fall back to
+      the platform sans at the moment it matters most. One variable file covers
+      every weight, so this costs 35KB and no third-party request.
     -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      href="/fonts/archivo-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
     />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
@@ -24,6 +27,24 @@
     <title>Pantry to Plate</title>
   </head>
   <body>
+    <!--
+      THESIS: The pantry as a supermarket shelf rail - count first, small print
+      underneath, a yellow flag on what to use next - refusing the cream-ground
+      recipe app with its rounded cards and photography it does not own.
+      OWN-WORLD: White card stock on a warm grey channel, print black, hairline
+      rules, one 2px corner. Archivo at 800 with tabular figures. Three flags
+      that each carry a word: #a81712 urgent, #f2c200 use first, #0f6b3a ready.
+      STORY: You see what is about to go off before you see anything else, and
+      the number of each thing you own is the largest mark on its ticket.
+      FIRST VIEWPORT: Ruled heading, then a rail of tickets - what expires
+      soonest at the top, count set at 2.3rem on the left, name and unit as
+      small print, flag struck into the right edge.
+      FORM: Shelf Edge, candidate 1 of 7, chosen by the user over the roll.
+      Seed a4e258c4.
+      FINISH: unreviewed and undocumented is unfinished; this build ends with
+      the finish review, the verdict, DESIGN.md, and every shipping raster
+      carrying its provenance.
+    -->
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

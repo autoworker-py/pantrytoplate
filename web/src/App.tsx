@@ -1,7 +1,7 @@
 import { Link, NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './lib/auth';
 import { ToastProvider } from './components/Toast';
-import { Icon } from './components/Icon';
+import { Icon, type IconName } from './components/Icon';
 import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
 import { ReconsentGate } from './components/ReconsentGate';
@@ -14,12 +14,17 @@ import ShoppingList from './pages/ShoppingList';
 import Nutrition from './pages/Nutrition';
 import Settings from './pages/Settings';
 
-const TABS: Array<{ to: string; label: string; end: boolean }> = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/inventory', label: 'Pantry', end: false },
-  { to: '/diary', label: 'Diary', end: false },
-  { to: '/recipes', label: 'Recipes', end: false },
-  { to: '/shopping', label: 'Shopping', end: false },
+/*
+ * Words alone were a placeholder. A tab bar carries a mark over its word in
+ * every app people already know, and these are cut from the same stencil as
+ * the rest of the interface rather than borrowed from an emoji font.
+ */
+const TABS: Array<{ to: string; label: string; end: boolean; icon: IconName }> = [
+  { to: '/', label: 'Home', end: true, icon: 'board' },
+  { to: '/inventory', label: 'Pantry', end: false, icon: 'crate' },
+  { to: '/diary', label: 'Diary', end: false, icon: 'book' },
+  { to: '/recipes', label: 'Recipes', end: false, icon: 'skillet' },
+  { to: '/shopping', label: 'Shopping', end: false, icon: 'cart' },
 ];
 
 export default function App() {
@@ -135,6 +140,7 @@ export default function App() {
         <nav className="tabbar" aria-label="Main">
           {TABS.map((tab) => (
             <NavLink key={tab.to} to={tab.to} end={tab.end}>
+              <Icon name={tab.icon} size={21} />
               {tab.label}
             </NavLink>
           ))}
