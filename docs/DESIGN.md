@@ -103,6 +103,29 @@ contact shadow, a thin edge.
    split into "Foods the app knows" and "New to the app" before anything is
    saved. New ones become the importer's own foods, drawn by type.
 
+## Receipts (`web/src/screens/receipt`, `web/src/lib/receipt.ts`)
+
+Put food away has a third tab, Receipt, in the iPhone app. The photo is read on
+the phone with Apple's text recognition (`ios/App/App/ReceiptTextPlugin.swift`)
+and deleted once read. Receipts print store shorthand ("BNLS SKNLS CHKN BRST"),
+so each line is matched in order against:
+
+1. **Wording linked before.** What the phone remembers from earlier receipts:
+   the line's words, the food it turned out to be, and how it was put away.
+2. **Everything bought before.** The pantry now plus every food put away on
+   this phone, matched by how shorthand is made (cut short, or vowels dropped).
+   Describing words (organic, boneless, sharp) never name a food. A line whose
+   every word is accounted for comes ticked; a near one is offered as "Looks
+   like your …".
+3. **Anything else** waits unticked under New to the app: link it once by
+   suggestion, barcode or search, or mark it not food, and every later receipt
+   knows it. Fees are skipped from the start.
+
+The review is thermal paper under the kitchen light: recognised lines get a warm
+highlighter stroke as a light sweeps down the receipt. Nothing goes in until
+"Add N to pantry", which puts every ticked line away at once, with Undo. The
+memory lives on the phone, per account, and is erased with the account.
+
 ## Components (`web/src/ui`)
 
 - `Page`: a three-slot header (left, centre, right) over a scrolling column or

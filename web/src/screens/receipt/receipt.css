@@ -1,0 +1,87 @@
+/* ---------- the receipt: thermal paper under the kitchen light ---------- */
+
+.receipt-stage {
+  position: relative; display: flex; justify-content: center; align-items: flex-start;
+  height: 238px; padding-top: 30px; overflow: hidden; border-radius: var(--r-lg);
+  background: radial-gradient(75% 70% at 50% 0%, rgba(255, 222, 170, .17), rgba(255, 222, 170, 0) 72%), var(--bg-1);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.receipt-stage::before { content: ''; position: absolute; top: 0; left: 36%; right: 36%; height: 8px; border-radius: 0 0 8px 8px; background: linear-gradient(180deg, #fff4e0, #f1d39e); z-index: 2; }
+.receipt-stage:not(.tall)::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 70px; background: linear-gradient(rgba(18, 20, 22, 0), var(--bg-1)); z-index: 2; }
+.receipt-stage.tall { height: auto; padding: 34px 0 30px; }
+
+.paper {
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  position: relative; width: 272px; padding: 18px 18px 26px; transform: rotate(-1deg);
+  font-family: var(--mono); font-size: 11px; line-height: 1.6; letter-spacing: .02em; color: rgba(34, 32, 30, .82);
+  background: linear-gradient(180deg, #f4efe6, #e9e2d6 60%, #ddd5c7);
+  box-shadow: 0 34px 50px -24px rgba(0, 0, 0, .85), 0 0 0 1px rgba(255, 255, 255, .2) inset;
+  /* torn along the bottom */
+  -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - 7px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 11px 7px repeat-x;
+  mask: linear-gradient(#000 0 0) top / 100% calc(100% - 7px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 11px 7px repeat-x;
+}
+.paper.compact { width: 236px; }
+.paper-head { display: flex; flex-direction: column; align-items: center; gap: 1px; padding-bottom: 10px; margin-bottom: 8px; border-bottom: 1px dashed rgba(34, 32, 30, .35); }
+.paper-head b { font-size: 12.5px; letter-spacing: .12em; }
+.paper-line { position: relative; display: flex; justify-content: space-between; gap: 12px; padding: 0 3px; margin: 0 -3px; border-radius: 2px; transition: background-color .3s ease; }
+.paper-line span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* read and recognised: a warm highlighter stroke; read and new: a quiet underline */
+.paper-line.known { background: rgba(243, 186, 104, .42); }
+.paper-line.read:not(.known) span:first-child { text-decoration: underline dotted rgba(34, 32, 30, .45); text-underline-offset: 3px; }
+.paper-line.edge::after { content: ''; position: absolute; left: -22px; right: -22px; bottom: -2px; height: 2px; background: #f7d7a4; box-shadow: 0 0 14px 5px rgba(243, 201, 139, .6); }
+.paper-total { display: flex; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(34, 32, 30, .35); font-weight: 700; }
+
+/* ---------- the Receipt tab ---------- */
+
+.receipt-intro { padding-bottom: 8px; }
+.disclaimer { display: flex; gap: 9px; align-items: flex-start; margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12.5px; line-height: 1.5; color: var(--ink-3); }
+.disclaimer svg { flex: none; margin-top: 1.5px; }
+
+/* ---------- reading ---------- */
+
+.receipt-reading { padding-top: 6px; }
+.reading-count { margin-top: 22px; text-align: center; font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--ink-2); }
+.reading-count b { font-size: 22px; color: var(--ink); margin-right: 2px; }
+
+/* ---------- the review ---------- */
+
+.receipt-summary { display: flex; gap: 18px; font-size: 14px; color: var(--ink-3); }
+.receipt-summary b { font-family: var(--display); font-size: 17px; color: var(--ink); margin-right: 3px; }
+.receipt-list .r-row { gap: 12px; }
+.r-tick { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; box-shadow: inset 0 0 0 1.6px var(--ink-4); color: #1d1509; transition: background var(--fast) ease, box-shadow var(--fast) ease; }
+.r-tick.on { background: var(--warm); box-shadow: 0 0 12px -2px rgba(243, 201, 139, .55); }
+.r-row .thumb { width: 42px; height: 42px; }
+.r-row.off:not(.new) .thumb, .r-row.off:not(.new) .grow, .r-row.off:not(.new) .r-amount { opacity: .45; }
+.r-text { display: block; margin-top: 3px; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 11.5px; letter-spacing: .03em; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-text.big { margin-top: 0; font-size: 13.5px; color: var(--ink); }
+.r-row .s b { color: var(--warm); font-weight: 600; }
+.r-amount { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding: 6px 0 6px 8px; text-align: right; }
+.r-amount span:first-child { font-weight: 600; font-size: 15px; }
+.r-amount span:last-child { font-size: 13px; color: var(--ink-3); }
+.r-row .link-btn { flex: none; font-weight: 600; }
+.r-skipped { display: flex; gap: 10px; align-items: flex-start; margin-top: 18px; padding: 12px 14px; border-radius: var(--r-sm); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line); font-size: 13.5px; color: var(--ink-3); }
+.r-skipped svg { flex: none; margin-top: 2px; }
+.r-skipped .r-text { display: inline; white-space: normal; margin: 0; }
+
+/* ---------- linking a new line ---------- */
+
+.r-ticket { margin-top: 12px; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 4px; background: linear-gradient(180deg, #f4efe6, #e6dfd2); border-radius: 4px; transform: rotate(-.6deg); box-shadow: 0 16px 26px -16px rgba(0, 0, 0, .8); }
+.r-ticket .r-text.big { color: #26231f; font-size: 15px; font-weight: 600; }
+.r-ticket .fine { color: #6f695f; font-size: 12.5px; }
+.r-suggest { margin-top: 16px; display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: var(--r); background: radial-gradient(90% 120% at 0% 0%, rgba(255, 222, 170, .1), rgba(255, 222, 170, 0) 70%), var(--bg-2); box-shadow: inset 0 0 0 1px rgba(243, 201, 139, .28); }
+.r-suggest .grow { flex: 1; min-width: 0; }
+.r-suggest .t { display: block; font-weight: 650; }
+.r-suggest .s { display: block; font-size: 13.5px; color: var(--ink-3); }
+
+/* a recognised line's name opens "not the right thing?" */
+.r-what { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; text-align: left; }
+.r-what .grow { flex: 1; min-width: 0; }
+
+/* still reading: blank paper, and the light going over it */
+.paper-line.placeholder { height: 17.6px; align-items: center; }
+.paper-line.placeholder span { display: block; height: 7px; border-radius: 2px; background: rgba(34, 32, 30, .14); }
+.paper-line.placeholder span:last-child { width: 30px; flex: none; }
+.paper.waiting { min-height: 280px; }
+.paper.waiting::after { content: ''; position: absolute; left: 0; right: 0; top: 18px; height: 2px; background: #f7d7a4; box-shadow: 0 0 14px 5px rgba(243, 201, 139, .6); animation: paper-sweep 1.5s var(--ease-in-out) infinite alternate; }
+@keyframes paper-sweep { to { top: calc(100% - 28px); } }
+@media (prefers-reduced-motion: reduce) { .paper.waiting::after { animation: none; } }

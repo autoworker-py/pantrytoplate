@@ -1,6 +1,9 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { useAuth } from '../lib/auth';
+import { rememberFoods } from '../lib/receiptMemory';
+import { canReadReceipts } from '../lib/receiptText';
 import type { ExternalHit, Food, StorageLocation } from '../lib/types';
 import { dateInputToISO, formatDateInput } from '../lib/format';
 import { CountsAs } from '../components/CountsAs';
@@ -9,6 +12,7 @@ import { UnitSelect } from '../components/UnitSelect';
 import { FoodThumb } from '../fridge/Fridge';
 import { Icon } from '../ui/Icon';
 import { BackButton, Page, Sheet, errorText, useToast } from '../ui/kit';
+import { ReceiptFlow } from './receipt/ReceiptFlow';
 
 // the decoder is heavy; only load it when someone scans
 const BarcodeScanner = lazy(() => import('../components/BarcodeScanner').then((m) => ({ default: m.BarcodeScanner })));
@@ -36,18 +40,44 @@ type Picked = { food: Food; packageGrams?: number | null };
 
 export default function AddFood() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<'type' | 'scan'>('type');
+  const [mode, setMode] = useState<'type' | 'scan' | 'receipt'>('type');
   const [picked, setPicked] = useState<Picked | null>(null);
   const [creating, setCreating] = useState<{ name: string; barcode?: string } | null>(null);
   const [added, setAdded] = useState<string[]>([]);
   const [resetKey, setResetKey] = useState(0);
 
+  const tabs = (
+    <div className="seg" role="tablist" style={{ marginBottom: 14 }}>
+      <button type="button" role="tab" aria-selected={mode === 'type'} className={mode === 'type' ? 'on' : ''} onClick={() => setMode('type')}>Type it</button>
+      <button type="button" role="tab" aria-selected={mode === 'scan'} className={mode === 'scan' ? 'on' : ''} onClick={() => setMode('scan')}>Scan it</button>
+      {/* receipts are read with Apple's text recognition: the iPhone app, or a sample shop in development */}
+      {canReadReceipts || import.meta.env.DEV ? (
+        <button type="button" role="tab" aria-selected={mode === 'receipt'} className={mode === 'receipt' ? 'on' : ''} onClick={() => setMode('receipt')}>Receipt</button>
+      ) : null}
+    </div>
+  );
+
+  if (mode === 'receipt') {
+    return (
+      <ReceiptFlow
+        tabs={tabs}
+        back={<BackButton fallback="/pantry" />}
+        homeFor={homeFor}
+        finder={(how, found, unknown) =>
+          how === 'scan' ? (
+            <ScanFlow onPick={(p) => found(p.food)} onUnknown={(barcode) => unknown('', barcode)} />
+          ) : (
+            <TypeFlow onPick={(p) => found(p.food)} onCreate={(name) => unknown(name)} />
+          )
+        }
+        newFood={(name, barcode, created, close) => <NewFoodSheet initialName={name} barcode={barcode} onClose={close} onCreated={(food) => created(food)} />}
+      />
+    );
+  }
+
   return (
     <Page left={<BackButton fallback="/pantry" />} title="Put food away" right={added.length ? <button type="button" className="pill-btn" onClick={() => navigate('/pantry')}>Done</button> : null}>
-      <div className="seg" role="tablist" style={{ marginBottom: 14 }}>
-        <button type="button" role="tab" aria-selected={mode === 'type'} className={mode === 'type' ? 'on' : ''} onClick={() => setMode('type')}>Type it</button>
-        <button type="button" role="tab" aria-selected={mode === 'scan'} className={mode === 'scan' ? 'on' : ''} onClick={() => setMode('scan')}>Scan it</button>
-      </div>
+      {tabs}
 
       {mode === 'type' ? (
         <TypeFlow key={resetKey} onPick={setPicked} onCreate={(name) => setCreating({ name })} />
@@ -309,6 +339,7 @@ function NewFoodSheet({ initialName, barcode, onClose, onCreated }: { initialNam
 
 function DetailsSheet({ picked, onClose, onAdded }: { picked: Picked; onClose: () => void; onAdded: (name: string) => void }) {
   const toast = useToast();
+  const { user } = useAuth();
   const [food, setFood] = useState(picked.food);
   const whole = (picked.packageGrams ?? 0) > 0;
   const [quantity, setQuantity] = useState(whole ? picked.packageGrams! : 1);
@@ -332,6 +363,7 @@ function DetailsSheet({ picked, onClose, onAdded }: { picked: Picked; onClose: (
       }
       await api.post('/api/inventory', { foodReferenceId: food.id, quantity, unit, storageLocation: where, expirationDate: expiry ? dateInputToISO(expiry) : null });
       toast(`${food.name} is in the ${where === 'pantry' ? 'cupboard' : where}.`);
+      if (user) void rememberFoods(user.id, [{ id: food.id, name: food.name, category: food.category, quantity, unit, where }]);
       onAdded(food.name);
     } catch (cause) {
       setError(errorText(cause, 'Could not add that.'));

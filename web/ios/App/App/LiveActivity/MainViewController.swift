@@ -4,7 +4,8 @@ import UIKit
 /**
  The app's bridge view controller.
 
- Exists for one reason: to register the Live Activity plugin.
+ Exists for one reason: to register the app's own plugins, the Live Activity
+ and receipt reading.
 
  Capacitor discovers plugins that ship as Swift packages from a generated list,
  but a plugin written directly in the app target is in no such list, so nothing
@@ -18,5 +19,6 @@ import UIKit
 class MainViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(LiveActivityPlugin())
+        bridge?.registerPluginInstance(ReceiptTextPlugin())
     }
 }

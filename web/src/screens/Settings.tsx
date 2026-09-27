@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { api } from '../lib/api';
 import type { Settings as SettingsData, WeightGoal } from '../lib/types';
 import { useAuth } from '../lib/auth';
+import { forgetReceipts } from '../lib/receiptMemory';
 import { PrivacyNotice } from '../components/PrivacyNotice';
 import { Icon } from '../ui/Icon';
 import { BackButton, Page, Sheet, Switch, errorText, useToast } from '../ui/kit';
@@ -229,7 +230,7 @@ function PasswordSheet({ onClose }: { onClose: () => void }) {
 
 /** A real cascade: nothing is kept. So it says so, and asks for the password. */
 function DeleteSheet({ onClose }: { onClose: () => void }) {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -238,6 +239,8 @@ function DeleteSheet({ onClose }: { onClose: () => void }) {
     setError(null);
     try {
       await api.post('/api/auth/delete-account', { password });
+      // what this phone learned from receipts goes with the account
+      if (user) await forgetReceipts(user.id);
       logout();
     } catch (e) {
       setError(errorText(e, 'Could not delete your account.'));
