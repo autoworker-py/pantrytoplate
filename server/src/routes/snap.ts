@@ -35,7 +35,7 @@ const routes: FastifyPluginAsync = async (app) => {
       .parse(request.body);
     const before = await standing(request.userId);
     if (!before.plus && (before.freeLeft ?? 0) <= 0) {
-      throw new HttpError(402, 'Your free meal photos are used up. Plus reads as many as you like.', 'plus_required');
+      throw new HttpError(402, 'Your free meal photos are used up. Pro reads as many as you like.', 'plus_required');
     }
     const plate = await readPlate(body.image, body.mediaType);
     if (!before.plus && plate.items.length > 0) {

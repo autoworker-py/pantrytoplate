@@ -10,8 +10,8 @@ import { Paywall, SnapReading, SnapReview, SnapStage, type SnapItem } from './Sn
 
 /*
  * Snap a meal, from the photo Eaten hands over to the entry in the diary:
- * read, check, log. Free photos run out into the Plus paywall; a code unlocks
- * Plus while payments are off. Everything logged can be undone from the toast.
+ * read, check, log. Free photos run out into the Pro paywall; a code unlocks
+ * Pro while payments are off. Everything logged can be undone from the toast.
  */
 
 type Stage = 'reading' | 'review' | 'paywall' | 'problem';
@@ -134,9 +134,9 @@ export default function SnapFlow() {
     setPayError(null);
     try {
       setStatus(await redeemPlus(code));
-      toast('Plus is on for this account.');
+      toast('Pro is on for this account.');
       setBusy(false);
-      // straight back to the photo that was waiting (read afresh, now with Plus), or to taking one
+      // straight back to the photo that was waiting (read afresh, now with Pro), or to taking one
       reading.current = null;
       if (photo && !base.length) { setStage('reading'); return; }
       const next = await photographMeal().catch(() => null);
@@ -151,7 +151,7 @@ export default function SnapFlow() {
   const editingItem = items.find((item) => item.id === editing) ?? null;
 
   return (
-    <Page left={close} title={stage === 'paywall' ? 'Pantry2Plate Plus' : 'Snap a meal'}>
+    <Page left={close} title={stage === 'paywall' ? 'Pantry2Plate Pro' : 'Snap a meal'}>
       {stage === 'reading' ? <SnapReading items={base} found={found} photo={photo?.dataUrl || undefined} /> : null}
       {stage === 'review' ? (
         <SnapReview

@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 
 /**
- * Pantry2Plate Plus, while payments are switched off: unlocked by a code.
+ * Pantry2Plate Pro ("plus" in the code and the database), while payments are
+ * switched off: unlocked by a code.
  *
  * Only a SHA-256 of each code lives here, so a code cannot be read out of the
  * source or the app. Codes compare without case, spaces or dashes.

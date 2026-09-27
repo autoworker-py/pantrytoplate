@@ -93,15 +93,15 @@ export function SnapStage({ items, found, scanning = false, photo }: { items: Sn
   );
 }
 
-/** Eaten's two ways to log what did not come from the pantry. Everyone starts without Plus; the line says where they stand. */
+/** Eaten's two ways to log what did not come from the pantry. Everyone starts without Pro; the line says where they stand. */
 export function LogActions({ status, onSnap, onOther }: { status: { plus: boolean; freeLeft: number | null } | null; onSnap: () => void; onOther: () => void }) {
   const standing = !status
     ? 'Calories from a photo'
     : status.plus
-      ? 'Plus: as many as you like'
+      ? 'Pro: as many as you like'
       : (status.freeLeft ?? 0) > 0
         ? `${status.freeLeft} free ${status.freeLeft === 1 ? 'photo' : 'photos'} left`
-        : 'Needs Plus';
+        : 'Needs Pro';
   return (
     <div className="log-actions">
       <button type="button" className="snap-btn" onClick={onSnap}>
@@ -211,7 +211,7 @@ export function SnapReview({
   );
 }
 
-/** Pantry2Plate Plus. Payments are not switched on yet, so a code is the only way in, and the page says so. */
+/** Pantry2Plate Pro. Payments are not switched on yet, so a code is the only way in, and the page says so. */
 export function Paywall({ usedFree, busy = false, error, onRedeem }: { usedFree: number; busy?: boolean; error?: string | null; onRedeem: (code: string) => void }) {
   const [plan, setPlan] = useState<'year' | 'month'>('year');
   const [redeeming, setRedeeming] = useState(false);
@@ -221,10 +221,10 @@ export function Paywall({ usedFree, busy = false, error, onRedeem }: { usedFree:
       <div className="test-mode"><Icon name="info" size={14} /> Test mode: payments aren’t switched on yet</div>
       <div className="paywall-hero">
         <SnapStage items={[]} found={0} />
-        <span className="plus-badge">Plus</span>
+        <span className="plus-badge">Pro</span>
       </div>
       <h1 className="title-xl" style={{ marginTop: 20 }}>Snap a meal.<br />Skip the typing.</h1>
-      <p className="muted" style={{ marginTop: 8 }}>You’ve used your {usedFree} free photos. Plus reads every plate you photograph, as often as you eat.</p>
+      <p className="muted" style={{ marginTop: 8 }}>You’ve used your {usedFree} free photos. Pro reads every plate you photograph, as often as you eat.</p>
 
       <ul className="plus-list">
         <li><Icon name="check" size={17} stroke={2.2} /> Calories and macros from a photo, in seconds</li>
@@ -255,7 +255,7 @@ export function Paywall({ usedFree, busy = false, error, onRedeem }: { usedFree:
             <input id="pw-code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="XXXX-XXXX" autoCapitalize="characters" autoComplete="off" />
           </div>
           {error ? <div className="banner error" style={{ marginTop: 12 }}>{error}</div> : null}
-          <button type="button" className="btn block" style={{ marginTop: 12 }} disabled={busy || code.trim().length < 4} onClick={() => onRedeem(code.trim())}>{busy ? 'Checking…' : 'Unlock Plus'}</button>
+          <button type="button" className="btn block" style={{ marginTop: 12 }} disabled={busy || code.trim().length < 4} onClick={() => onRedeem(code.trim())}>{busy ? 'Checking…' : 'Unlock Pro'}</button>
         </div>
       ) : (
         <button type="button" className="btn ghost block" style={{ marginTop: 10 }} onClick={() => setRedeeming(true)}>Have a code? Redeem it</button>

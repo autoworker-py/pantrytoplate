@@ -28,7 +28,7 @@ export default function Eaten() {
   const navigate = useNavigate();
 
   /**
-   * Nobody is assumed to have Plus: with no answer about the allowance, the
+   * Nobody is assumed to have Pro: with no answer about the allowance, the
    * camera stays shut. Free photos used up: the paywall comes before the
    * camera, never after a photo is taken.
    */
