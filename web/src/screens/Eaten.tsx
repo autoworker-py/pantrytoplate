@@ -27,10 +27,19 @@ export default function Eaten() {
   const toast = useToast();
   const navigate = useNavigate();
 
-  /** Free photos used up: the paywall comes before the camera, never after a photo is taken. */
+  /**
+   * Nobody is assumed to have Plus: with no answer about the allowance, the
+   * camera stays shut. Free photos used up: the paywall comes before the
+   * camera, never after a photo is taken.
+   */
   async function startSnap() {
-    const now = snap ?? (await snapStatus().catch(() => null));
-    if (now && !now.plus && (now.freeLeft ?? 0) <= 0) {
+    const now = (await snapStatus().catch(() => null)) ?? null;
+    setSnap(now);
+    if (!now || !now.available) {
+      toast(now ? 'Photo reading is not set up yet. Try again soon.' : 'Snap a meal is not available right now. Try again in a moment.');
+      return;
+    }
+    if (!now.plus && (now.freeLeft ?? 0) <= 0) {
       navigate('/snap', { state: { paywall: true } });
       return;
     }
@@ -112,7 +121,7 @@ export default function Eaten() {
         </section>
       )}
 
-      {isToday ? <LogActions freeLeft={snap && !snap.plus ? snap.freeLeft : null} onSnap={() => void startSnap()} onOther={() => setEatingOut(true)} /> : null}
+      {isToday ? <LogActions status={snap} onSnap={() => void startSnap()} onOther={() => setEatingOut(true)} /> : null}
 
       {diary && diary.entryCount === 0 ? (
         <div className="empty" style={{ paddingTop: 30 }}>

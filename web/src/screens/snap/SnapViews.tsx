@@ -93,15 +93,22 @@ export function SnapStage({ items, found, scanning = false, photo }: { items: Sn
   );
 }
 
-/** Eaten's two ways to log what did not come from the pantry. */
-export function LogActions({ freeLeft, onSnap, onOther }: { freeLeft: number | null; onSnap: () => void; onOther: () => void }) {
+/** Eaten's two ways to log what did not come from the pantry. Everyone starts without Plus; the line says where they stand. */
+export function LogActions({ status, onSnap, onOther }: { status: { plus: boolean; freeLeft: number | null } | null; onSnap: () => void; onOther: () => void }) {
+  const standing = !status
+    ? 'Calories from a photo'
+    : status.plus
+      ? 'Plus: as many as you like'
+      : (status.freeLeft ?? 0) > 0
+        ? `${status.freeLeft} free ${status.freeLeft === 1 ? 'photo' : 'photos'} left`
+        : 'Needs Plus';
   return (
     <div className="log-actions">
       <button type="button" className="snap-btn" onClick={onSnap}>
         <span className="snap-icon"><Icon name="camera" size={20} /></span>
         <span className="grow">
           <span className="t">Snap a meal</span>
-          <span className="s">{freeLeft === null ? 'Calories from a photo' : `${freeLeft} free ${freeLeft === 1 ? 'photo' : 'photos'} left`}</span>
+          <span className="s">{standing}</span>
         </span>
       </button>
       <button type="button" className="btn secondary other-btn" onClick={onOther}>
