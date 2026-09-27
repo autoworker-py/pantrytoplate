@@ -1,0 +1,83 @@
+/* ---------- the plate under the kitchen light ---------- */
+
+.snap-stage {
+  position: relative; padding: 22px 18px 18px; border-radius: var(--r-lg); overflow: hidden;
+  background: radial-gradient(80% 75% at 50% 0%, rgba(255, 222, 170, .16), rgba(255, 222, 170, 0) 72%), var(--bg-1);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.snap-stage::before { content: ''; position: absolute; top: 0; left: 36%; right: 36%; height: 8px; border-radius: 0 0 8px 8px; background: linear-gradient(180deg, #fff4e0, #f1d39e); }
+.snap-photo { position: relative; aspect-ratio: 320 / 210; }
+.plate-art { display: block; width: 100%; height: 100%; }
+/* a camera's frame, so it reads as a photo being taken */
+.snap-corners { position: absolute; inset: -6px; pointer-events: none;
+  background:
+    linear-gradient(var(--ink-3), var(--ink-3)) top left / 18px 2px no-repeat, linear-gradient(var(--ink-3), var(--ink-3)) top left / 2px 18px no-repeat,
+    linear-gradient(var(--ink-3), var(--ink-3)) top right / 18px 2px no-repeat, linear-gradient(var(--ink-3), var(--ink-3)) top right / 2px 18px no-repeat,
+    linear-gradient(var(--ink-3), var(--ink-3)) bottom left / 18px 2px no-repeat, linear-gradient(var(--ink-3), var(--ink-3)) bottom left / 2px 18px no-repeat,
+    linear-gradient(var(--ink-3), var(--ink-3)) bottom right / 18px 2px no-repeat, linear-gradient(var(--ink-3), var(--ink-3)) bottom right / 2px 18px no-repeat; }
+.snap-sweep { position: absolute; left: -8px; right: -8px; top: 0; height: 2px; background: #f7d7a4; box-shadow: 0 0 16px 6px rgba(243, 201, 139, .55); animation: snap-sweep 1.8s var(--ease-in-out) infinite alternate; }
+@keyframes snap-sweep { to { top: 100%; } }
+
+/* what was found, pinned where it sits */
+.snap-pin { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; animation: pin-in .45s var(--ease) both; }
+.snap-pin i { order: 2; width: 14px; height: 14px; border-radius: 50%; background: rgba(243, 201, 139, .25); box-shadow: 0 0 0 2px #f6efe4, 0 0 12px 3px rgba(243, 201, 139, .6); }
+.snap-pin b { order: 1; height: 22px; padding: 0 9px; border-radius: 11px; display: inline-flex; align-items: center; white-space: nowrap; background: #f6efe4; color: #15171a; font-family: var(--display); font-size: 11.5px; font-weight: 700; box-shadow: 0 6px 14px -4px rgba(0, 0, 0, .7); }
+@keyframes pin-in { from { opacity: 0; transform: translate(-50%, -38%); } }
+
+@media (prefers-reduced-motion: reduce) { .snap-sweep, .snap-pin { animation: none; } }
+
+/* ---------- Eaten: two ways to log what is not in the pantry ---------- */
+
+.log-actions { display: grid; grid-template-columns: 1.45fr 1fr; gap: 10px; margin-top: 12px; }
+.snap-btn { display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left; border-radius: var(--r);
+  background: radial-gradient(120% 140% at 0% 0%, rgba(243, 201, 139, .16), rgba(243, 201, 139, 0) 60%), var(--bg-2);
+  box-shadow: inset 0 0 0 1px rgba(243, 201, 139, .3); }
+.snap-btn:active { transform: scale(.98); }
+.snap-icon { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--warm); color: #1d1509; box-shadow: 0 0 14px -2px rgba(243, 201, 139, .55); }
+.snap-btn .grow { min-width: 0; }
+.snap-btn .t { display: block; font-family: var(--display); font-weight: 700; font-size: 15.5px; }
+.snap-btn .s { display: block; font-size: 12.5px; color: var(--ink-3); margin-top: 1px; }
+.log-actions .other-btn { height: auto; min-height: 64px; font-size: 14.5px; padding: 0 12px; }
+
+/* ---------- reading and review ---------- */
+
+.snap-reading { padding-top: 6px; }
+.snap-total { margin-top: 14px; padding: 18px 20px; border-radius: var(--r-lg); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line); }
+.snap-total .big { font-size: 40px; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
+.snap-total .of { color: var(--ink-3); font-weight: 600; }
+.snap-macros { display: flex; gap: 18px; margin-top: 10px; font-size: 13.5px; color: var(--ink-3); }
+.snap-macros b { color: var(--ink); font-weight: 650; margin-right: 2px; }
+.snap-item .grow { flex: 1; min-width: 0; }
+.snap-item.off .thumb, .snap-item.off .grow, .snap-item.off .snap-kcal { opacity: .4; }
+.snap-note { display: block; margin-top: 4px; font-size: 12.5px; line-height: 1.35; color: var(--warm); }
+.snap-kcal { flex: none; font-weight: 650; font-size: 15px; }
+
+/* ---------- Plus ---------- */
+
+.paywall { padding-bottom: 12px; }
+.test-mode { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: var(--blue); background: rgba(156, 195, 230, .1); box-shadow: inset 0 0 0 1px rgba(156, 195, 230, .22); }
+.paywall-hero { position: relative; margin-top: 14px; }
+.plus-badge { position: absolute; top: 14px; right: 14px; height: 26px; padding: 0 12px; border-radius: 13px; display: inline-flex; align-items: center; background: var(--warm); color: #1d1509; font-family: var(--display); font-weight: 800; font-size: 13px; letter-spacing: .02em; box-shadow: 0 0 16px -2px rgba(243, 201, 139, .6); }
+.plus-list { list-style: none; padding: 0; margin: 18px 0 0; display: flex; flex-direction: column; gap: 11px; }
+.plus-list li { display: flex; gap: 10px; align-items: flex-start; line-height: 1.4; }
+.plus-list svg { flex: none; margin-top: 2px; color: var(--warm); }
+.plans { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 22px; }
+.plan { position: relative; display: flex; flex-direction: column; gap: 3px; padding: 16px 14px 14px; text-align: left; border-radius: var(--r); background: var(--bg-2); box-shadow: inset 0 0 0 1px var(--line-2); transition: box-shadow var(--fast) ease, background var(--fast) ease; }
+.plan.on { background: radial-gradient(120% 120% at 0% 0%, rgba(243, 201, 139, .12), rgba(243, 201, 139, 0) 70%), var(--bg-2); box-shadow: inset 0 0 0 1.5px var(--warm); }
+.plan-tag { position: absolute; top: -10px; left: 12px; height: 20px; padding: 0 8px; border-radius: 10px; display: inline-flex; align-items: center; background: var(--warm); color: #1d1509; font-size: 11px; font-weight: 700; }
+.plan .t { font-weight: 650; color: var(--ink-2); font-size: 14px; }
+.plan .price { font-family: var(--display); font-size: 21px; font-weight: 700; }
+.plan .price small { font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.plan .s { font-size: 12.5px; color: var(--ink-3); }
+.redeem { margin-top: 14px; padding: 4px 16px 16px; border-radius: var(--r); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line); }
+.redeem input { letter-spacing: .12em; font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
+.paywall-hero .snap-corners { display: none; }
+
+/* a real photo keeps its own shape, and the pins sit on the photo itself */
+.snap-stage.has-photo .snap-photo { aspect-ratio: auto; width: fit-content; max-width: 100%; margin: 0 auto; }
+.snap-shot { display: block; max-width: 100%; max-height: 42vh; border-radius: 12px; }
+.snap-what { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; text-align: left; }
+.snap-problem { text-align: center; padding: 20px 8px 0; }
+.snap-problem h2 { font-size: 19px; }
+.snap-problem p { margin-top: 6px; color: var(--ink-2); }
+.portion-chips { margin-top: 12px; }

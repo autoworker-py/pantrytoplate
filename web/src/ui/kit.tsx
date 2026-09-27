@@ -172,6 +172,7 @@ export function Stepper({
   min = 1,
   max = 99,
   step = 1,
+  values,
   label,
   format = (v: number) => String(v),
 }: {
@@ -180,16 +181,20 @@ export function Stepper({
   min?: number;
   max?: number;
   step?: number;
+  /** an explicit ladder to walk instead of even steps: [0.25, 0.5, 0.75, 1, 1.5, 2, …] */
+  values?: number[];
   label: string;
   format?: (value: number) => string;
 }) {
+  const down = values ? [...values].reverse().find((v) => v < value - 1e-9) : value - step >= min - 1e-9 ? +(value - step).toFixed(2) : undefined;
+  const up = values ? values.find((v) => v > value + 1e-9) : value + step <= max + 1e-9 ? +(value + step).toFixed(2) : undefined;
   return (
     <div className="stepper" role="group" aria-label={label}>
-      <button type="button" aria-label={`Less ${label}`} disabled={value <= min} onClick={() => onChange(Math.max(min, +(value - step).toFixed(2)))}>
+      <button type="button" aria-label={`Less ${label}`} disabled={down === undefined} onClick={() => down !== undefined && onChange(down)}>
         <Icon name="minus" size={18} />
       </button>
       <output aria-live="polite">{format(value)}</output>
-      <button type="button" aria-label={`More ${label}`} disabled={value >= max} onClick={() => onChange(Math.min(max, +(value + step).toFixed(2)))}>
+      <button type="button" aria-label={`More ${label}`} disabled={up === undefined} onClick={() => up !== undefined && onChange(up)}>
         <Icon name="plus" size={18} />
       </button>
     </div>

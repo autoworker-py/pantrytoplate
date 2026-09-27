@@ -336,6 +336,7 @@ export async function cookRecipe(
             recipeId: recipe.id,
             cookEventId,
             mealSlot,
+            servings: servings ?? recipe.servings,
             calories: totals.calories,
             proteinGrams: totals.protein,
             carbsGrams: totals.carbs,
@@ -366,7 +367,8 @@ export async function cookRecipe(
     const keep = Math.min(Math.max(0, keepServings), servingsCooked);
 
     if (keep > 0 && result.caloriesLogged !== null) {
-      const perServing = result.caloriesLogged / Math.max(1, servingsCooked);
+      // a half serving is still a serving's worth divided by a half
+      const perServing = result.caloriesLogged / servingsCooked;
       result.leftovers = await storeLeftovers(
         userId,
         {
@@ -386,6 +388,7 @@ export async function cookRecipe(
         await tx.consumptionLog.update({
           where: { id: logId },
           data: {
+            servings: servingsCooked - keep,
             calories: log.calories === null ? null : log.calories * eatenShare,
             proteinGrams: log.proteinGrams === null ? null : log.proteinGrams * eatenShare,
             carbsGrams: log.carbsGrams === null ? null : log.carbsGrams * eatenShare,

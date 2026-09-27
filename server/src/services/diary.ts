@@ -8,7 +8,8 @@
  * because silently treating unknown as zero is how a calorie tracker lies.
  */
 import { prisma, type Tx } from '../db.js';
-import { notFound } from '../errors.js';
+import type { FoodReference } from '@prisma/client';
+import { badRequest, notFound } from '../errors.js';
 import { roundQuantity } from './units.js';
 import { getSettings } from './settings.js';
 
@@ -212,7 +213,7 @@ export async function entryDetail(userId: string, id: string, db: Tx = prisma) {
       kind: 'meal' as const,
       name: first.recipe?.name ?? 'Cooked meal',
       brand: null,
-      quantity: 1,
+      quantity: roundQuantity(first.servings ?? 1),
       unit: 'serving',
       source: 'recipe',
       mealSlot: first.mealSlot,
@@ -388,4 +389,135 @@ export async function calorieHistory(userId: string, days = 7, db: Tx = prisma) 
     totalCalories: roundQuantity(totals.calories),
     protein: roundQuantity(totals.protein),
   }));
+}
+
+/**
+ * "I only ate half of it." What was logged shrinks to what was eaten, and the
+ * rest goes somewhere real: a cooked meal's rest becomes leftovers in the
+ * fridge; a food from the pantry goes back to the lot it came from. Meals
+ * cooked before servings were recorded count as one portion.
+ */
+export async function saveRest(userId: string, id: string, ate: number) {
+  if (!(ate > 0 && ate < 1)) throw badRequest('Say how much you ate: some of it, but not all.');
+  const { storeLeftovers } = await import('./leftovers.js');
+  return prisma.$transaction(async (tx) => {
+    const meal = await mealOf(tx, userId, id);
+    if (meal) {
+      const { logs, recipe } = meal;
+      const servings = logs[0]!.servings ?? 1;
+      const total = (pick: (log: (typeof logs)[number]) => number | null) =>
+        logs.every((log) => pick(log) === null) ? null : logs.reduce((sum, log) => sum + (pick(log) ?? 0), 0);
+      const perServing = (value: number | null) => (value === null ? null : value / servings);
+      const calories = total((log) => log.calories);
+      const leftover = await storeLeftovers(
+        userId,
+        {
+          recipeId: recipe.id,
+          recipeName: recipe.name,
+          servings: servings * (1 - ate),
+          caloriesPerServing: perServing(calories),
+          proteinPerServing: perServing(total((log) => log.proteinGrams)),
+          carbsPerServing: perServing(total((log) => log.carbsGrams)),
+          fatPerServing: perServing(total((log) => log.fatGrams)),
+        },
+        tx,
+      );
+      for (const log of logs) await scaleLog(tx, log, ate, true);
+      return {
+        kind: 'meal' as const,
+        name: recipe.name,
+        ate,
+        calories: calories === null ? null : roundQuantity(calories * ate),
+        leftover,
+        restored: null,
+      };
+    }
+
+    const log = await tx.consumptionLog.findFirst({ where: { id, userId }, include: { foodReference: true, inventoryItem: true } });
+    if (!log) throw notFound('Diary entry not found.');
+    if (!log.inventoryItem) throw badRequest('This did not come from your pantry, so there is nowhere to put the rest back.', 'not_from_pantry');
+    const back = await moveToLot(tx, log, log.quantityConsumed * (1 - ate), 1);
+    await scaleLog(tx, log, ate, false);
+    return {
+      kind: 'food' as const,
+      name: log.foodReference.name,
+      ate,
+      calories: log.calories === null ? null : roundQuantity(log.calories * ate),
+      leftover: null,
+      restored: back,
+    };
+  });
+}
+
+/** Undo "I only ate some": the leftovers go, or the pantry gives the rest back, and the diary shows it all again. */
+export async function undoSaveRest(userId: string, id: string, ate: number, leftoverItemId?: string | null) {
+  if (!(ate > 0 && ate < 1)) throw badRequest('Say how much was eaten.');
+  return prisma.$transaction(async (tx) => {
+    const meal = await mealOf(tx, userId, id);
+    if (meal) {
+      if (leftoverItemId) await tx.inventoryItem.deleteMany({ where: { id: leftoverItemId, userId, isLeftover: true } });
+      for (const log of meal.logs) await scaleLog(tx, log, 1 / ate, true);
+      return { undone: true };
+    }
+    const log = await tx.consumptionLog.findFirst({ where: { id, userId }, include: { foodReference: true, inventoryItem: true } });
+    if (!log || !log.inventoryItem) throw notFound('Diary entry not found.');
+    // the log holds what was eaten; the rest was ate-to-(1-ate) of that
+    await moveToLot(tx, log, (log.quantityConsumed / ate) * (1 - ate), -1);
+    await scaleLog(tx, log, 1 / ate, false);
+    return { undone: true };
+  });
+}
+
+async function mealOf(tx: Tx, userId: string, id: string) {
+  let logs = await tx.consumptionLog.findMany({ where: { userId, cookEventId: id }, include: { recipe: true } });
+  if (logs.length === 0) {
+    const one = await tx.consumptionLog.findFirst({ where: { id, userId }, select: { cookEventId: true } });
+    if (!one?.cookEventId) return null;
+    logs = await tx.consumptionLog.findMany({ where: { userId, cookEventId: one.cookEventId }, include: { recipe: true } });
+  }
+  const recipe = logs[0]?.recipe;
+  if (!recipe) return null;
+  return { logs, recipe };
+}
+
+/** The diary's share of a log: its nutrition, and for a food its amount, times a factor. */
+async function scaleLog(
+  tx: Tx,
+  log: { id: string; quantityConsumed: number; servings: number | null; calories: number | null; proteinGrams: number | null; carbsGrams: number | null; fatGrams: number | null },
+  factor: number,
+  meal: boolean,
+) {
+  const times = (value: number | null) => (value === null ? null : value * factor);
+  await tx.consumptionLog.update({
+    where: { id: log.id },
+    data: {
+      ...(meal ? { servings: (log.servings ?? 1) * factor } : { quantityConsumed: log.quantityConsumed * factor }),
+      calories: times(log.calories),
+      proteinGrams: times(log.proteinGrams),
+      carbsGrams: times(log.carbsGrams),
+      fatGrams: times(log.fatGrams),
+    },
+  });
+}
+
+/** Put an amount (in the log's unit) back into the lot it came from, or take it out again (direction -1). */
+async function moveToLot(
+  tx: Tx,
+  log: { unit: string; foodReference: FoodReference; inventoryItem: { id: string; unit: string; quantity: number } | null },
+  amount: number,
+  direction: 1 | -1,
+) {
+  if (!log.inventoryItem) return null;
+  const { loadConvertContext } = await import('./conversions.js');
+  const { convert } = await import('./units.js');
+  const ctx = await loadConvertContext(log.foodReference, tx);
+  const inLot = convert(amount, log.unit, log.inventoryItem.unit, ctx);
+  if (!inLot.ok) throw badRequest('That amount is in a unit the pantry cannot put back.', 'unit_mismatch');
+  const lot = await tx.inventoryItem.findUnique({ where: { id: log.inventoryItem.id } });
+  if (!lot) return null;
+  const updated = await tx.inventoryItem.update({
+    where: { id: lot.id },
+    data: { quantity: Math.max(0, lot.quantity + direction * inLot.value) },
+  });
+  return { inventoryItemId: updated.id, name: log.foodReference.name, quantity: roundQuantity(updated.quantity), unit: updated.unit };
 }

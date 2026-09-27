@@ -65,4 +65,14 @@ export const env = {
   expiryWarningDays: num('EXPIRY_WARNING_DAYS', 3),
   /** how long an external API may take before we fall back to manual entry */
   externalTimeoutMs: num('EXTERNAL_TIMEOUT_MS', 6000),
+  /**
+   * Snap a meal reads photos with whichever vision model has a key: Gemini
+   * first, then Claude. Neither means photo reading is switched off.
+   */
+  geminiApiKey: process.env.GEMINI_API_KEY ?? '',
+  geminiModel: str('GEMINI_MODEL', 'gemini-3.8-flash'),
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
+  anthropicModel: str('ANTHROPIC_MODEL', 'claude-sonnet-5'),
+  /** meal photos an account may read before it needs Plus */
+  freeSnaps: num('FREE_SNAPS', 3),
 };

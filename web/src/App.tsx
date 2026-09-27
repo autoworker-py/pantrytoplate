@@ -13,6 +13,7 @@ import RecipeNew from './screens/RecipeNew';
 import AddFood from './screens/AddFood';
 import Shopping from './screens/Shopping';
 import Eaten from './screens/Eaten';
+import SnapFlow from './screens/snap/SnapFlow';
 import Settings from './screens/Settings';
 
 export default function App() {
@@ -73,6 +74,7 @@ export default function App() {
             <Route path="/add" element={<AddFood />} />
             <Route path="/shopping" element={<Shopping />} />
             <Route path="/eaten" element={<Eaten />} />
+            <Route path="/snap" element={<SnapFlow />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/inventory" element={<Navigate to="/pantry" replace />} />
             <Route path="/diary" element={<Navigate to="/eaten" replace />} />

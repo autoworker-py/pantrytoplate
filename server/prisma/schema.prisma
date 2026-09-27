@@ -39,6 +39,10 @@ model User {
 
   /// "metric" | "imperial" — how amounts are shown back to you
   unitSystem          String  @default("metric")
+  /// Pantry2Plate Plus: when it was unlocked (by a code, while payments are off)
+  plusSince           DateTime?
+  /// meal photos read on the free allowance, before Plus
+  snapsUsed           Int      @default(0)
   /// comma separated diet tags that filter every suggestion, e.g. "vegetarian"
   dietTags            String?
   /// daily reminder about food about to expire
@@ -268,6 +272,8 @@ model ConsumptionLog {
   /// One id shared by every row written by a single cook, so the diary can show
   /// "Chicken Fried Rice" as one meal instead of six loose ingredients.
   cookEventId String?
+  /// servings of a cooked recipe this meal was, so part of it can go back in the fridge
+  servings    Float?
   /// nutrition at time of logging; null when no conversion to the food's
   /// nutrition basis was possible
   calories   Float?

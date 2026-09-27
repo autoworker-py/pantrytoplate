@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import type { CookPreview, MealSlot } from '../lib/types';
-import { formatAmount } from '../lib/format';
+import { formatAmount, formatServings } from '../lib/format';
 import { describeDuration, formatClock, parseDuration } from '../lib/duration';
 import { loadTimer, secondsRemaining, startTimer, stopTimer, type RunningTimer } from '../lib/cookTimer';
 import { Overlay } from '../components/Overlay';
@@ -104,7 +104,7 @@ export function CookSheet({
   }
 
   return (
-    <Sheet title="What gets used" sub={`${preview.name} · ${preview.servingsCooked} ${preview.servingsCooked === 1 ? 'serving' : 'servings'}`} onClose={onClose}>
+    <Sheet title="What gets used" sub={`${preview.name} · ${formatServings(preview.servingsCooked)}`} onClose={onClose}>
       {error ? <div className="banner error" style={{ marginTop: 10 }}>{error}</div> : null}
       <div className="deductions">
         {lines.map(({ ing, d }) => (
@@ -129,11 +129,11 @@ export function CookSheet({
         </div>
       ) : null}
 
-      {preview.servingsCooked > 1 ? (
+      {preview.servingsCooked >= 2 ? (
         <div className="keep">
           <div className="label">Keep some for later?</div>
           <div className="keep-row">
-            <Stepper value={keep} onChange={setKeep} min={0} max={preview.servingsCooked - 1} label="portions to keep" />
+            <Stepper value={keep} onChange={setKeep} min={0} max={Math.floor(preview.servingsCooked - 0.01)} label="portions to keep" />
             <span className="fine">{keep === 0 ? 'Eating it all now.' : `${preview.servingsCooked - keep} now, ${keep} in the fridge. Only what you eat now counts today.`}</span>
           </div>
         </div>

@@ -65,6 +65,15 @@ export const STATUS_LABEL: Record<IngredientStatus, string> = {
   unknown_conversion: 'Check units',
 };
 
+/** "¼ serving", "½ serving", "1 serving", "1½ servings", "3 servings". */
+export function formatServings(servings: number): string {
+  const whole = Math.floor(servings + 1e-9);
+  const part = servings - whole;
+  const fraction = part > 0.7 ? '¾' : part > 0.4 ? '½' : part > 0.1 ? '¼' : '';
+  const number = whole === 0 && fraction ? fraction : `${whole}${fraction}`;
+  return `${number} ${servings <= 1 ? 'serving' : 'servings'}`;
+}
+
 /** A local calendar day for a date field: "2026-09-29" (not the UTC day, which runs ahead in the evening). */
 export function formatDateInput(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;

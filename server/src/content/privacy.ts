@@ -9,8 +9,8 @@
  * next visit. Only bump it for changes that alter what is collected, why, who
  * receives it, or how long it is kept — not for typos.
  */
-export const PRIVACY_VERSION = '2026-08-27';
-export const PRIVACY_EFFECTIVE = '27 August 2026';
+export const PRIVACY_VERSION = '2026-09-27';
+export const PRIVACY_EFFECTIVE = '27 September 2026';
 
 export const PRIVACY_POLICY = `# Privacy Notice
 
@@ -140,14 +140,27 @@ you. Results are cached locally so the same lookup is not repeated.
 If you import a recipe from a link, the server fetches that page. The site you
 linked to will see the server's IP address, not yours.
 
-### 4.3 Hosting
+### 4.3 Meal photos, only if you use Snap a meal
+
+If you photograph a meal with Snap a meal, the photo is sent to an outside AI
+service so it can estimate what is on the plate: Google's Gemini, or
+Anthropic's Claude if this installation is set up that way. It is sent without
+your name, email or anything else about you, and this app does not keep the
+photo: once the estimate comes back, it is discarded. What you then log is
+stored like any other diary entry.
+
+That service's own terms govern what it does with the photo. On Google's free
+tier, Google may use what it receives to improve its products, and people may
+review it. Nothing is sent unless you take or choose a photo in Snap a meal.
+
+### 4.4 Hosting
 
 Wherever this installation runs — a personal machine, a cloud server, or a
 managed platform — that provider necessarily stores the data on their hardware
 and may have technical access to it. Ask the operator where this instance runs
 if it matters to you.
 
-### 4.4 Legal requests
+### 4.5 Legal requests
 
 If validly compelled by law, the operator may have to disclose data. They will
 tell you unless legally prohibited from doing so.

@@ -2,11 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import type { CookPreview, IngredientMatch } from '../lib/types';
-import { formatAmount } from '../lib/format';
+import { formatAmount, formatServings } from '../lib/format';
 import { FoodThumb } from '../fridge/Fridge';
 import { Icon } from '../ui/Icon';
 import { BackButton, Page, Stepper, errorText, useToast } from '../ui/kit';
 import { CookMode, CookSheet, NO_ADJUSTMENTS, parseSteps, previewPath, type Adjustments } from './cooking';
+
+/** A little, down to a quarter of a serving; halves up to two; then whole servings. */
+const SERVING_STEPS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 24];
 
 const STATUS: Record<IngredientMatch['status'], { text: string; tone: string }> = {
   ok: { text: 'Have it', tone: 'ok' },
@@ -130,7 +133,7 @@ export default function RecipeDetail() {
 
           <div className="section">
             <h2>Ingredients</h2>
-            <Stepper value={servings} onChange={(v) => setAdj((a) => ({ ...a, servings: v }))} min={1} max={24} label="servings" format={(v) => `${v} ${v === 1 ? 'serving' : 'servings'}`} />
+            <Stepper value={servings} onChange={(v) => setAdj((a) => ({ ...a, servings: v }))} values={SERVING_STEPS} label="servings" format={formatServings} />
           </div>
 
           <div className="ingredients">

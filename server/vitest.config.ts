@@ -13,6 +13,8 @@ export default defineConfig({
       // never call USDA / Open Food Facts from the test suite
       OFFLINE_MODE: 'true',
       EXPIRY_WARNING_DAYS: '3',
+      // one accepted Plus code, so redeeming can be tested without the real one
+      PLUS_CODE: 'TEST-PLUS-CODE',
     },
   },
 });

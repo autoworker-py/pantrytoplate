@@ -21,6 +21,7 @@ import settingsRoutes from './routes/settings.js';
 import reportRoutes from './routes/reports.js';
 import adRoutes from './routes/ads.js';
 import planningRoutes from './routes/planning.js';
+import snapRoutes from './routes/snap.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -97,6 +98,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(reportRoutes, { prefix: '/api/reports' });
   await app.register(adRoutes, { prefix: '/api/ads' });
   await app.register(planningRoutes, { prefix: '/api/planning' });
+  await app.register(snapRoutes, { prefix: '/api/snap' });
 
   await registerWebApp(app);
 

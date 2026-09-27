@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { calorieHistory, dailySummary, entryDetail, undoEntry } from '../services/diary.js';
+import { calorieHistory, dailySummary, entryDetail, saveRest, undoEntry, undoSaveRest } from '../services/diary.js';
 import { logEatingOut, recentEatingOut, searchEatOutFoods } from '../services/eatingOut.js';
 
 /**
@@ -69,6 +69,19 @@ const routes: FastifyPluginAsync = async (app) => {
   });
 
   /** Undo: removes the entry and puts the food back in the pantry. */
+  /** "I only ate half": the rest becomes leftovers, or goes back to the pantry */
+  app.post('/:id/save-rest', async (request) => {
+    const { id } = request.params as { id: string };
+    const { ate } = z.object({ ate: z.number().gt(0).lt(1) }).parse(request.body);
+    return { result: await saveRest(request.userId, id, ate) };
+  });
+
+  app.post('/:id/save-rest/undo', async (request) => {
+    const { id } = request.params as { id: string };
+    const body = z.object({ ate: z.number().gt(0).lt(1), leftoverItemId: z.string().nullish() }).parse(request.body);
+    return { result: await undoSaveRest(request.userId, id, body.ate, body.leftoverItemId) };
+  });
+
   app.delete('/:id', async (request) => {
     const { id } = request.params as { id: string };
     return { result: await undoEntry(request.userId, id) };

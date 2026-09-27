@@ -1,8 +1,10 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { handPhoto, photographMeal, snapStatus, type SnapStatus } from '../lib/snap';
+import { LogActions } from './snap/SnapViews';
 import type { DayDiary, DiaryEntry, EntryDetail, MealSlot } from '../lib/types';
-import { formatAmount } from '../lib/format';
+import { formatAmount, formatServings } from '../lib/format';
 import { FoodThumb } from '../fridge/Fridge';
 import { Icon } from '../ui/Icon';
 import { Page, Sheet, errorText, useToast } from '../ui/kit';
@@ -20,7 +22,27 @@ function isoDate(d: Date) {
 interface Waste { wastedItems: number; perWeek: number; topWasted: Array<{ name: string; times: number }> }
 
 export default function Eaten() {
+  const [snap, setSnap] = useState<SnapStatus | null>(null);
+  useEffect(() => { void snapStatus().then(setSnap).catch(() => setSnap(null)); }, []);
   const toast = useToast();
+  const navigate = useNavigate();
+
+  /** Free photos used up: the paywall comes before the camera, never after a photo is taken. */
+  async function startSnap() {
+    const now = snap ?? (await snapStatus().catch(() => null));
+    if (now && !now.plus && (now.freeLeft ?? 0) <= 0) {
+      navigate('/snap', { state: { paywall: true } });
+      return;
+    }
+    try {
+      const photo = await photographMeal();
+      if (!photo) return;
+      handPhoto(photo);
+      navigate('/snap');
+    } catch (cause) {
+      toast(errorText(cause, 'Could not open the camera. Check that Pantry2Plate is allowed to use it in Settings.'));
+    }
+  }
   const [day, setDay] = useState(() => new Date());
   const [diary, setDiary] = useState<DayDiary | null>(null);
   const [week, setWeek] = useState<Array<{ date: string; totalCalories: number }>>([]);
@@ -57,7 +79,7 @@ export default function Eaten() {
   const maxWeek = Math.max(target * 1.25, ...week.map((w) => w.totalCalories), 1);
 
   return (
-    <Page title="Eaten" right={<button type="button" className="pill-btn" onClick={() => setEatingOut(true)}><Icon name="plus" size={16} /> Not in pantry</button>}>
+    <Page title="Eaten">
       <div className="daynav">
         <button type="button" className="icon-btn plain" aria-label="Previous day" onClick={() => shift(-1)}><Icon name="back" size={20} /></button>
         <span className="day">{isToday ? 'Today' : day.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
@@ -89,6 +111,8 @@ export default function Eaten() {
           {diary.unknownCalorieEntries > 0 ? <p className="fine" style={{ marginTop: 10 }}>{diary.unknownCalorieEntries} {diary.unknownCalorieEntries === 1 ? 'entry has' : 'entries have'} no nutrition data, so {diary.unknownCalorieEntries === 1 ? 'it is' : 'they are'} not counted.</p> : null}
         </section>
       )}
+
+      {isToday ? <LogActions freeLeft={snap && !snap.plus ? snap.freeLeft : null} onSnap={() => void startSnap()} onOther={() => setEatingOut(true)} /> : null}
 
       {diary && diary.entryCount === 0 ? (
         <div className="empty" style={{ paddingTop: 30 }}>
@@ -138,7 +162,7 @@ export default function Eaten() {
         </>
       ) : null}
 
-      {open ? <EntrySheet id={open} onClose={() => setOpen(null)} onUndone={(m) => { setOpen(null); toast(m); void load(); }} /> : null}
+      {open ? <EntrySheet id={open} onClose={() => setOpen(null)} onUndone={(m) => { setOpen(null); toast(m); void load(); }} onChanged={() => { setOpen(null); void load(); }} /> : null}
       {eatingOut ? <EatOutSheet onClose={() => setEatingOut(false)} onLogged={(m) => { setEatingOut(false); toast(m); void load(); }} /> : null}
     </Page>
   );
@@ -157,10 +181,39 @@ function EntryRow({ e, onOpen }: { e: DiaryEntry; onOpen: () => void }) {
   );
 }
 
-function EntrySheet({ id, onClose, onUndone }: { id: string; onClose: () => void; onUndone: (message: string) => void }) {
+const SHARES: Array<[number, string]> = [[0.25, 'A quarter'], [0.5, 'Half'], [0.75, 'Three quarters']];
+
+function EntrySheet({ id, onClose, onUndone, onChanged }: { id: string; onClose: () => void; onUndone: (message: string) => void; onChanged: () => void }) {
+  const toast = useToast();
   const [entry, setEntry] = useState<EntryDetail | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [partial, setPartial] = useState(false);
+
+  /** The rest of a cooked meal goes in the fridge; the rest of a pantry food goes back where it came from. */
+  async function ateSome(ate: number, label: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const { result } = await api.post<{ result: { kind: 'meal' | 'food'; name: string; leftover: { inventoryItemId: string; servings: number } | null } }>(`/api/consumption/${id}/save-rest`, { ate });
+      const rest = result.leftover
+        ? `${formatServings(result.leftover.servings)} of ${result.name} went in the fridge.`
+        : `The rest of the ${result.name.toLowerCase()} is back in your pantry.`;
+      toast(`Logged ${label.toLowerCase()} of it. ${rest}`, {
+        label: 'Undo',
+        run: () => {
+          void api
+            .post(`/api/consumption/${id}/save-rest/undo`, { ate, leftoverItemId: result.leftover?.inventoryItemId ?? null })
+            .then(() => { toast('Undone. All of it is back in your diary.'); onChanged(); })
+            .catch((e) => toast(errorText(e, 'Could not undo that.')));
+        },
+      });
+      onChanged();
+    } catch (e) {
+      setError(errorText(e, 'Could not change that.'));
+      setBusy(false);
+    }
+  }
 
   useEffect(() => {
     api.get<{ entry: EntryDetail }>(`/api/consumption/${id}`).then((d) => setEntry(d.entry)).catch(() => setError('Could not load that entry.'));
@@ -203,8 +256,23 @@ function EntrySheet({ id, onClose, onUndone }: { id: string; onClose: () => void
               </div>
             </>
           ) : null}
+          {entry.kind === 'meal' || entry.canUndo ? (
+            partial ? (
+              <div className="partial">
+                <div className="label" style={{ marginTop: 20 }}>How much did you eat?</div>
+                <div className="chips" style={{ marginTop: 8 }}>
+                  {SHARES.map(([share, label]) => <button key={share} type="button" className="chip" disabled={busy} onClick={() => void ateSome(share, label)}>{label}</button>)}
+                </div>
+                <p className="fine" style={{ marginTop: 8 }}>{entry.kind === 'meal' ? 'The rest goes in the fridge as leftovers. Only what you ate counts today.' : 'The rest goes back in your pantry. Only what you ate counts today.'}</p>
+              </div>
+            ) : (
+              <button type="button" className="btn secondary block" style={{ marginTop: 20 }} onClick={() => setPartial(true)} disabled={busy}>
+                <Icon name="fork" size={18} /> I didn’t finish it
+              </button>
+            )
+          ) : null}
           {entry.canUndo ? (
-            <button type="button" className="btn secondary block" style={{ marginTop: 20 }} onClick={undo} disabled={busy}>
+            <button type="button" className="btn ghost block" style={{ marginTop: 8 }} onClick={undo} disabled={busy}>
               <Icon name="undo" size={18} /> {entry.kind === 'meal' ? 'Undo, and put the ingredients back' : 'Undo, and put it back'}
             </button>
           ) : entry.source === 'eating_out' ? (
