@@ -42,14 +42,15 @@ function amountFor(p: ParsedLine, before: { quantity?: number; unit?: string } |
 export function ReceiptFlow({
   tabs,
   back,
-  homeFor,
+  placeFor,
   finder,
   newFood,
 }: {
   /** the Type it · Scan it · Receipt switch, shown before a receipt is read */
   tabs: ReactNode;
   back: ReactNode;
-  homeFor: (category: string | null) => StorageLocation;
+  /** where a food goes when nothing says otherwise */
+  placeFor: (food: { name: string; category: string | null }) => StorageLocation;
   /** the barcode scanner or the food search: what it finds, or a food the app does not know yet */
   finder: (how: 'scan' | 'search', found: (food: Food) => void, unknown: (name: string, barcode?: string) => void) => ReactNode;
   newFood: (name: string, barcode: string | undefined, created: (food: Food) => void, close: () => void) => ReactNode;
@@ -92,7 +93,7 @@ export function ReceiptFlow({
     if (learned) return { ...line, ...amountFor(p, learned), food: asFood(learned.food), where: learned.where };
     if (p.fee) return { ...line, skipped: true };
     const match = matchLine(p.text, bought.current);
-    if (match?.sure) return { ...line, ...amountFor(p, match.food), food: asFood(match.food), where: match.food.where ?? homeFor(match.food.category) };
+    if (match?.sure) return { ...line, ...amountFor(p, match.food), food: asFood(match.food), where: match.food.where ?? placeFor(match.food) };
     return { ...line, ...amountFor(p, null), suggestion: match ? asFood(match.food) : undefined };
   }
 
@@ -160,7 +161,7 @@ export function ReceiptFlow({
     const before = memory.current?.foods[food.id] ?? null;
     setLines((all) =>
       all.map((l) =>
-        l.id !== id ? l : { ...l, ...amountFor(l.parsed, before), food: asFood(food), suggestion: undefined, skipped: false, where: before?.where ?? homeFor(food.category) },
+        l.id !== id ? l : { ...l, ...amountFor(l.parsed, before), food: asFood(food), suggestion: undefined, skipped: false, where: before?.where ?? placeFor(food) },
       ),
     );
     setTicked((t) => new Set(t).add(id));
@@ -195,7 +196,7 @@ export function ReceiptFlow({
           foodReferenceId: l.food!.id,
           quantity: l.quantity,
           unit: l.unit,
-          storageLocation: l.where ?? homeFor(l.food!.category),
+          storageLocation: l.where ?? placeFor(l.food!),
         }),
       ),
     );
@@ -208,7 +209,7 @@ export function ReceiptFlow({
     const learned = memory.current ?? (await loadMemory(userId));
     for (const { line } of went) {
       const each = line.parsed.measure?.byWeight ? line.quantity : round(line.quantity / Math.max(1, line.parsed.count));
-      const where = line.where ?? homeFor(line.food!.category);
+      const where = line.where ?? placeFor(line.food!);
       const food: RememberedFood = { ...line.food!, quantity: each, unit: line.unit, where };
       learned.lines[line.parsed.key] = { food, quantity: each, unit: line.unit, where };
       learned.foods[food.id] = food;

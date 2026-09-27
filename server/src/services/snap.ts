@@ -95,6 +95,34 @@ const SAMPLE: Array<z.infer<typeof ItemSchema>> = [
   { name: 'butter or oil', grams: 14, portion: 'About 1 tbsp', calories: 102, protein: 0, carbs: 0, fat: 11.5, x: 0.52, y: 0.2, note: 'Guessed from the shine on the broccoli. Take it out if there wasn’t any.' },
 ];
 
+/** Busy, rate-limited or briefly down: worth another try after a wait. */
+export class RetryableError extends Error {
+  constructor(public status: number) {
+    super(`The photo reader answered ${status}.`);
+  }
+}
+
+const RETRYABLE = new Set([429, 500, 502, 503, 504, 529]);
+/** Google's advice for a 503: wait 1, 2, 4, then 8 seconds between attempts. */
+export const RETRY_DELAYS_MS = [1000, 2000, 4000, 8000];
+/** each attempt's own limit, so five of them and the waits fit inside the phone's 100 seconds */
+const ATTEMPT_TIMEOUT_MS = 15_000;
+
+export async function withRetries<T>(
+  attempt: (n: number) => Promise<T>,
+  delays: number[] = RETRY_DELAYS_MS,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+): Promise<T> {
+  for (let n = 0; ; n++) {
+    try {
+      return await attempt(n);
+    } catch (error) {
+      if (!(error instanceof RetryableError) || n >= delays.length) throw error;
+      await sleep(delays[n]!);
+    }
+  }
+}
+
 export function snapProvider(): Plate['provider'] | null {
   if (env.geminiApiKey) return 'gemini';
   if (env.anthropicApiKey) return 'claude';
@@ -133,17 +161,25 @@ function parseJson(text: string): unknown {
   return JSON.parse(bare);
 }
 
-async function askGemini(image: string, mediaType: string): Promise<unknown> {
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${env.geminiModel}:generateContent`, {
+/** A timed-out or dropped request is as retryable as a busy answer. */
+async function post(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS) });
+  } catch {
+    throw new RetryableError(504);
+  }
+}
+
+async function askGemini(image: string, mediaType: string, model: string): Promise<unknown> {
+  const response = await post(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-goog-api-key': env.geminiApiKey },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ inline_data: { mime_type: mediaType, data: image } }, { text: PROMPT }] }],
       generationConfig: { temperature: 0.2, responseMimeType: 'application/json', responseSchema: GEMINI_SCHEMA },
     }),
-    signal: AbortSignal.timeout(45_000),
   });
-  if (response.status === 429) throw new HttpError(429, 'Too many photos just now. Try again in a minute.', 'snap_busy');
+  if (RETRYABLE.has(response.status)) throw new RetryableError(response.status);
   if (!response.ok) throw new HttpError(502, 'That photo could not be read. Try again.', 'snap_failed');
   const data = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
   const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('') ?? '';
@@ -151,7 +187,7 @@ async function askGemini(image: string, mediaType: string): Promise<unknown> {
 }
 
 async function askClaude(image: string, mediaType: string): Promise<unknown> {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await post('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': env.anthropicApiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
@@ -167,9 +203,8 @@ async function askClaude(image: string, mediaType: string): Promise<unknown> {
         },
       ],
     }),
-    signal: AbortSignal.timeout(45_000),
   });
-  if (response.status === 429) throw new HttpError(429, 'Too many photos just now. Try again in a minute.', 'snap_busy');
+  if (RETRYABLE.has(response.status)) throw new RetryableError(response.status);
   if (!response.ok) throw new HttpError(502, 'That photo could not be read. Try again.', 'snap_failed');
   const data = (await response.json()) as { content?: Array<{ type: string; text?: string }> };
   return parseJson(data.content?.find((block) => block.type === 'text')?.text ?? '{"items":[]}');
@@ -180,10 +215,17 @@ export async function readPlate(image: string, mediaType: string): Promise<Plate
   if (!provider) throw new HttpError(503, 'Photo reading is not set up on this server yet.', 'snap_off');
   if (provider === 'sample') return { provider, items: tidy(SAMPLE) };
 
+  // the last two tries go to a steadier model when the newest one stays overloaded
+  const model = (n: number) => (n >= 3 && env.geminiFallbackModel ? env.geminiFallbackModel : env.geminiModel);
   let reply: unknown;
   try {
-    reply = provider === 'gemini' ? await askGemini(image, mediaType) : await askClaude(image, mediaType);
+    reply = await withRetries((n) => (provider === 'gemini' ? askGemini(image, mediaType, model(n)) : askClaude(image, mediaType)));
   } catch (error) {
+    if (error instanceof RetryableError) {
+      throw error.status === 429
+        ? new HttpError(429, 'Too many photos just now. Try again in a minute.', 'snap_busy')
+        : new HttpError(503, 'The photo reader is busy right now. Try again in a minute.', 'snap_busy');
+    }
     if (error instanceof HttpError) throw error;
     throw new HttpError(502, 'That photo could not be read. Try again.', 'snap_failed');
   }

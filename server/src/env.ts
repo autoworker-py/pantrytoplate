@@ -71,6 +71,8 @@ export const env = {
    */
   geminiApiKey: process.env.GEMINI_API_KEY ?? '',
   geminiModel: str('GEMINI_MODEL', 'gemini-3.8-flash'),
+  /** tried for the last attempts when the main model keeps answering "overloaded" */
+  geminiFallbackModel: str('GEMINI_FALLBACK_MODEL', 'gemini-3.5-flash'),
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
   anthropicModel: str('ANTHROPIC_MODEL', 'claude-sonnet-5'),
   /** meal photos an account may read before it needs Plus */

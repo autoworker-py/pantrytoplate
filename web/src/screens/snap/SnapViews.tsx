@@ -118,12 +118,12 @@ export function LogActions({ status, onSnap, onOther }: { status: { plus: boolea
   );
 }
 
-export function SnapReading({ items, found, photo }: { items: SnapItem[]; found: number; photo?: string }) {
+export function SnapReading({ items, found, photo, slow = false }: { items: SnapItem[]; found: number; photo?: string; slow?: boolean }) {
   return (
     <div className="snap-reading" aria-live="polite">
       <SnapStage items={items} found={found} scanning photo={photo} />
       <p className="reading-count">{found ? <><b className="num">{found}</b> {found === 1 ? 'food' : 'foods'} found so far</> : 'Reading your plate…'}</p>
-      <p className="fine" style={{ textAlign: 'center', marginTop: 4 }}>Working out portions from the plate’s size</p>
+      <p className="fine" style={{ textAlign: 'center', marginTop: 4 }}>{slow && !found ? 'The reader is busy, so it is trying again. Hang on.' : 'Working out portions from the plate’s size'}</p>
     </div>
   );
 }

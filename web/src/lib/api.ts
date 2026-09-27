@@ -44,10 +44,10 @@ export const tokenStore = {
  */
 const TIMEOUT_MS = 10_000;
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown, timeoutMs: number = TIMEOUT_MS): Promise<T> {
   const token = tokenStore.get();
   const controller = new AbortController();
-  const expiry = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const expiry = setTimeout(() => controller.abort(), timeoutMs);
 
   let response: Response;
   try {
@@ -182,9 +182,9 @@ async function cachedGet<T>(path: string): Promise<T> {
 }
 
 /** Anything that changes server state makes every cached read suspect. */
-async function mutate<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function mutate<T>(method: string, path: string, body?: unknown, timeoutMs?: number): Promise<T> {
   try {
-    return await request<T>(method, path, body);
+    return await request<T>(method, path, body, timeoutMs);
   } finally {
     invalidateCache();
   }
@@ -194,7 +194,8 @@ export const api = {
   get: <T>(path: string) => cachedGet<T>(path),
   /** Bypasses the cache for a read that must be current. */
   getFresh: <T>(path: string) => request<T>('GET', path),
-  post: <T>(path: string, body?: unknown) => mutate<T>('POST', path, body ?? {}),
+  /** timeoutMs for the rare request that is slow on purpose, like reading a photo */
+  post: <T>(path: string, body?: unknown, options?: { timeoutMs?: number }) => mutate<T>('POST', path, body ?? {}, options?.timeoutMs),
   patch: <T>(path: string, body: unknown) => mutate<T>('PATCH', path, body),
   put: <T>(path: string, body: unknown) => mutate<T>('PUT', path, body),
   delete: <T>(path: string) => mutate<T>('DELETE', path),

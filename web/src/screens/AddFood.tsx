@@ -2,7 +2,8 @@ import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { rememberFoods } from '../lib/receiptMemory';
+import { loadMemory, rememberFoods } from '../lib/receiptMemory';
+import { whereFor } from '../lib/where';
 import { canReadReceipts } from '../lib/receiptText';
 import type { ExternalHit, Food, StorageLocation } from '../lib/types';
 import { dateInputToISO, formatDateInput } from '../lib/format';
@@ -21,14 +22,6 @@ export const CATEGORIES = [
   'Produce', 'Fruit', 'Herbs', 'Dairy & Eggs', 'Cheese', 'Meat & Seafood', 'Bakery', 'Frozen', 'Grains', 'Pasta',
   'Legumes', 'Baking', 'Canned Goods', 'Condiments', 'Sauces', 'Oils & Vinegars', 'Spices', 'Nuts & Seeds', 'Snacks', 'Beverages',
 ] as const;
-
-/** where a thing usually lives, so the question is a confirmation rather than a chore */
-export function homeFor(category: string | null | undefined): StorageLocation {
-  if (!category) return 'pantry';
-  if (category === 'Frozen') return 'freezer';
-  if (['Dairy & Eggs', 'Cheese', 'Meat & Seafood', 'Produce', 'Herbs'].includes(category)) return 'fridge';
-  return 'pantry';
-}
 
 const WHERE: Array<{ key: StorageLocation; label: string }> = [
   { key: 'fridge', label: 'Fridge' },
@@ -62,7 +55,7 @@ export default function AddFood() {
       <ReceiptFlow
         tabs={tabs}
         back={<BackButton fallback="/pantry" />}
-        homeFor={homeFor}
+        placeFor={whereFor}
         finder={(how, found, unknown) =>
           how === 'scan' ? (
             <ScanFlow onPick={(p) => found(p.food)} onUnknown={(barcode) => unknown('', barcode)} />
@@ -355,23 +348,40 @@ function DetailsSheet({ picked, onClose, onAdded }: { picked: Picked; onClose: (
   const whole = (picked.packageGrams ?? 0) > 0;
   const [quantity, setQuantity] = useState(whole ? picked.packageGrams! : 1);
   const [unit, setUnit] = useState(whole ? 'g' : food.defaultUnit);
-  const [where, setWhere] = useState<StorageLocation>(homeFor(food.category));
+  const [where, setWhere] = useState<StorageLocation>(() => whereFor(food));
+  // where you put this last time beats any guess, until you pick for yourself
+  const [placed, setPlaced] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    let live = true;
+    void loadMemory(user.id).then((memory) => {
+      const last = memory.foods[food.id]?.where;
+      if (live && last) setWhere((current) => (placed ? current : last));
+    });
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [food.id, user]);
   const [expiry, setExpiry] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const loaded = usePack(food.id);
   const [pack, setPack] = useState<Pack | null>(null);
   useEffect(() => setPack(loaded), [loaded]);
+  // a known pack starts on Full, unless an amount has been picked already
+  const [amountTouched, setAmountTouched] = useState(whole);
+  useEffect(() => {
+    if (!amountTouched && loaded?.known && loaded.grams) {
+      setQuantity(loaded.grams);
+      setUnit('g');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
   const sub = useMemo(() => [food.brand, food.caloriesPerUnit !== null ? `${Math.round(food.caloriesPerUnit * (food.defaultUnit === 'g' ? 100 : 1))} kcal per ${food.defaultUnit === 'g' ? '100 g' : food.defaultUnit}` : 'No nutrition data'].filter(Boolean).join(' · '), [food]);
 
   async function add() {
     setBusy(true);
     setError(null);
     try {
-      // a pack size someone adjusted is worth remembering for next time
-      if (whole && unit === 'g' && quantity > 0 && quantity !== picked.packageGrams) {
-        await api.post(`/api/foods/${food.id}/conversions`, { fromUnit: 'package', toUnit: 'g', multiplier: Math.round(quantity) }).catch(() => undefined);
-      }
       await api.post('/api/inventory', { foodReferenceId: food.id, quantity, unit, storageLocation: where, expirationDate: expiry ? dateInputToISO(expiry) : null });
       toast(`${food.name} is in the ${where === 'pantry' ? 'cupboard' : where}.`);
       if (user) void rememberFoods(user.id, [{ id: food.id, name: food.name, category: food.category, quantity, unit, where }]);
@@ -399,23 +409,23 @@ function DetailsSheet({ picked, onClose, onAdded }: { picked: Picked; onClose: (
         </div>
       ) : null}
 
-      <PackSize pack={pack} quantity={quantity} unit={unit} onPick={(q, u) => { setQuantity(q); setUnit(u); }} onSaved={(g) => setPack((p) => (p ? { ...p, grams: g, estimated: false, known: true } : p))} />
+      <PackSize pack={pack} quantity={quantity} unit={unit} onPick={(q, u) => { setQuantity(q); setUnit(u); setAmountTouched(true); }} onSaved={(g) => setPack((p) => (p ? { ...p, grams: g, estimated: false, known: true } : p))} />
 
       <div className="field-row">
         <div className="field">
           <label htmlFor="d-qty">How much</label>
-          <input id="d-qty" type="number" inputMode="decimal" min={0} step="any" value={Number.isFinite(quantity) ? quantity : ''} onChange={(e) => setQuantity(Number(e.target.value))} />
+          <input id="d-qty" type="number" inputMode="decimal" min={0} step="any" value={Number.isFinite(quantity) ? quantity : ''} onChange={(e) => { setQuantity(Number(e.target.value)); setAmountTouched(true); }} />
         </div>
         <div className="field">
           <label htmlFor="d-unit">Unit</label>
-          <UnitSelect id="d-unit" value={unit} onChange={setUnit} suggested={food.defaultUnit} />
+          <UnitSelect id="d-unit" value={unit} onChange={(u) => { setUnit(u); setAmountTouched(true); }} suggested={food.defaultUnit} />
         </div>
       </div>
 
       <div className="label" style={{ marginTop: 18 }}>Where does it go?</div>
       <div className="chips" style={{ marginTop: 8 }}>
         {WHERE.map((w) => (
-          <button key={w.key} type="button" className={`chip${where === w.key ? ' on' : ''}`} onClick={() => setWhere(w.key)}>{w.label}</button>
+          <button key={w.key} type="button" className={`chip${where === w.key ? ' on' : ''}`} onClick={() => { setWhere(w.key); setPlaced(true); }}>{w.label}</button>
         ))}
       </div>
 

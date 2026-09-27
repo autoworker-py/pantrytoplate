@@ -45,6 +45,7 @@ export default function SnapFlow() {
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  const [slow, setSlow] = useState(false);
   // one read per photo, however many times React starts the effect: each read is an AI request
   const reading = useRef<{ photo: MealPhoto; answer: ReturnType<typeof readMeal> } | null>(null);
 
@@ -59,6 +60,13 @@ export default function SnapFlow() {
     if (f === 1) return item;
     return { ...item, grams: Math.round(item.grams * f), calories: item.calories * f, protein: tenth(item.protein * f), carbs: tenth(item.carbs * f), fat: tenth(item.fat * f), portion: `About ${Math.round(item.grams * f)} g` };
   });
+
+  // a read that takes a while is the reader being busy and the server trying again
+  useEffect(() => {
+    if (stage !== 'reading') { setSlow(false); return; }
+    const t = window.setTimeout(() => setSlow(true), 9000);
+    return () => window.clearTimeout(t);
+  }, [stage]);
 
   useEffect(() => {
     if (stage !== 'reading') return;
@@ -86,11 +94,11 @@ export default function SnapFlow() {
         if (live) setStage('review');
       } catch (cause) {
         if (!live) return;
-        const code = (cause as ApiError).status;
+        const { status: code, code: reason } = cause as ApiError;
         if (code === 402) { setStage('paywall'); return; }
         setProblem(
-          code === 503 ? { title: 'Photo reading is not set up yet', text: 'The server needs its AI key before it can read photos.' }
-            : code === 429 ? { title: 'Too many photos just now', text: 'Give it a minute, then try again.' }
+          reason === 'snap_off' ? { title: 'Photo reading is not set up yet', text: 'The server needs its AI key before it can read photos.' }
+            : reason === 'snap_busy' || code === 429 ? { title: 'The photo reader is busy', text: 'It was tried a few times. Give it a minute, then try again. This photo was not counted.' }
             : { title: 'That photo could not be read', text: errorText(cause, 'Try again, or take another photo.') },
         );
         setStage('problem');
@@ -152,7 +160,7 @@ export default function SnapFlow() {
 
   return (
     <Page left={close} title={stage === 'paywall' ? 'Pantry2Plate Pro' : 'Snap a meal'}>
-      {stage === 'reading' ? <SnapReading items={base} found={found} photo={photo?.dataUrl || undefined} /> : null}
+      {stage === 'reading' ? <SnapReading items={base} found={found} photo={photo?.dataUrl || undefined} slow={slow} /> : null}
       {stage === 'review' ? (
         <SnapReview
           items={items}

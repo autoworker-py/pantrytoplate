@@ -33,6 +33,8 @@ export async function cacheExternalFood(data: ExternalFood, db: Tx = prisma): Pr
     fatPerUnit: data.fatPerUnit,
     carbsPerUnit: data.carbsPerUnit,
     servingSizeGrams: data.servingSizeGrams,
+    // a scanned product's own pack size, kept apart from any correction
+    ...(data.source === 'openfoodfacts' ? { packageGramsScanned: data.packageGrams && data.packageGrams > 0 ? data.packageGrams : 0 } : {}),
   } satisfies Prisma.FoodReferenceUncheckedCreateInput;
 
   if (data.barcode) {
@@ -143,9 +145,11 @@ export interface BarcodeResolution {
  * size for its category. Estimates are flagged so the UI can say so.
  */
 export async function packageGramsFor(
-  food: { id: string; category: string | null; servingSizeGrams: number | null },
+  food: { id: string; category: string | null; servingSizeGrams: number | null; packageGramsScanned?: number | null },
   db: Tx = prisma,
 ): Promise<{ grams: number | null; estimated: boolean }> {
+  // what the product database said a pack is beats anything learned since
+  if (food.packageGramsScanned && food.packageGramsScanned > 0) return { grams: Math.round(food.packageGramsScanned), estimated: false };
   const row = await db.unitConversion.findFirst({
     where: { foodReferenceId: food.id, fromUnit: 'package', toUnit: 'g' },
   });
@@ -164,8 +168,24 @@ export async function resolveBarcode(
   db: Tx = prisma,
 ): Promise<{ ok: true; result: BarcodeResolution } | { ok: false; reason: string; message: string }> {
   const clean = barcode.replace(/\D/g, '');
-  const cached = await db.foodReference.findUnique({ where: { barcode: clean } });
+  let cached = await db.foodReference.findUnique({ where: { barcode: clean } });
   if (cached) {
+    // scanned before the pack size was kept apart from corrections: ask the
+    // product database once more, and put its pack size back
+    if (cached.source === 'openfoodfacts' && cached.packageGramsScanned === null) {
+      const fresh = await lookupBarcode(clean);
+      if (fresh.ok) {
+        const grams = fresh.data.packageGrams && fresh.data.packageGrams > 0 ? fresh.data.packageGrams : 0;
+        cached = await db.foodReference.update({ where: { id: cached.id }, data: { packageGramsScanned: grams } });
+        if (grams > 0) {
+          await db.unitConversion.upsert({
+            where: { foodReferenceId_fromUnit_toUnit: { foodReferenceId: cached.id, fromUnit: 'package', toUnit: 'g' } },
+            create: { foodReferenceId: cached.id, fromUnit: 'package', toUnit: 'g', multiplier: grams },
+            update: { multiplier: grams },
+          });
+        }
+      }
+    }
     const pack = await packageGramsFor(cached, db);
     return {
       ok: true,

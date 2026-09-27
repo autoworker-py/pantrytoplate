@@ -266,6 +266,11 @@ const routes: FastifyPluginAsync = async (app) => {
 
     const fromUnit = normalizeUnit(body.fromUnit);
     const toUnit = normalizeUnit(body.toUnit);
+    // a scanned product's pack size is the product database's; nothing overwrites it
+    if (fromUnit === 'package' && food.packageGramsScanned && food.packageGramsScanned > 0) {
+      const kept = await prisma.unitConversion.findFirst({ where: { foodReferenceId: id, fromUnit, toUnit } });
+      return reply.code(200).send({ conversion: kept, kept: 'scanned' });
+    }
     const conversion = await prisma.unitConversion.upsert({
       where: { foodReferenceId_fromUnit_toUnit: { foodReferenceId: id, fromUnit, toUnit } },
       create: { foodReferenceId: id, fromUnit, toUnit, multiplier: body.multiplier },

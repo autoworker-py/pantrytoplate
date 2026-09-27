@@ -105,6 +105,10 @@ model FoodReference {
   carbsPerUnit    Float?
   /// grams in ONE defaultUnit. Bridges count/serving units to mass units.
   servingSizeGrams Float?
+  /// the pack size the product database gave when the barcode was scanned: the
+  /// truth for "full pack", which a portion picked while adding never changes.
+  /// 0 means scanned, but the database gave no size; null means never checked.
+  packageGramsScanned Float?
 
   /// typical days from purchase to expiry; pre-fills the date on add
   shelfLifeDays Int?

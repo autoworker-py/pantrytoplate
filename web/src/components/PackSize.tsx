@@ -13,6 +13,9 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { Icon } from '../ui/Icon';
 
+/** How much of a pack is going in: all of it, or what is left of one already open. */
+const FRACTIONS: Array<[number, string]> = [[1, 'Full'], [0.75, '¾'], [0.5, 'Half'], [0.25, 'Quarter']];
+
 export interface Pack {
   foodReferenceId: string;
   name: string;
@@ -87,23 +90,22 @@ export function PackSize({
     }
   }
 
-  // Known size: offer it as a shortcut and get out of the way.
+  // Known size: offer the amounts as shortcuts and get out of the way. The
+  // pack size itself comes from the scan; picking less than all of it never
+  // changes what a full pack is.
   if (pack.known && pack.grams) {
+    const grams = pack.grams;
     return (
-      <div className="chip-row">
-        <button
-          type="button"
-          className={`chip ${quantity === pack.grams && unit === 'g' ? 'chip-on' : ''}`}
-          onClick={() => onPick(pack.grams!, 'g')}
-        >
-          Full pack · {pack.grams} g
-        </button>
-        <button type="button" className="chip" onClick={() => onPick(Math.round(pack.grams! / 2), 'g')}>
-          Half
-        </button>
-        <button type="button" className="chip" onClick={() => onPick(1, pack.defaultUnit)}>
-          One {pack.defaultUnit}
-        </button>
+      <div className="chip-row" role="radiogroup" aria-label="How much of the pack">
+        {FRACTIONS.map(([share, label]) => {
+          const amount = Math.round(grams * share);
+          const on = unit === 'g' && Math.abs(quantity - amount) < 0.5;
+          return (
+            <button key={share} type="button" role="radio" aria-checked={on} className={`chip${on ? ' chip-on' : ''}`} onClick={() => onPick(amount, 'g')}>
+              {share === 1 ? `Full · ${grams} g` : label}
+            </button>
+          );
+        })}
       </div>
     );
   }
