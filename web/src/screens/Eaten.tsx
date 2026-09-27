@@ -57,7 +57,7 @@ export default function Eaten() {
   const maxWeek = Math.max(target * 1.25, ...week.map((w) => w.totalCalories), 1);
 
   return (
-    <Page title="Eaten" right={<button type="button" className="pill-btn" onClick={() => setEatingOut(true)}><Icon name="plus" size={16} /> Ate out</button>}>
+    <Page title="Eaten" right={<button type="button" className="pill-btn" onClick={() => setEatingOut(true)}><Icon name="plus" size={16} /> Not in pantry</button>}>
       <div className="daynav">
         <button type="button" className="icon-btn plain" aria-label="Previous day" onClick={() => shift(-1)}><Icon name="back" size={20} /></button>
         <span className="day">{isToday ? 'Today' : day.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
@@ -150,7 +150,7 @@ function EntryRow({ e, onOpen }: { e: DiaryEntry; onOpen: () => void }) {
       <span className="thumb">{e.kind === 'meal' ? <Icon name="cook" size={22} className="warm" /> : <FoodThumb name={e.name} category={null} quantity={e.quantity} unit={e.unit} size={32} />}</span>
       <span className="grow">
         <span className="t">{e.recipeName ?? e.name}</span>
-        <span className="s">{e.kind === 'meal' ? `Cooked · ${e.ingredientCount} ingredients` : formatAmount(e.quantity, e.unit)}{e.source === 'eating_out' ? ' · ate out' : ''}</span>
+        <span className="s">{e.kind === 'meal' ? `Cooked · ${e.ingredientCount} ingredients` : formatAmount(e.quantity, e.unit)}{e.source === 'eating_out' ? ' · not from pantry' : ''}</span>
       </span>
       <span className="end num">{e.calories === null ? <span className="faint">–</span> : Math.round(e.calories)}</span>
     </button>
@@ -229,7 +229,18 @@ function EatOutSheet({ onClose, onLogged }: { onClose: () => void; onLogged: (m:
   const [recent, setRecent] = useState<Recent[]>([]);
   const [hits, setHits] = useState<Hit[]>([]);
   const [kcal, setKcal] = useState('');
+  const [manual, setManual] = useState(false);
+  const [name, setName] = useState('');
+  const [protein, setProtein] = useState('');
+  const [carbs, setCarbs] = useState('');
+  const [fat, setFat] = useState('');
   const [scan, setScan] = useState(false);
+  const grams = (v: string) => (v.trim() === '' ? null : Math.max(0, Number(v)));
+  // macros alone are enough: four calories a gram of protein or carbohydrate, nine of fat
+  const fromMacros = Math.round((grams(protein) ?? 0) * 4 + (grams(carbs) ?? 0) * 4 + (grams(fat) ?? 0) * 9);
+  const calories = kcal.trim() !== '' ? Number(kcal) : fromMacros > 0 ? fromMacros : null;
+  const canLog = name.trim().length > 0 && calories !== null && calories >= 0;
+  const typeIt = () => { setName(q.trim()); setManual(true); };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -266,7 +277,7 @@ function EatOutSheet({ onClose, onLogged }: { onClose: () => void; onLogged: (m:
   }
 
   return (
-    <Sheet title="Ate out" sub="Only your calories change. Nothing goes into your pantry." onClose={onClose}>
+    <Sheet title="Something not in your pantry" sub="It counts toward today. Nothing in your pantry changes." onClose={onClose}>
       <div className="chips" style={{ marginTop: 12 }}>
         {(['breakfast', 'lunch', 'dinner', 'snack'] as MealSlot[]).map((m) => <button key={m} type="button" className={`chip${meal === m ? ' on' : ''}`} onClick={() => setMeal(m)}>{MEAL[m]}</button>)}
       </div>
@@ -293,16 +304,25 @@ function EatOutSheet({ onClose, onLogged }: { onClose: () => void; onLogged: (m:
               </button>
             ))}
           </div>
-          {q.trim().length >= 2 ? (
+          {manual ? (
             <div className="manual">
-              <span className="fine">Not listed? Log “{q.trim()}” with the calories:</span>
-              <div className="field-row" style={{ alignItems: 'flex-end' }}>
-                <div className="field" style={{ marginTop: 8 }}><input type="number" inputMode="numeric" min={0} value={kcal} onChange={(e) => setKcal(e.target.value)} placeholder="kcal" aria-label="Calories" /></div>
-                <button type="button" className="btn" style={{ flex: '0 0 auto' }} disabled={busy || !(Number(kcal) >= 0) || kcal === ''} onClick={() => void log({ name: q.trim(), calories: Number(kcal) }, q.trim())}>Log it</button>
+              <div className="field"><label htmlFor="m-name">What was it?</label><input id="m-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Chicken burrito" /></div>
+              <div className="macro-grid">
+                <div className="field"><label htmlFor="m-kcal">Calories</label><input id="m-kcal" type="number" inputMode="numeric" min={0} value={kcal} onChange={(e) => setKcal(e.target.value)} placeholder={fromMacros > 0 ? String(fromMacros) : 'kcal'} /></div>
+                <div className="field"><label htmlFor="m-p">Protein (g)</label><input id="m-p" type="number" inputMode="decimal" min={0} value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="Optional" /></div>
+                <div className="field"><label htmlFor="m-c">Carbs (g)</label><input id="m-c" type="number" inputMode="decimal" min={0} value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="Optional" /></div>
+                <div className="field"><label htmlFor="m-f">Fat (g)</label><input id="m-f" type="number" inputMode="decimal" min={0} value={fat} onChange={(e) => setFat(e.target.value)} placeholder="Optional" /></div>
               </div>
+              {kcal.trim() === '' && fromMacros > 0 ? <p className="fine" style={{ marginTop: 8 }}>About {fromMacros} kcal from those macros.</p> : null}
+              <button type="button" className="btn block" style={{ marginTop: 14 }} disabled={busy || !canLog} onClick={() => void log({ name: name.trim(), calories, protein: grams(protein), carbs: grams(carbs), fat: grams(fat) }, name.trim())}>Log it</button>
             </div>
-          ) : null}
-          <button type="button" className="btn ghost block" style={{ marginTop: 10 }} onClick={() => setScan(true)}><Icon name="scan" size={18} /> Scan a packet instead</button>
+          ) : (
+            <>
+              {q.trim().length >= 2 ? <p className="fine" style={{ marginTop: 12 }}>Not listed? <button type="button" className="link-btn" onClick={typeIt}>Enter “{q.trim()}” yourself</button></p> : null}
+              <button type="button" className="btn ghost block" style={{ marginTop: 10 }} onClick={typeIt}><Icon name="edit" size={18} /> Enter calories and macros yourself</button>
+            </>
+          )}
+          <button type="button" className="btn ghost block" onClick={() => setScan(true)}><Icon name="scan" size={18} /> Scan a packet instead</button>
         </>
       )}
     </Sheet>

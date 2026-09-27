@@ -45,6 +45,7 @@ export function ItemSheet({ item, onClose, onChanged }: { item: InventoryItem; o
   const [quantity, setQuantity] = useState(() => defaultAmount(item));
   const [unit, setUnit] = useState(item.unit);
   const [meal, setMeal] = useState<MealSlot>(mealNow);
+  const [expiry, setExpiry] = useState(() => (item.expirationDate ? formatDateInput(new Date(item.expirationDate)) : ''));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
@@ -127,8 +128,9 @@ export function ItemSheet({ item, onClose, onChanged }: { item: InventoryItem; o
 
   const correct = () =>
     run(async () => {
-      await api.patch(`/api/inventory/${item.id}`, { quantity, unit });
-      return `${item.food.name} corrected to ${formatAmount(quantity, unit)}.`;
+      await api.patch(`/api/inventory/${item.id}`, { quantity, unit, expirationDate: expiry ? dateInputToISO(expiry) : null });
+      const until = expiry ? `, use by ${new Date(`${expiry}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}` : '';
+      return `${item.food.name}: ${formatAmount(quantity, unit)}${until}.`;
     });
 
   const destroy = () =>
@@ -179,9 +181,9 @@ export function ItemSheet({ item, onClose, onChanged }: { item: InventoryItem; o
               <Icon name="move" size={22} />
               <span>Move it</span>
             </button>
-            <button type="button" className="action" onClick={() => { setQuantity(item.quantity); setStep('edit'); }}>
+            <button type="button" className="action" onClick={() => { setQuantity(item.quantity); setUnit(item.unit); setStep('edit'); }}>
               <Icon name="edit" size={22} />
-              <span>Correct amount</span>
+              <span>Edit</span>
             </button>
           </div>
 
@@ -214,6 +216,8 @@ export function ItemSheet({ item, onClose, onChanged }: { item: InventoryItem; o
           onConsume={consume}
           onRemove={remove}
           onCorrect={correct}
+          expiry={expiry}
+          onExpiry={setExpiry}
         />
       )}
     </Sheet>
@@ -269,7 +273,7 @@ function defaultAmount(item: InventoryItem): number {
 }
 
 function AmountStep({
-  item, step, quantity, unit, onQuantity, onUnit, meal, onMeal, busy, onBack, onConsume, onRemove, onCorrect,
+  item, step, quantity, unit, onQuantity, onUnit, meal, onMeal, busy, onBack, onConsume, onRemove, onCorrect, expiry, onExpiry,
 }: {
   item: InventoryItem;
   step: 'ate' | 'gone' | 'edit';
@@ -284,9 +288,11 @@ function AmountStep({
   onConsume: () => void;
   onRemove: (reason: RemovalReason) => void;
   onCorrect: () => void;
+  expiry: string;
+  onExpiry: (day: string) => void;
 }) {
   const shares: Array<[string, number]> = [['A quarter', 0.25], ['Half', 0.5], ['All of it', 1]];
-  const heading = step === 'ate' ? 'How much did you eat?' : step === 'gone' ? 'How much is gone?' : 'How much is there really?';
+  const heading = step === 'ate' ? 'How much did you eat?' : step === 'gone' ? 'How much is gone?' : 'Amount and use-by date';
   const sameUnit = unit === item.unit;
   const ok = quantity > 0 && (step === 'edit' || !sameUnit || quantity <= item.quantity + 1e-9);
 
@@ -357,9 +363,19 @@ function AmountStep({
           </div>
         </>
       ) : (
-        <button type="button" className="btn block" style={{ marginTop: 20 }} onClick={onCorrect} disabled={busy || !(quantity > 0)}>
-          Set to {formatAmount(quantity || 0, unit)}
-        </button>
+        <>
+          <div className="field">
+            <label htmlFor="amt-date">Use by</label>
+            <div className="date-row">
+              <input id="amt-date" type="date" value={expiry} onChange={(e) => onExpiry(e.target.value)} />
+              {expiry ? <button type="button" className="link-btn" onClick={() => onExpiry('')}>No date</button> : null}
+            </div>
+          </div>
+          <p className="fine" style={{ marginTop: 6 }}>{expiry ? 'You get a warning before this date.' : 'With no date, it never shows as going off.'}</p>
+          <button type="button" className="btn block" style={{ marginTop: 20 }} onClick={onCorrect} disabled={busy || !(quantity > 0)}>
+            Save
+          </button>
+        </>
       )}
     </div>
   );

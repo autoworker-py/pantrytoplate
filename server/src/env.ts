@@ -59,7 +59,7 @@ export const env = {
    */
   webRoot: process.env.WEB_ROOT ?? '',
   usdaApiKey: str('USDA_API_KEY', 'DEMO_KEY'),
-  offUserAgent: str('OFF_USER_AGENT', 'PantryToPlate/0.1 (local development)'),
+  offUserAgent: str('OFF_USER_AGENT', 'Pantry2Plate/0.1 (local development)'),
   /** hard kill switch for outbound calls; the app stays fully usable */
   offlineMode: str('OFFLINE_MODE', 'false').toLowerCase() === 'true',
   expiryWarningDays: num('EXPIRY_WARNING_DAYS', 3),

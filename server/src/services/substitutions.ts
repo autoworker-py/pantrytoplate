@@ -95,6 +95,61 @@ export async function substitutionsFor(
   return options.sort((a, b) => Number(b.enough) - Number(a.enough));
 }
 
+export interface StockedSwap {
+  substituteId: string;
+  substituteName: string;
+}
+
+/**
+ * The same question for many ingredients at once, for ranking a whole list:
+ * which of them have a stand-in held in enough quantity? One read of the rules
+ * and one of the pantry, however many recipes are asking. Keys are the
+ * caller's own, so one ingredient can be asked about in several amounts.
+ */
+export async function stockedSubstitutes(
+  userId: string,
+  needs: Array<{ key: string; foodReferenceId: string; quantity: number; unit: string }>,
+  db: Tx = prisma,
+): Promise<Map<string, StockedSwap>> {
+  const found = new Map<string, StockedSwap>();
+  if (needs.length === 0) return found;
+  const rules = await db.substitution.findMany({
+    where: { foodReferenceId: { in: [...new Set(needs.map((need) => need.foodReferenceId))] } },
+    include: { substitute: true },
+    orderBy: { rank: 'asc' },
+  });
+  if (rules.length === 0) return found;
+
+  const lots = await db.inventoryItem.findMany({
+    where: { userId, quantity: { gt: 0 } },
+    include: { foodReference: true },
+  });
+  const byIngredient = new Map<string, typeof lots>();
+  for (const lot of lots) {
+    const key = lot.foodReference.canonicalId ?? lot.foodReferenceId;
+    byIngredient.set(key, [...(byIngredient.get(key) ?? []), lot]);
+  }
+  const contexts = await loadConvertContexts(lots.map((lot) => lot.foodReference), db);
+
+  for (const need of needs) {
+    for (const rule of rules) {
+      if (rule.foodReferenceId !== need.foodReferenceId) continue;
+      const held = byIngredient.get(rule.substituteId);
+      if (!held) continue;
+      let available = 0;
+      for (const lot of held) {
+        const converted = convert(lot.quantity, lot.unit, need.unit, contexts.get(lot.foodReferenceId) ?? {});
+        if (converted.ok) available += converted.value;
+      }
+      if (available + 1e-6 >= need.quantity * rule.ratio) {
+        found.set(need.key, { substituteId: rule.substituteId, substituteName: rule.substitute.name });
+        break;
+      }
+    }
+  }
+  return found;
+}
+
 /**
  * Rewrite a recipe's ingredients to use stand-ins the cook picked.
  *

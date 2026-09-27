@@ -9,6 +9,7 @@ import Cook from './screens/Cook';
 import Pantry from './screens/Pantry';
 import Recipes from './screens/Recipes';
 import RecipeDetail from './screens/RecipeDetail';
+import RecipeNew from './screens/RecipeNew';
 import AddFood from './screens/AddFood';
 import Shopping from './screens/Shopping';
 import Eaten from './screens/Eaten';
@@ -67,6 +68,7 @@ export default function App() {
             <Route path="/" element={<Cook />} />
             <Route path="/pantry" element={<Pantry />} />
             <Route path="/recipes" element={<Recipes />} />
+            <Route path="/recipes/new" element={<RecipeNew />} />
             <Route path="/recipes/:id" element={<RecipeDetail />} />
             <Route path="/add" element={<AddFood />} />
             <Route path="/shopping" element={<Shopping />} />

@@ -1,5 +1,5 @@
 /*
- * Night — the Pantry to Plate design system.
+ * Night — the Pantry2Plate design system.
  *
  * The app is a black-glass fridge at 6pm: a charcoal room, one warm light, and
  * the food as the only colour. Everything here serves that. Colour is spent on
@@ -309,3 +309,10 @@ button.list-row:active, a.list-row:active { background: rgba(255, 244, 228, .03)
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* a small print note: what a feature can and cannot promise */
+.disclaimer { display: flex; gap: 9px; align-items: flex-start; margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12.5px; line-height: 1.5; color: var(--ink-3); }
+.disclaimer svg { flex: none; margin-top: 1.5px; }
+
+/* two small actions side by side in a header slot */
+.head-actions { display: flex; gap: 8px; }

@@ -112,6 +112,8 @@ export interface RecipeSummary {
   canMakeNow: boolean;
   counts: Record<IngredientStatus, number>;
   missing: string[];
+  /** every gap filled by something held: ready tonight with these swaps (servers from 2026-09 on) */
+  swaps?: Array<{ foodReferenceId: string; name: string; substituteId: string; substituteName: string }>;
   gaps: number;
   totalMinutes: number | null;
   difficulty: string | null;

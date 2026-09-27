@@ -4,6 +4,7 @@ import type { Settings as SettingsData, WeightGoal } from '../lib/types';
 import { useAuth } from '../lib/auth';
 import { forgetReceipts } from '../lib/receiptMemory';
 import { PrivacyNotice } from '../components/PrivacyNotice';
+import { BodyInputs, describeBody, type UnitSystem } from '../components/BodyInputs';
 import { Icon } from '../ui/Icon';
 import { BackButton, Page, Sheet, Switch, errorText, useToast } from '../ui/kit';
 
@@ -84,7 +85,7 @@ export default function Settings() {
           <p className="fine" style={{ marginTop: 8 }}>{GOALS.find((g) => g.value === s.weightGoal)?.note}</p>
 
           <div className="group" style={{ marginTop: 16 }}>
-            <Row title="Your measurements" sub={s.body.weightKg ? `${s.body.heightCm ?? '–'} cm · ${s.body.weightKg} kg${s.body.birthYear ? ` · born ${s.body.birthYear}` : ''}` : 'Not set. Your target is a general default.'} onClick={() => setSheet('body')}><Icon name="chevron" size={18} className="faint" /></Row>
+            <Row title="Your measurements" sub={s.body.weightKg ? `${describeBody(s.unitSystem, s.body.heightCm, s.body.weightKg)}${s.body.birthYear ? ` · born ${s.body.birthYear}` : ''}` : 'Not set. Your target is a general default.'} onClick={() => setSheet('body')}><Icon name="chevron" size={18} className="faint" /></Row>
             <Row title="Daily targets" sub={`${s.dailyCalorieTarget.toLocaleString()} kcal · ${s.proteinTargetGrams} g protein · ${s.carbsTargetGrams} g carbs · ${s.fatTargetGrams} g fat`} onClick={() => setSheet('targets')}><Icon name="chevron" size={18} className="faint" /></Row>
             <Row title="Units">
               <div className="mini-seg">
@@ -152,19 +153,17 @@ export default function Settings() {
 }
 
 function BodySheet({ s, onClose, onSave }: { s: SettingsData; onClose: () => void; onSave: (u: Record<string, unknown>) => void }) {
-  const [weight, setWeight] = useState(s.body.weightKg ? String(s.body.weightKg) : '');
-  const [height, setHeight] = useState(s.body.heightCm ? String(s.body.heightCm) : '');
+  const [system, setSystem] = useState<UnitSystem>(s.unitSystem);
+  const [heightCm, setHeightCm] = useState<number | null>(s.body.heightCm ?? null);
+  const [weightKg, setWeightKg] = useState<number | null>(s.body.weightKg ?? null);
   const [born, setBorn] = useState(s.body.birthYear ? String(s.body.birthYear) : '');
   const [sex, setSex] = useState(s.body.sex ?? 'unspecified');
   const [activity, setActivity] = useState(s.body.activityLevel ?? 'moderate');
   const num = (v: string) => (v.trim() ? Number(v) : null);
   return (
     <Sheet title="Your measurements" sub="Change any of these and your calorie target is worked out again." onClose={onClose}>
-      <div className="field"><label htmlFor="b-w">Weight (kg)</label><input id="b-w" type="number" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} /></div>
-      <div className="field-row">
-        <div className="field"><label htmlFor="b-h">Height (cm)</label><input id="b-h" type="number" inputMode="numeric" value={height} onChange={(e) => setHeight(e.target.value)} /></div>
-        <div className="field"><label htmlFor="b-y">Born</label><input id="b-y" type="number" inputMode="numeric" placeholder="1990" value={born} onChange={(e) => setBorn(e.target.value)} /></div>
-      </div>
+      <BodyInputs system={system} onSystem={setSystem} heightCm={heightCm} weightKg={weightKg} onChange={(h, w) => { setHeightCm(h); setWeightKg(w); }} />
+      <div className="field"><label htmlFor="b-y">Year you were born</label><input id="b-y" type="number" inputMode="numeric" placeholder="1990" value={born} onChange={(e) => setBorn(e.target.value)} /></div>
       <div className="label" style={{ marginTop: 16 }}>Sex</div>
       <div className="chips" style={{ marginTop: 8 }}>
         {[['female', 'Female'], ['male', 'Male'], ['unspecified', 'Rather not say']].map(([v, l]) => <button key={v} type="button" className={`chip${sex === v ? ' on' : ''}`} onClick={() => setSex(v)}>{l}</button>)}
@@ -177,7 +176,7 @@ function BodySheet({ s, onClose, onSave }: { s: SettingsData; onClose: () => voi
           </button>
         ))}
       </div>
-      <button type="button" className="btn block" style={{ marginTop: 20 }} onClick={() => onSave({ weightKg: num(weight), heightCm: num(height), birthYear: num(born), sex, activityLevel: activity })}>Save</button>
+      <button type="button" className="btn block" style={{ marginTop: 20 }} onClick={() => onSave({ weightKg, heightCm, birthYear: num(born), sex, activityLevel: activity, unitSystem: system })}>Save</button>
     </Sheet>
   );
 }

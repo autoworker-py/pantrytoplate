@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import type { EnergyEstimate } from '../lib/types';
 import { Logo } from '../ui/kit';
+import { BodyInputs, localUnitSystem, type UnitSystem } from '../components/BodyInputs';
 
 type Sex = 'male' | 'female' | 'unspecified';
 const ACTIVITY = [
@@ -24,8 +25,9 @@ const GOALS = [
  */
 export default function Onboarding() {
   const { refresh } = useAuth();
-  const [height, setHeight] = useState('');
-  const [weight, setWeight] = useState('');
+  const [system, setSystem] = useState<UnitSystem>(localUnitSystem);
+  const [heightCm, setHeightCm] = useState<number | null>(null);
+  const [weightKg, setWeightKg] = useState<number | null>(null);
   const [born, setBorn] = useState('');
   const [sex, setSex] = useState<Sex>('unspecified');
   const [activity, setActivity] = useState('moderate');
@@ -34,7 +36,7 @@ export default function Onboarding() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const body = { heightCm: Number(height) || null, weightKg: Number(weight) || null, birthYear: Number(born) || null, sex, activityLevel: activity, weightGoal: goal };
+  const body = { heightCm, weightKg, birthYear: Number(born) || null, sex, activityLevel: activity, weightGoal: goal };
   const complete = Boolean(body.heightCm && body.weightKg && body.birthYear);
 
   useEffect(() => {
@@ -45,13 +47,15 @@ export default function Onboarding() {
     }, 250);
     return () => { live = false; window.clearTimeout(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [height, weight, born, sex, activity, goal, complete]);
+  }, [heightCm, weightKg, born, sex, activity, goal, complete]);
 
   async function finish(skipped: boolean) {
     setBusy(true);
     setError(null);
     try {
       await api.post('/api/auth/onboarding', skipped ? { skipped: true } : body);
+      // the units they chose here are the units the app speaks from now on
+      await api.patch('/api/settings', { unitSystem: system }).catch(() => undefined);
       await refresh();
     } catch {
       setError('Could not save that. You can set it later in Settings.');
@@ -68,10 +72,7 @@ export default function Onboarding() {
       </div>
       <div className="auth-form">
         {error ? <div className="banner error">{error}</div> : null}
-        <div className="field-row">
-          <div className="field"><label htmlFor="o-h">Height (cm)</label><input id="o-h" type="number" inputMode="numeric" placeholder="178" value={height} onChange={(e) => setHeight(e.target.value)} /></div>
-          <div className="field"><label htmlFor="o-w">Weight (kg)</label><input id="o-w" type="number" inputMode="decimal" placeholder="76" value={weight} onChange={(e) => setWeight(e.target.value)} /></div>
-        </div>
+        <BodyInputs system={system} onSystem={setSystem} heightCm={heightCm} weightKg={weightKg} onChange={(h, w) => { setHeightCm(h); setWeightKg(w); }} />
         <div className="field"><label htmlFor="o-y">Year you were born</label><input id="o-y" type="number" inputMode="numeric" placeholder="1995" value={born} onChange={(e) => setBorn(e.target.value)} /></div>
 
         <div className="label" style={{ marginTop: 18 }}>Sex</div>

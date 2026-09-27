@@ -12,7 +12,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  */
 const config: CapacitorConfig = {
   appId: 'com.connordavidson.pantrytoplate',
-  appName: 'Pantry to Plate',
+  appName: 'Pantry2Plate',
   webDir: 'dist',
 
   ios: {

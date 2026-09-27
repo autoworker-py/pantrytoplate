@@ -36,7 +36,7 @@ const WHERE: Array<{ key: StorageLocation; label: string }> = [
   { key: 'freezer', label: 'Freezer' },
 ];
 
-type Picked = { food: Food; packageGrams?: number | null };
+export type Picked = { food: Food; packageGrams?: number | null };
 
 export default function AddFood() {
   const navigate = useNavigate();
@@ -118,7 +118,18 @@ export default function AddFood() {
 
 /* ---------- typing ---------- */
 
-function TypeFlow({ onPick, onCreate }: { onPick: (p: Picked) => void; onCreate: (name: string) => void }) {
+/** Search every food: the catalogue, the wider product database, or a new one of your own. Also used to pick recipe ingredients. */
+export function TypeFlow({
+  onPick,
+  onCreate,
+  placeholder = 'What did you buy?',
+  hint = 'Type a food, or switch to Scan it and point the camera at a barcode. You only ever add something once.',
+}: {
+  onPick: (p: Picked) => void;
+  onCreate: (name: string) => void;
+  placeholder?: string;
+  hint?: string;
+}) {
   const [q, setQ] = useState('');
   const [local, setLocal] = useState<Food[]>([]);
   const [external, setExternal] = useState<ExternalHit[]>([]);
@@ -163,12 +174,12 @@ function TypeFlow({ onPick, onCreate }: { onPick: (p: Picked) => void; onCreate:
     <>
       <div className="search">
         <Icon name="search" size={19} />
-        <input className="input big-input" autoFocus value={q} placeholder="What did you buy?" onChange={(e) => setQ(e.target.value)} aria-label="What did you buy?" autoComplete="off" />
+        <input className="input big-input" autoFocus value={q} placeholder={placeholder} onChange={(e) => setQ(e.target.value)} aria-label={placeholder} autoComplete="off" />
       </div>
       {error ? <div className="banner error" style={{ marginTop: 12 }}>{error}</div> : null}
 
       {term.length < 2 ? (
-        <p className="fine" style={{ marginTop: 14 }}>Type a food, or switch to Scan it and point the camera at a barcode. You only ever add something once.</p>
+        <p className="fine" style={{ marginTop: 14 }}>{hint}</p>
       ) : (
         <div className="list results">
           {local.map((f) => (
@@ -254,7 +265,7 @@ function ScanFlow({ onPick, onUnknown }: { onPick: (p: Picked) => void; onUnknow
 
 /* ---------- a food the app does not know ---------- */
 
-function NewFoodSheet({ initialName, barcode, onClose, onCreated }: { initialName: string; barcode?: string; onClose: () => void; onCreated: (food: Food, packageGrams?: number | null) => void }) {
+export function NewFoodSheet({ initialName, barcode, onClose, onCreated }: { initialName: string; barcode?: string; onClose: () => void; onCreated: (food: Food, packageGrams?: number | null) => void }) {
   const [name, setName] = useState(initialName);
   const [brand, setBrand] = useState('');
   const [category, setCategory] = useState<string | null>(null);

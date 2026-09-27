@@ -1,6 +1,6 @@
 # Night
 
-The design system for Pantry to Plate, as built on the `night-redesign` branch.
+The design system for Pantry2Plate, as built on the `night-redesign` branch.
 It records what ships, from the code in `web/src`. The previous looks are in
 `backup/` and in git history; neither is a direction to preserve.
 

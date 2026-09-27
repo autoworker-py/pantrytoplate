@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import type { CookPreview, IngredientMatch } from '../lib/types';
 import { formatAmount } from '../lib/format';
@@ -19,7 +19,9 @@ export default function RecipeDetail() {
   const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const toast = useToast();
-  const [adj, setAdj] = useState<Adjustments>(NO_ADJUSTMENTS);
+  // arriving from "Ready with a swap", the swaps are already made
+  const arrived = (useLocation().state as { swaps?: Record<string, string> } | null)?.swaps;
+  const [adj, setAdj] = useState<Adjustments>(() => (arrived ? { ...NO_ADJUSTMENTS, swaps: arrived } : NO_ADJUSTMENTS));
   const [preview, setPreview] = useState<CookPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);

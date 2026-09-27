@@ -63,19 +63,30 @@ export default function Recipes() {
 
   const groups = useMemo(() => {
     const all = data?.recipes ?? [];
+    const swap = (r: RecipeSummary) => !r.canMakeNow && Boolean(r.swaps?.length);
     return [
       { key: 'use', title: 'Use it up first', items: all.filter((r) => r.canMakeNow && r.usesExpiring.length) },
       { key: 'ready', title: 'Ready now', items: all.filter((r) => r.canMakeNow && !r.usesExpiring.length) },
-      { key: 'near', title: 'One or two things away', items: all.filter((r) => !r.canMakeNow && r.gaps <= 2) },
-      { key: 'rest', title: 'Needs a shop', items: all.filter((r) => !r.canMakeNow && r.gaps > 2) },
+      { key: 'swap', title: 'Ready with a swap', items: all.filter(swap) },
+      { key: 'near', title: 'One or two things away', items: all.filter((r) => !r.canMakeNow && !swap(r) && r.gaps <= 2) },
+      { key: 'rest', title: 'Needs a shop', items: all.filter((r) => !r.canMakeNow && !swap(r) && r.gaps > 2) },
     ].filter((g) => g.items.length);
   }, [data]);
+
+  // a swap recipe opens with its swaps already made, so Cook this works straight away
+  const open = (r: RecipeSummary) =>
+    navigate(`/recipes/${r.id}`, r.swaps?.length && !r.canMakeNow ? { state: { swaps: Object.fromEntries(r.swaps.map((s) => [s.foodReferenceId, s.substituteId])) } } : undefined);
 
   return (
     <Page
       left={<BackButton />}
       title="Recipes"
-      right={<button type="button" className="icon-btn" aria-label="Import a recipe from a link" onClick={() => setImporting(true)}><Icon name="link" size={20} /></button>}
+      right={
+        <span className="head-actions">
+          <Link to="/recipes/new" className="icon-btn" aria-label="Write your own recipe"><Icon name="plus" size={20} /></Link>
+          <button type="button" className="icon-btn" aria-label="Import a recipe from a link" onClick={() => setImporting(true)}><Icon name="link" size={20} /></button>
+        </span>
+      }
     >
       <div className="search">
         <Icon name="search" size={19} />
@@ -98,7 +109,7 @@ export default function Recipes() {
         <div style={{ marginTop: 20 }}>{[0, 1, 2, 3, 4].map((i) => <div key={i} className="skeleton" style={{ height: 64, marginBottom: 10 }} />)}</div>
       ) : data.recipes.length === 0 ? (
         filter === 'mine' && !q ? (
-          <Empty title="No recipes of your own yet" action={<button type="button" className="btn small" onClick={() => setImporting(true)}>Import one from a link</button>}>Paste a link from any recipe site and it is matched against your pantry.</Empty>
+          <Empty title="No recipes of your own yet" action={<div className="btn-row"><Link to="/recipes/new" className="btn small">Write one</Link><button type="button" className="btn small secondary" onClick={() => setImporting(true)}>Import a link</button></div>}>Write down one you make, or paste a link from any recipe site. Either way it is matched against your pantry.</Empty>
         ) : (
           <Empty title="Nothing matches">{q ? `No recipe mentions “${q}”.` : 'Try a different filter.'}</Empty>
         )
@@ -108,7 +119,7 @@ export default function Recipes() {
             <section key={g.key}>
               <div className="section"><h2>{g.title}</h2><span className="aside">{g.items.length}</span></div>
               <div className="list">
-                {g.items.map((r) => <RecipeRow key={r.id} r={r} onOpen={() => navigate(`/recipes/${r.id}`)} />)}
+                {g.items.map((r) => <RecipeRow key={r.id} r={r} onOpen={() => open(r)} />)}
               </div>
             </section>
           ))}
@@ -128,7 +139,10 @@ export default function Recipes() {
 
 function RecipeRow({ r, onOpen }: { r: RecipeSummary; onOpen: () => void }) {
   const kcal = r.nutrition?.caloriesPerServing ? `${Math.round(r.nutrition.caloriesPerServing)} kcal` : null;
-  const line = r.usesExpiring.length
+  const swaps = !r.canMakeNow ? r.swaps ?? [] : [];
+  const line = swaps.length
+    ? `Use ${swaps[0].substituteName.toLowerCase()} for ${swaps[0].name.toLowerCase()}${swaps.length > 1 ? ` +${swaps.length - 1} more` : ''}`
+    : r.usesExpiring.length
     ? `Uses ${r.usesExpiring.slice(0, 2).join(', ').toLowerCase()}`
     : !r.canMakeNow && r.missing.length
       ? `Needs ${r.missing.slice(0, 2).join(', ').toLowerCase()}${r.missing.length > 2 ? ` +${r.missing.length - 2}` : ''}`
@@ -143,7 +157,7 @@ function RecipeRow({ r, onOpen }: { r: RecipeSummary; onOpen: () => void }) {
         <span className="t">{r.name}{r.isMine ? <span className="tag info" style={{ marginLeft: 8 }}>Yours</span> : null}</span>
         <span className="s">{[line, kcal].filter(Boolean).join(' · ')}</span>
       </span>
-      {r.canMakeNow ? <span className="tag ok">Ready</span> : <span className={`tag ${r.gaps <= 2 ? 'soon' : 'neutral'}`}>Need {r.gaps}</span>}
+      {r.canMakeNow ? <span className="tag ok">Ready</span> : swaps.length ? <span className="tag ok">Swap</span> : <span className={`tag ${r.gaps <= 2 ? 'soon' : 'neutral'}`}>Need {r.gaps}</span>}
     </button>
   );
 }
@@ -238,6 +252,10 @@ function ImportSheet({ onClose, onDone }: { onClose: () => void; onDone: (id: st
           <button type="button" className="btn ghost block" onClick={() => setPreview(null)} disabled={busy}>Use a different link</button>
         </>
       )}
+      <p className="disclaimer">
+        <Icon name="info" size={15} />
+        <span>Imported recipes are read from the web page you link, so they may be incomplete or not entirely accurate. They are not written or checked by Pantry2Plate; check the amounts before you cook.</span>
+      </p>
     </Sheet>
   );
 }

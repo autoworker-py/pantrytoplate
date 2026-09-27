@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Pantry to Plate</string>
+	<string>Pantry2Plate</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -27,9 +27,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Pantry to Plate uses the camera to scan barcodes on food packaging and to photograph receipts, so you do not have to type items in. Both are read on your device, and no photos are stored or uploaded.</string>
+	<string>Pantry2Plate uses the camera to scan barcodes on food packaging and to photograph receipts, so you do not have to type items in. Both are read on your device, and no photos are stored or uploaded.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Pantry to Plate can read a receipt or a barcode from a photo you choose. The photo is read on your device and is not stored or uploaded.</string>
+	<string>Pantry2Plate can read a receipt or a barcode from a photo you choose. The photo is read on your device and is not stored or uploaded.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

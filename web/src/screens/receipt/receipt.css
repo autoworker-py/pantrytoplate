@@ -34,8 +34,6 @@
 /* ---------- the Receipt tab ---------- */
 
 .receipt-intro { padding-bottom: 8px; }
-.disclaimer { display: flex; gap: 9px; align-items: flex-start; margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12.5px; line-height: 1.5; color: var(--ink-3); }
-.disclaimer svg { flex: none; margin-top: 1.5px; }
 
 /* ---------- reading ---------- */
 

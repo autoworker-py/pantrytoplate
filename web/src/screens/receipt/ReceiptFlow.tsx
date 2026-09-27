@@ -103,7 +103,7 @@ export function ReceiptFlow({
       try {
         path = await photographReceipt(from);
       } catch (cause) {
-        setError(errorText(cause, 'Could not open the camera. Check that Pantry to Plate is allowed to use it in Settings.'));
+        setError(errorText(cause, 'Could not open the camera. Check that Pantry2Plate is allowed to use it in Settings.'));
         return;
       }
     }

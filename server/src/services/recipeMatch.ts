@@ -319,10 +319,23 @@ export interface RecipeSearchOptions {
   page?: number;
 }
 
+/** A gap filled by something in the pantry: "white bread for wholemeal bread". */
+export interface RecipeSwap {
+  foodReferenceId: string;
+  name: string;
+  substituteId: string;
+  substituteName: string;
+}
+
 export interface RankedRecipe extends RecipeMatch {
   gaps: number;
   score: number;
+  /** every gap has a stand-in you hold enough of: ready tonight with these swaps */
+  swaps: RecipeSwap[];
 }
+
+/** Past this many gaps a recipe is a shop, not a swap. */
+const MAX_SWAPS = 3;
 
 /** How many recipes get the expensive per-ingredient evaluation. */
 const SHORTLIST_SIZE = 60;
@@ -589,13 +602,39 @@ export async function searchRecipes(
   const matches = await evaluateRecipes(userId, onDiet, null, db);
   const ratings = await ratingsFor(userId, onDiet.map((recipe) => recipe.id), db);
 
+  // Missing wholemeal bread with white bread in the cupboard is not missing
+  // anything tonight. Only missing or short gaps can be swapped: an amount in
+  // units the app cannot compare is still a question for the cook.
+  const swappable = (match: RecipeMatch) => {
+    const gaps = match.ingredients.filter((i) => i.status !== 'ok');
+    return gaps.length > 0 && gaps.length <= MAX_SWAPS && gaps.every((i) => i.status === 'missing' || i.status === 'short') ? gaps : [];
+  };
+  const { stockedSubstitutes } = await import('./substitutions.js');
+  const stocked = await stockedSubstitutes(
+    userId,
+    matches.flatMap((match) =>
+      swappable(match).map((i) => ({ key: `${match.id}:${i.foodReferenceId}`, foodReferenceId: i.foodReferenceId, quantity: i.requiredQuantity, unit: i.requiredUnit })),
+    ),
+    db,
+  );
+
   const ranked: RankedRecipe[] = matches
     .map((match) => {
       const gaps = match.counts.missing + match.counts.short + match.counts.unknown_conversion;
       const fit = goalFit(match.nutrition ?? undefined, goal);
 
+      const gapsToSwap = swappable(match);
+      const swaps: RecipeSwap[] = gapsToSwap.every((i) => stocked.has(`${match.id}:${i.foodReferenceId}`))
+        ? gapsToSwap.map((i) => ({ foodReferenceId: i.foodReferenceId, name: i.name, ...stocked.get(`${match.id}:${i.foodReferenceId}`)! }))
+        : [];
+
       let score = 0;
       if (match.canMakeNow) score += 1000;
+      // cookable tonight with a swap: below ready as written, above anything that needs a shop
+      if (swaps.length) {
+        score += 850;
+        match.reasons.push(`Ready with ${swaps.map((s) => `${s.substituteName.toLowerCase()} for ${s.name.toLowerCase()}`).join(' and ')}`);
+      }
       // something you rated highly beats something you have never tried
       const rating = ratings.get(match.id);
       if (rating !== undefined) score += (rating - 3) * 25;
@@ -610,7 +649,7 @@ export async function searchRecipes(
       }
       if (rating !== undefined && rating >= 4) match.reasons.push(`You rated this ${rating}/5`);
 
-      return { ...match, gaps, score };
+      return { ...match, gaps, score, swaps };
     })
     .filter((recipe) => {
       if (opts.maxCaloriesPerServing) {

@@ -247,3 +247,14 @@ form .row button[type='submit'] { flex: none; padding: 0 16px; border-radius: va
 .target-card { margin-top: 20px; padding: 18px; border-radius: var(--r-lg); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line); display: flex; flex-direction: column; gap: 4px; min-height: 84px; justify-content: center; transition: box-shadow var(--med) ease; }
 .target-card.on { box-shadow: inset 0 0 0 1.5px rgba(243, 201, 139, .45); }
 .target-card .big { font-size: 38px; font-weight: 700; color: var(--warm); letter-spacing: -.02em; line-height: 1; }
+
+/* height and weight, in metric or US units */
+.body-units { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; }
+.height-us { display: flex; align-items: center; gap: 6px; }
+.height-us input { flex: 1; min-width: 0; }
+.height-us span { flex: none; font-size: 14px; color: var(--ink-3); }
+.date-row { display: flex; align-items: center; gap: 14px; }
+.date-row input { flex: 1; min-width: 0; }
+.date-row .link-btn { flex: none; }
+.macro-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
+.recipe-basics { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start; }

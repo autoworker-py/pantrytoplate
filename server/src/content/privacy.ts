@@ -16,7 +16,7 @@ export const PRIVACY_POLICY = `# Privacy Notice
 
 **Version ${PRIVACY_VERSION} · Effective ${PRIVACY_EFFECTIVE}**
 
-This notice explains what Pantry to Plate ("the app") collects about you, why,
+This notice explains what Pantry2Plate ("the app") collects about you, why,
 where it goes, and what you can make it do. It is written to be read, not to be
 survived. If something here is unclear, treat that as a fault in the notice and
 ask.

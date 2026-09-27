@@ -98,6 +98,8 @@ const routes: FastifyPluginAsync = async (app) => {
         isMine: recipe.isMine,
         source: recipe.source,
         missing: recipe.ingredients.filter((i) => i.status !== 'ok').map((i) => i.name),
+        // gaps the pantry can fill tonight, for the "Ready with a swap" group
+        swaps: recipe.swaps,
       })),
     };
   });
