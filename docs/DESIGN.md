@@ -9,12 +9,16 @@ It records what ships, from the code in `web/src`. The previous looks are in
 A black-glass fridge at 6pm. A charcoal room, one warm light, and the food as
 the only colour. The pantry is a place you look into, not a list you read.
 
-- **Cook** (home) shows the fridge with tonight's recipe below it. What the
-  recipe takes lifts off the shelf with a warm glow and its amount; nothing
-  else is hidden.
-- **Pantry** is the same fridge, with Fridge, Cupboard and Freezer as three
-  rooms. Shelves fill from whatever is owned; the shelves scroll inside a fixed
-  frame so the room stays still.
+- **Cook** (home) shows the kitchen with tonight's recipe below it. Fridge,
+  Cupboard and Freezer sit side by side: swipe between them or tap the tabs,
+  which count what the recipe uses in each room with a lit dot. What it takes
+  lifts off the shelf with a warm glow and its amount; nothing else is hidden.
+  A recipe opens on the fridge when it uses anything there.
+- **Pantry** is the same three rooms, swipeable the same way. Shelves fill from
+  whatever is owned and scroll inside a fixed frame so the room stays still.
+  Tapping a thing offers eat some, it's gone, move it (to another room; out of
+  the freezer it can be marked thawing, which brings its date in to two days)
+  and correct the amount, each with Undo.
 - **Shopping**, **Eaten**, **Settings** and the sign-in screens use the same
   surfaces and type; they are lists and sheets, not fridges.
 

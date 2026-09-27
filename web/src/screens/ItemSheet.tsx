@@ -1,15 +1,31 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import type { InventoryItem, MealSlot, RecipesForFood, RemovalReason } from '../lib/types';
-import { expiryLabel, formatAmount } from '../lib/format';
+import type { InventoryItem, MealSlot, RecipesForFood, RemovalReason, StorageLocation } from '../lib/types';
+import { dateInputToISO, expiryLabel, formatAmount, formatDateInput } from '../lib/format';
 import { FoodThumb, expiryTag } from '../fridge/Fridge';
+import { ZONES } from '../fridge/ZonePager';
 import { CountsAs } from '../components/CountsAs';
 import { UnitSelect } from '../components/UnitSelect';
-import { Icon } from '../ui/Icon';
-import { Sheet, errorText, useToast } from '../ui/kit';
+import { Icon, type IconName } from '../ui/Icon';
+import { Sheet, Switch, errorText, useToast } from '../ui/kit';
 
 const WHERE = { fridge: 'the fridge', pantry: 'the cupboard', freezer: 'the freezer' } as const;
+const ZONE_ICON: Record<StorageLocation, IconName> = { fridge: 'pantry', pantry: 'box', freezer: 'snow' };
+const ZONE_HINT: Record<StorageLocation, string> = {
+  fridge: 'Cold, for what goes off.',
+  pantry: 'Dry, at room temperature.',
+  freezer: 'Keeps for months. The date moves out to match.',
+};
+/** Thawed food keeps about two days. */
+const THAW_DAYS = 2;
+
+/** A local calendar day n days from today, sent as local noon like every date the app sends. */
+function dayFromToday(n: number): { iso: string; name: string } {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return { iso: dateInputToISO(formatDateInput(d)) ?? d.toISOString(), name: d.toLocaleDateString(undefined, { weekday: 'long' }) };
+}
 
 export function mealNow(): MealSlot {
   const hour = new Date().getHours();
@@ -25,7 +41,7 @@ export function mealNow(): MealSlot {
  * goes in the bin (it goes in the waste log). First say which, then how much.
  */
 export function ItemSheet({ item, onClose, onChanged }: { item: InventoryItem; onClose: () => void; onChanged: () => void }) {
-  const [step, setStep] = useState<'home' | 'ate' | 'gone' | 'edit'>('home');
+  const [step, setStep] = useState<'home' | 'ate' | 'gone' | 'edit' | 'move'>('home');
   const [quantity, setQuantity] = useState(() => defaultAmount(item));
   const [unit, setUnit] = useState(item.unit);
   const [meal, setMeal] = useState<MealSlot>(mealNow);
@@ -35,22 +51,26 @@ export function ItemSheet({ item, onClose, onChanged }: { item: InventoryItem; o
   const tag = expiryTag(item);
   const soon = item.storageLocation !== 'freezer' && item.daysUntilExpiration !== null && item.daysUntilExpiration >= 0 && item.daysUntilExpiration <= 2;
 
-  async function run(action: () => Promise<string | { message: string; logId?: string }>) {
+  async function run(action: () => Promise<string | { message: string; logId?: string; undo?: { run: () => Promise<unknown>; done: string } }>) {
     setBusy(true);
     setError(null);
     try {
       const out = await action();
       const message = typeof out === 'string' ? out : out.message;
       const logId = typeof out === 'string' ? undefined : out.logId;
+      const undo = typeof out === 'string' ? undefined : out.undo;
+      const reverse = logId
+        ? { run: () => api.delete(`/api/consumption/${logId}`), done: `Undone. ${item.food.name} is back in your pantry.` }
+        : undo;
       toast(
         message,
-        logId
+        reverse
           ? {
               label: 'Undo',
               run: () => {
-                void api
-                  .delete(`/api/consumption/${logId}`)
-                  .then(() => { toast(`Undone. ${item.food.name} is back in your pantry.`); onChanged(); })
+                void reverse
+                  .run()
+                  .then(() => { toast(reverse.done); onChanged(); })
                   .catch((e) => toast(errorText(e, 'Could not undo that.')));
               },
             }
@@ -82,11 +102,28 @@ export function ItemSheet({ item, onClose, onChanged }: { item: InventoryItem; o
       return `${formatAmount(quantity, unit)} ${item.food.name} taken out. ${formatAmount(result.remaining, item.unit)} left.${why}${result.lowStock.added ? ' Added to your shopping list.' : ''}`;
     });
 
+  // where it was, so a move can be put back exactly
+  const putBack = {
+    run: () => api.patch(`/api/inventory/${item.id}`, { storageLocation: item.storageLocation, expirationDate: item.expirationDate }),
+    done: `Undone. ${item.food.name} is back in ${WHERE[item.storageLocation]}.`,
+  };
+
   const freeze = () =>
     run(async () => {
       const data = await api.post<{ item: InventoryItem }>(`/api/inventory/${item.id}/freeze`);
-      return `${item.food.name} is in the freezer now, good for about ${data.item.daysUntilExpiration} more days.`;
+      return { message: `${item.food.name} is in the freezer now, good for about ${data.item.daysUntilExpiration} more days.`, undo: putBack };
     });
+
+  /** Out of the freezer and thawing, it keeps about two days; a date already sooner stays. */
+  const move = (to: StorageLocation, thawing: boolean) =>
+    to === 'freezer'
+      ? freeze()
+      : run(async () => {
+          const d = item.daysUntilExpiration;
+          const thaw = thawing && (d === null || d > THAW_DAYS) ? dayFromToday(THAW_DAYS) : null;
+          await api.patch(`/api/inventory/${item.id}`, thaw ? { storageLocation: to, expirationDate: thaw.iso } : { storageLocation: to });
+          return { message: `${item.food.name} moved to ${WHERE[to]}.${thaw ? ` Thawing, so use it by ${thaw.name}.` : ''}`, undo: putBack };
+        });
 
   const correct = () =>
     run(async () => {
@@ -123,6 +160,9 @@ export function ItemSheet({ item, onClose, onChanged }: { item: InventoryItem; o
           {soon ? (
             <div className="banner warm" style={{ marginTop: 14 }}>
               <strong>{item.daysUntilExpiration === 0 ? 'Goes off today.' : item.daysUntilExpiration === 1 ? 'Goes off tomorrow.' : 'Goes off in 2 days.'}</strong> Freeze it and it keeps for months instead.
+              <div style={{ marginTop: 10 }}>
+                <button type="button" className="btn small secondary" onClick={freeze} disabled={busy}><Icon name="snow" size={17} /> Freeze it</button>
+              </div>
             </div>
           ) : null}
 
@@ -135,12 +175,10 @@ export function ItemSheet({ item, onClose, onChanged }: { item: InventoryItem; o
               <Icon name="bin" size={22} />
               <span>It's gone</span>
             </button>
-            {item.storageLocation !== 'freezer' ? (
-              <button type="button" className={`action${soon ? ' warm' : ''}`} onClick={freeze} disabled={busy}>
-                <Icon name="snow" size={22} />
-                <span>Freeze it</span>
-              </button>
-            ) : null}
+            <button type="button" className="action" onClick={() => setStep('move')}>
+              <Icon name="move" size={22} />
+              <span>Move it</span>
+            </button>
             <button type="button" className="action" onClick={() => { setQuantity(item.quantity); setStep('edit'); }}>
               <Icon name="edit" size={22} />
               <span>Correct amount</span>
@@ -159,6 +197,8 @@ export function ItemSheet({ item, onClose, onChanged }: { item: InventoryItem; o
             <Icon name="trash" size={18} /> Remove from pantry
           </button>
         </>
+      ) : step === 'move' ? (
+        <MoveStep item={item} busy={busy} onBack={() => { setStep('home'); setError(null); }} onMove={move} />
       ) : (
         <AmountStep
           item={item}
@@ -177,6 +217,48 @@ export function ItemSheet({ item, onClose, onChanged }: { item: InventoryItem; o
         />
       )}
     </Sheet>
+  );
+}
+
+/** Fridge, cupboard or freezer: put wherever it really is. */
+function MoveStep({ item, busy, onBack, onMove }: { item: InventoryItem; busy: boolean; onBack: () => void; onMove: (to: StorageLocation, thawing: boolean) => void }) {
+  const [thawing, setThawing] = useState(true);
+  const fromFreezer = item.storageLocation === 'freezer';
+  const d = item.daysUntilExpiration;
+  const dateMoves = d === null || d > THAW_DAYS;
+  return (
+    <div className="amount-step">
+      <button type="button" className="btn ghost" style={{ paddingLeft: 0 }} onClick={onBack}>
+        <Icon name="back" size={18} /> Back
+      </button>
+      <h3 className="title-m" style={{ marginTop: 4 }}>Where does it live now?</h3>
+      <div className="list move-list" style={{ marginTop: 12 }}>
+        {ZONES.map((z) => {
+          const here = z.key === item.storageLocation;
+          return (
+            <button key={z.key} type="button" className="list-row" disabled={busy || here} onClick={() => onMove(z.key, fromFreezer && thawing)}>
+              <span className="thumb"><Icon name={ZONE_ICON[z.key]} size={22} /></span>
+              <span className="grow">
+                <span className="t">{z.label}</span>
+                <span className="s">{ZONE_HINT[z.key]}</span>
+              </span>
+              {here ? <span className="tag neutral">Here now</span> : <Icon name="chevron" size={16} />}
+            </button>
+          );
+        })}
+      </div>
+      {fromFreezer ? (
+        <div className="thaw-row">
+          <span className="grow">
+            <span className="t">It’s thawing</span>
+            <span className="s">
+              {!thawing ? 'The date stays as it is.' : dateMoves ? `Thawed food keeps about ${THAW_DAYS} days, so the date moves to ${dayFromToday(THAW_DAYS).name}.` : 'Its date is already sooner than that, so it stays.'}
+            </span>
+          </span>
+          <Switch on={thawing} onChange={setThawing} label="It’s thawing" />
+        </div>
+      ) : null}
+    </div>
   );
 }
 

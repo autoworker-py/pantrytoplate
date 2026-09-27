@@ -4,16 +4,11 @@ import { api } from '../lib/api';
 import type { InventoryItem, StorageLocation } from '../lib/types';
 import { formatAmount } from '../lib/format';
 import { Fridge, FoodThumb, expiryTag } from '../fridge/Fridge';
+import { ZONES, ZonePager } from '../fridge/ZonePager';
 import { Icon } from '../ui/Icon';
 import { Empty, Logo, Page, Sheet } from '../ui/kit';
 import { ItemSheet } from './ItemSheet';
 import { firstDoorThisSession } from './door';
-
-const ZONES: Array<{ key: StorageLocation; label: string }> = [
-  { key: 'fridge', label: 'Fridge' },
-  { key: 'pantry', label: 'Cupboard' },
-  { key: 'freezer', label: 'Freezer' },
-];
 
 const ZONE_KEY = 'pantry.zone';
 
@@ -81,22 +76,27 @@ export default function Pantry() {
         <div className="pad"><div className="banner error">{error} <button type="button" className="link-btn" onClick={() => void load(true)}>Try again</button></div></div>
       ) : null}
 
-      <Fridge
-        key={zone}
+      <ZonePager
         zone={zone}
-        items={byZone[zone]}
-        onItem={setActive}
-        animateDoor={door && zone === 'fridge'}
-        empty={
-          items ? (
-            <Empty
-              title={zone === 'freezer' ? 'The freezer is empty' : zone === 'pantry' ? 'The cupboard is empty' : 'The fridge is empty'}
-              action={<Link to="/add" className="btn small">Put food away</Link>}
-            >
-              Scan or type what you bought once. After that, using it is a tap.
-            </Empty>
-          ) : null
-        }
+        onZone={pick}
+        render={(z) => (
+          <Fridge
+            zone={z}
+            items={byZone[z]}
+            onItem={setActive}
+            animateDoor={door && z === 'fridge'}
+            empty={
+              items ? (
+                <Empty
+                  title={z === 'freezer' ? 'The freezer is empty' : z === 'pantry' ? 'The cupboard is empty' : 'The fridge is empty'}
+                  action={<Link to="/add" className="btn small">Put food away</Link>}
+                >
+                  Scan or type what you bought once. After that, using it is a tap.
+                </Empty>
+              ) : null
+            }
+          />
+        )}
       />
 
       {searching ? (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import type { CookPreview, IngredientMatch } from '../lib/types';
@@ -26,22 +26,41 @@ export default function RecipeDetail() {
   const [cookMode, setCookMode] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // the plan on screen is for these adjustments; until it is, cooking waits
+  const path = previewPath(id, adj);
+  const latest = useRef(path);
+  latest.current = path;
+  const [loadedPath, setLoadedPath] = useState<string | null>(null);
+  const stale = loadedPath !== path;
 
   const load = useCallback(async (fresh = false) => {
+    const asked = previewPath(id, adj);
     try {
-      const path = previewPath(id, adj);
-      const data = fresh ? await api.getFresh<{ preview: CookPreview }>(path) : await api.get<{ preview: CookPreview }>(path);
+      const data = fresh ? await api.getFresh<{ preview: CookPreview }>(asked) : await api.get<{ preview: CookPreview }>(asked);
+      if (latest.current !== asked) return; // a newer change is on its way
       setPreview(data.preview);
+      setLoadedPath(asked);
       setError(null);
     } catch (cause) {
+      if (latest.current !== asked) return;
       setError(errorText(cause, 'Could not load this recipe.'));
     }
   }, [id, adj]);
 
   useEffect(() => { void load(); }, [load]);
+  // a change that turns out to leave a gap cancels a cook that was waiting on it
+  useEffect(() => { if (!stale && preview?.blocked) setConfirming(false); }, [stale, preview]);
 
   const steps = useMemo(() => (preview ? parseSteps(preview.instructions) : []), [preview]);
-  const gaps = preview ? preview.ingredients.filter((i) => i.status !== 'ok') : [];
+  // leaving something out shows at once; the new plan follows from the server
+  const out = new Set(adj.exclude);
+  const ingredients = preview ? preview.ingredients.filter((i) => !out.has(i.foodReferenceId)) : [];
+  const leftOut = preview
+    ? [...preview.excludedIngredients, ...preview.ingredients].filter((x, i, all) => out.has(x.foodReferenceId) && all.findIndex((y) => y.foodReferenceId === x.foodReferenceId) === i)
+    : [];
+  const gaps = ingredients.filter((i) => i.status !== 'ok');
+  // the server blocks a cook on any gap, so the same rule stands in until its answer lands
+  const blocked = preview ? (stale ? gaps.length > 0 : preview.blocked) : false;
   const swapped = new Set(Object.values(adj.swaps));
   const servings = adj.servings ?? preview?.servingsCooked ?? 1;
 
@@ -113,7 +132,7 @@ export default function RecipeDetail() {
           </div>
 
           <div className="ingredients">
-            {preview.ingredients.map((ing) => {
+            {ingredients.map((ing) => {
               const s = STATUS[ing.status];
               return (
                 <div className={`ing${ing.status === 'ok' ? '' : ' gap'}`} key={ing.recipeIngredientId}>
@@ -166,11 +185,11 @@ export default function RecipeDetail() {
             })}
           </div>
 
-          {preview.excludedIngredients.length ? (
+          {leftOut.length ? (
             <div className="left-out">
-              <span className="fine">Left out tonight. Calories are without {preview.excludedIngredients.length === 1 ? 'it' : 'them'}:</span>
+              <span className="fine">Left out tonight. Calories are without {leftOut.length === 1 ? 'it' : 'them'}:</span>
               <div className="chips" style={{ marginTop: 8 }}>
-                {preview.excludedIngredients.map((x) => (
+                {leftOut.map((x) => (
                   <button key={x.foodReferenceId} type="button" className="chip" onClick={() => setAdj((a) => ({ ...a, exclude: a.exclude.filter((e) => e !== x.foodReferenceId) }))}>
                     <Icon name="plus" size={15} /> {x.name}
                   </button>
@@ -180,19 +199,8 @@ export default function RecipeDetail() {
           ) : null}
 
           {preview.estimatedCalories !== null ? (
-            <p className="fine" style={{ marginTop: 14 }}>About {Math.round(preview.estimatedCalories)} kcal in all, {Math.round(preview.estimatedCalories / servings)} a serving.</p>
+            <p className="fine" style={{ marginTop: 14, opacity: stale ? 0.45 : 1, transition: 'opacity .2s ease' }}>About {Math.round(preview.estimatedCalories)} kcal in all, {Math.round(preview.estimatedCalories / servings)} a serving.</p>
           ) : null}
-
-          <div className="cook-bar">
-            {preview.blocked ? (
-              <button type="button" className="btn" onClick={addGaps}>Add {gaps.length} to shopping list</button>
-            ) : (
-              <>
-                <button type="button" className="btn" onClick={() => setConfirming(true)}>Cook this</button>
-                {gaps.length ? <button type="button" className="btn secondary" onClick={addGaps}>Add {gaps.length} to list</button> : null}
-              </>
-            )}
-          </div>
 
           {steps.length ? (
             <>
@@ -226,10 +234,23 @@ export default function RecipeDetail() {
               <button type="button" className="btn ghost danger-ink" style={{ marginTop: 18 }} onClick={() => setDeleting(true)}><Icon name="trash" size={18} /> Delete this recipe</button>
             )
           ) : null}
+
+          {/* last in the page, so it rides the bottom edge the whole way down instead of jumping as the list changes */}
+          <div className="cook-bar">
+            {blocked ? (
+              <button type="button" className="btn" onClick={addGaps}>Add {gaps.length} to shopping list</button>
+            ) : (
+              <>
+                {/* tapped mid-update, the sheet opens as soon as the new plan is in */}
+                <button type="button" className="btn" onClick={() => setConfirming(true)}>Cook this</button>
+                {gaps.length ? <button type="button" className="btn secondary" onClick={addGaps}>Add {gaps.length} to list</button> : null}
+              </>
+            )}
+          </div>
         </>
       )}
 
-      {confirming && preview ? (
+      {confirming && preview && !stale && !preview.blocked ? (
         <CookSheet preview={preview} adjustments={adj} onClose={() => setConfirming(false)} onCooked={() => { setConfirming(false); void load(true); }} />
       ) : null}
       {cookMode && preview ? <CookMode name={preview.name} steps={steps} onClose={() => setCookMode(false)} /> : null}

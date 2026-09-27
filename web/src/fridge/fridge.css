@@ -105,6 +105,12 @@ button.col:active .obj svg { transform: scale(.96); }
 
 .fridge-empty { min-height: 100%; display: grid; place-items: center; text-align: center; color: var(--ink-2); padding: 40px 12px; }
 
+/* ---------- fridge, cupboard, freezer side by side ---------- */
+
+.zone-pager { flex: 1; min-height: 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; }
+.zone-pager::-webkit-scrollbar { display: none; }
+.zone-pane { flex: 0 0 100%; min-width: 0; display: flex; flex-direction: column; scroll-snap-align: start; scroll-snap-stop: always; }
+
 /* ---------- the door ---------- */
 
 .door { position: absolute; inset: 0; z-index: 8; border-radius: 24px; transform-origin: left center; pointer-events: none;

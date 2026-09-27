@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useState, type FormEvent } from
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import type { IngredientUse, RunOutPrediction, ShoppingItem } from '../lib/types';
-import { formatAmount, formatDateInput } from '../lib/format';
+import { dateInputToISO, formatAmount, formatDateInput } from '../lib/format';
 import { FoodThumb } from '../fridge/Fridge';
 import { UnitSelect } from '../components/UnitSelect';
 import { Icon } from '../ui/Icon';
@@ -186,7 +186,7 @@ function StockSheet({ item, onClose, onDone }: { item: ShoppingItem; onClose: ()
     setBusy(true);
     setError(null);
     try {
-      await api.post(`/api/shopping-list/${item.id}/stock`, { quantity, unit, expirationDate: expiry || null });
+      await api.post(`/api/shopping-list/${item.id}/stock`, { quantity, unit, expirationDate: expiry ? dateInputToISO(expiry) : null });
       onDone(`${item.name} is in your pantry.`);
     } catch (e) {
       setError(errorText(e, 'Could not put that away.'));

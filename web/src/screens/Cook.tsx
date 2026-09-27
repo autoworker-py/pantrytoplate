@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import type { CookPreview, InventoryItem, RecipeSummary } from '../lib/types';
+import type { CookPreview, InventoryItem, RecipeSummary, StorageLocation } from '../lib/types';
 import { formatAmount } from '../lib/format';
 import { Fridge } from '../fridge/Fridge';
+import { ZONES, ZonePager } from '../fridge/ZonePager';
 import { Icon } from '../ui/Icon';
 import { Empty, Logo, Page, errorText, useToast } from '../ui/kit';
 import { CookSheet, NO_ADJUSTMENTS, previewPath } from './cooking';
@@ -45,6 +46,7 @@ export default function Cook() {
   const [cooking, setCooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [swap, setSwap] = useState(0);
+  const [zone, setZone] = useState<StorageLocation>('fridge');
   const [door] = useState(firstDoorThisSession);
 
   const load = useCallback(async (fresh = false) => {
@@ -78,27 +80,37 @@ export default function Cook() {
     return () => { live = false; };
   }, [current, swap]);
 
-  const fridgeItems = useMemo(() => (inventory ?? []).filter((i) => i.storageLocation === 'fridge'), [inventory]);
+  const byZone = useMemo(() => {
+    const out: Record<StorageLocation, InventoryItem[]> = { fridge: [], pantry: [], freezer: [] };
+    for (const item of inventory ?? []) out[item.storageLocation]?.push(item);
+    return out;
+  }, [inventory]);
   const zoneOf = useMemo(() => new Map((inventory ?? []).map((i) => [i.id, i.storageLocation])), [inventory]);
 
-  // lift and glow: each lot the recipe draws from, labelled with what it takes
-  const { highlight, fromCupboard } = useMemo(() => {
+  // lift and glow: each lot the recipe draws from, wherever it is kept, labelled with what it takes
+  const { highlight, lit } = useMemo(() => {
     const map = new Map<string, string>();
-    const cupboard: string[] = [];
+    const count: Record<StorageLocation, number> = { fridge: 0, pantry: 0, freezer: 0 };
     if (preview && current && preview.id === current.id) {
       for (const ing of preview.ingredients) {
-        let inFridge = false;
         for (const d of ing.plan.deductions) {
-          if (zoneOf.get(d.inventoryItemId) === 'fridge') {
-            inFridge = true;
-            if (!map.has(d.inventoryItemId)) map.set(d.inventoryItemId, takesLabel(ing.requiredQuantity, ing.requiredUnit, ing.name));
-          }
+          const where = zoneOf.get(d.inventoryItemId);
+          if (!where || map.has(d.inventoryItemId)) continue;
+          map.set(d.inventoryItemId, takesLabel(ing.requiredQuantity, ing.requiredUnit, ing.name));
+          count[where] += 1;
         }
-        if (!inFridge && ing.status === 'ok') cupboard.push(ing.name.toLowerCase());
       }
     }
-    return { highlight: map, fromCupboard: cupboard };
+    return { highlight: map, lit: count };
   }, [preview, current, zoneOf]);
+
+  // a new recipe opens on the fridge when it uses anything there, else on the room holding most of it
+  const openedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!preview || !current || preview.id !== current.id || openedFor.current === preview.id) return;
+    openedFor.current = preview.id;
+    setZone(lit.fridge ? 'fridge' : ZONES.reduce((best, z) => (lit[z.key] > lit[best] ? z.key : best), 'fridge' as StorageLocation));
+  }, [preview, current, lit]);
 
   const why = current && inventory ? whyLine(current, inventory) : null;
   const facts = current
@@ -125,14 +137,31 @@ export default function Cook() {
     >
       {error ? <div className="pad" style={{ marginBottom: 10 }}><div className="banner error">{error} <button type="button" className="link-btn" onClick={() => void load(true)}>Try again</button></div></div> : null}
 
-      <Fridge
-        zone="fridge"
-        mode="cook"
-        items={fridgeItems}
-        highlight={highlight}
-        scrollToLit
-        animateDoor={door}
-        empty={inventory ? <span className="fine">Nothing in the fridge. Tonight’s ideas come from the cupboard.</span> : null}
+      <div className="seg zone-seg" role="tablist" aria-label="Where it is kept">
+        {ZONES.map((z) => (
+          <button key={z.key} type="button" role="tab" aria-selected={zone === z.key} className={zone === z.key ? 'on' : ''} onClick={() => setZone(z.key)}>
+            <span>
+              {z.label}
+              {lit[z.key] ? <span className="count lit" aria-label={`, ${lit[z.key]} used tonight`}>{lit[z.key]}</span> : null}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <ZonePager
+        zone={zone}
+        onZone={setZone}
+        render={(z) => (
+          <Fridge
+            zone={z}
+            mode="cook"
+            items={byZone[z]}
+            highlight={highlight}
+            scrollToLit
+            animateDoor={door && z === 'fridge'}
+            empty={inventory ? <span className="fine">Nothing in the {z === 'pantry' ? 'cupboard' : z}.</span> : null}
+          />
+        )}
       />
 
       <section className="tonight" aria-live="polite">
@@ -150,7 +179,6 @@ export default function Cook() {
             </button>
             {why ? <p className={`why${why.urgent ? ' urgent' : ''}`}>{why.urgent ? <i aria-hidden="true" /> : null}{why.text}</p> : null}
             <p className="facts">{facts}{recipes.length > 1 ? <span className="count"> · {index % recipes.length + 1} of {recipes.length}</span> : null}</p>
-            {fromCupboard.length ? <p className="plus">Plus {fromCupboard.slice(0, 3).join(', ')}{fromCupboard.length > 3 ? ` and ${fromCupboard.length - 3} more` : ''} from the cupboard.</p> : null}
             <div className="btn-row" style={{ marginTop: 14 }}>
               {current.canMakeNow ? (
                 <button type="button" className="btn" disabled={!preview || preview.id !== current.id || preview.blocked} onClick={() => setCooking(true)}>Cook this</button>

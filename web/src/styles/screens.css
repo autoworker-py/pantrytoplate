@@ -6,15 +6,25 @@
 
 /* ---------- pantry ---------- */
 .zone-seg { margin: 0 0 10px; }
-.page-fixed > .frame { animation: frame-in .45s var(--ease) both; }
+.page-fixed > .frame, .page-fixed > .zone-pager { animation: frame-in .45s var(--ease) both; }
+/* what tonight's recipe uses in each room: a lit dot and how many */
+.seg .count.lit { color: var(--warm); }
+.seg .count.lit::before { content: ''; display: inline-block; width: 5px; height: 5px; margin: 0 4px 2px 0; border-radius: 50%; background: var(--warm); box-shadow: 0 0 6px rgba(243, 201, 139, .8); vertical-align: middle; }
 @keyframes frame-in { from { opacity: 0; transform: scale(.985); } }
 
+.move-list .list-row { width: 100%; text-align: left; }
+.move-list .list-row:disabled { opacity: 1; }
+.move-list .list-row:disabled .thumb, .move-list .list-row:disabled .grow { opacity: .5; }
+.move-list .thumb { color: var(--ink-2); }
+.thaw-row { margin-top: 16px; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: var(--r-sm); background: var(--bg-2); box-shadow: inset 0 0 0 1px var(--line); }
+.thaw-row .grow { flex: 1; min-width: 0; }
+.thaw-row .t { display: block; font-weight: 600; }
+.thaw-row .s { display: block; font-size: 13.5px; color: var(--ink-3); margin-top: 2px; line-height: 1.35; }
 .item-hero { margin-top: 12px; display: flex; align-items: center; gap: 18px; padding: 16px; border-radius: var(--r-lg); background: radial-gradient(90% 90% at 50% 0%, rgba(255, 222, 170, .1), rgba(255, 222, 170, 0) 70%), var(--bg-2); }
 .item-hero .facts { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .action-grid { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .action { min-height: 84px; border-radius: var(--r); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; text-align: left; background: var(--bg-2); box-shadow: inset 0 0 0 1px var(--line); font-family: var(--display); font-weight: 650; font-size: 15px; transition: transform var(--fast) ease, background var(--fast) ease; }
 .action:active { transform: scale(.98); background: var(--bg-3); }
-.action.warm { color: var(--warm); box-shadow: inset 0 0 0 1px rgba(243, 201, 139, .3); }
 .amount-step { margin-top: 10px; }
 .stack-btns { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
 .range { width: 100%; margin-top: 18px; accent-color: var(--warm); height: 32px; }
@@ -68,7 +78,8 @@ form .row button[type='submit'] { flex: none; padding: 0 16px; border-radius: va
 .check input { width: 22px; height: 22px; accent-color: var(--warm); flex: none; margin-top: 1px; }
 
 /* ---------- cook: tonight ---------- */
-.cook-page .frame { flex: 1 1 auto; min-height: 220px; }
+.cook-page .zone-pager { min-height: 220px; }
+.cook-page .zone-seg { margin-bottom: 8px; }
 .tonight { flex: none; padding: 0 10px 12px; }
 .tonight-card { background: var(--bg-1); border-radius: 24px; padding: 18px 18px 16px; box-shadow: inset 0 0 0 1px var(--line), 0 -12px 30px -18px rgba(0, 0, 0, .9); animation: card-in .42s var(--ease) both; }
 @keyframes card-in { from { opacity: 0; transform: translateY(8px); } }
@@ -79,7 +90,6 @@ form .row button[type='submit'] { flex: none; padding: 0 16px; border-radius: va
 .tonight .why i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--red); transform: translateY(-1px); }
 .tonight .facts { margin-top: 3px; font-size: 14.5px; color: var(--ink-2); }
 .tonight .facts .count { color: var(--ink-3); }
-.tonight .plus { margin-top: 2px; font-size: 14.5px; color: var(--ink-3); }
 
 /* ---------- cook: what gets used ---------- */
 .deductions { margin-top: 12px; border-top: 1px solid var(--line); }
@@ -135,7 +145,8 @@ form .row button[type='submit'] { flex: none; padding: 0 16px; border-radius: va
 .swap-opt .t { font-weight: 600; font-size: 15px; }
 .swap-opt .s { font-size: 13.5px; color: var(--ink-3); }
 .left-out { margin-top: 16px; }
-.cook-bar { position: sticky; bottom: calc(var(--tabs-h) + 10px); z-index: 5; display: flex; gap: 10px; margin-top: 20px; padding: 10px; margin-left: -10px; margin-right: -10px; border-radius: 22px; background: rgba(18, 20, 22, .82); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: inset 0 0 0 1px var(--line); }
+/* sticky insets count from the scroller's content box, which already clears the tabs by 28px */
+.cook-bar { position: sticky; bottom: -18px; z-index: 5; display: flex; gap: 10px; margin-top: 20px; padding: 10px; margin-left: -10px; margin-right: -10px; border-radius: 22px; background: rgba(18, 20, 22, .82); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: inset 0 0 0 1px var(--line); }
 .cook-bar .btn { flex: 1; }
 .cook-bar .btn.secondary { flex: 0 0 auto; }
 .method { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 16px; }

@@ -65,6 +65,17 @@ export const STATUS_LABEL: Record<IngredientStatus, string> = {
   unknown_conversion: 'Check units',
 };
 
+/** A local calendar day for a date field: "2026-09-29" (not the UTC day, which runs ahead in the evening). */
 export function formatDateInput(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * A date field's day, sent as local noon. The server reads a bare
+ * "2026-09-29" as UTC midnight, which is the evening before across the
+ * Americas, so every use-by date would land a day early.
+ */
+export function dateInputToISO(value: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12).toISOString() : null;
 }

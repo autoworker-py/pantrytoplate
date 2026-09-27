@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import type { ExternalHit, Food, StorageLocation } from '../lib/types';
-import { formatDateInput } from '../lib/format';
+import { dateInputToISO, formatDateInput } from '../lib/format';
 import { CountsAs } from '../components/CountsAs';
 import { PackSize, usePack, type Pack } from '../components/PackSize';
 import { UnitSelect } from '../components/UnitSelect';
@@ -330,7 +330,7 @@ function DetailsSheet({ picked, onClose, onAdded }: { picked: Picked; onClose: (
       if (whole && unit === 'g' && quantity > 0 && quantity !== picked.packageGrams) {
         await api.post(`/api/foods/${food.id}/conversions`, { fromUnit: 'package', toUnit: 'g', multiplier: Math.round(quantity) }).catch(() => undefined);
       }
-      await api.post('/api/inventory', { foodReferenceId: food.id, quantity, unit, storageLocation: where, expirationDate: expiry || null });
+      await api.post('/api/inventory', { foodReferenceId: food.id, quantity, unit, storageLocation: where, expirationDate: expiry ? dateInputToISO(expiry) : null });
       toast(`${food.name} is in the ${where === 'pantry' ? 'cupboard' : where}.`);
       onAdded(food.name);
     } catch (cause) {
