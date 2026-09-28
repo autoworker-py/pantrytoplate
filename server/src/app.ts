@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { ZodError } from 'zod';
 import { env } from './env.js';
 import { HttpError } from './errors.js';
+import { inZone, zoneOrDefault } from './zone.js';
 import './types.js';
 
 import authRoutes from './routes/auth.js';
@@ -55,6 +56,10 @@ export async function buildApp(): Promise<FastifyInstance> {
       await reply.code(401).send({ error: 'unauthorized', message: 'Sign in to continue.' });
     }
   });
+
+  // every request runs on its person's calendar, so "today" is their today and not the server's UTC one;
+  // set after the body is read, which would otherwise lose it, and before the route's own hooks
+  app.addHook('preHandler', (request, _reply, done) => inZone(zoneOrDefault(request.headers['x-time-zone']), done));
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError) {

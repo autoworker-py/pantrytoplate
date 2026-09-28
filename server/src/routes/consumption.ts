@@ -2,17 +2,16 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { calorieHistory, dailySummary, entryDetail, saveRest, undoEntry, undoSaveRest } from '../services/diary.js';
 import { logEatingOut, recentEatingOut, searchEatOutFoods } from '../services/eatingOut.js';
+import { localDay } from '../zone.js';
 
 /**
- * A bare "2026-08-21" is a calendar day, not an instant. `new Date()` would read
- * it as midnight UTC, which lands on the previous day for anyone west of
- * Greenwich — so anchor it at local noon instead.
+ * The day asked for, on the person's calendar. A bare "2026-08-21" is that day
+ * where they are, not midnight UTC; an instant is whichever day it falls on there.
  */
-function parseDayParam(value: string | undefined): Date {
-  if (!value) return new Date();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return new Date(`${value}T12:00:00`);
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+function parseDayParam(value: string | undefined): string {
+  if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const parsed = value ? new Date(value) : new Date();
+  return localDay(Number.isNaN(parsed.getTime()) ? new Date() : parsed);
 }
 
 const routes: FastifyPluginAsync = async (app) => {
@@ -26,7 +25,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
   app.get('/history', async (request) => {
     const { days } = request.query as { days?: string };
-    return { days: await calorieHistory(request.userId, Number(days) || 7) };
+    return { days: await calorieHistory(request.userId, Math.min(Number(days) || 7, 366)) };
   });
 
   /** Recents for the eating-out flow — must come before the /:id route. */

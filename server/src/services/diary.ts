@@ -12,16 +12,14 @@ import type { FoodReference } from '@prisma/client';
 import { badRequest, notFound } from '../errors.js';
 import { roundQuantity } from './units.js';
 import { getSettings } from './settings.js';
+import { addDays, dayStart, localDay } from '../zone.js';
 
 export const MEAL_SLOTS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 export type MealSlot = (typeof MEAL_SLOTS)[number];
 
-function dayBounds(date: Date) {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-  return { start, end };
+/** A calendar day on the person's own clock (see zone.ts), as the instants it runs between. */
+function dayBounds(day: string) {
+  return { start: dayStart(day), end: dayStart(addDays(day, 1)) };
 }
 
 export interface DiaryTotals {
@@ -46,8 +44,8 @@ export function macroSplit(totals: DiaryTotals) {
   };
 }
 
-export async function dailySummary(userId: string, date = new Date(), db: Tx = prisma) {
-  const { start, end } = dayBounds(date);
+export async function dailySummary(userId: string, day = localDay(new Date()), db: Tx = prisma) {
+  const { start, end } = dayBounds(day);
   const [logs, settings] = await Promise.all([
     db.consumptionLog.findMany({
       where: { userId, consumedAt: { gte: start, lt: end } },
@@ -167,7 +165,7 @@ export async function dailySummary(userId: string, date = new Date(), db: Tx = p
   });
 
   return {
-    date: start.toISOString().slice(0, 10),
+    date: day,
     totalCalories: roundQuantity(totals.calories),
     macros: {
       protein: roundQuantity(totals.protein),
@@ -358,26 +356,19 @@ export async function undoEntry(userId: string, id: string): Promise<UndoResult>
   });
 }
 
-/** Last N days of calorie totals, oldest first. */
+/** Last N days of calorie totals, oldest first, by the person's own calendar days. */
 export async function calorieHistory(userId: string, days = 7, db: Tx = prisma) {
-  const since = new Date();
-  since.setHours(0, 0, 0, 0);
-  since.setDate(since.getDate() - (days - 1));
+  const first = addDays(localDay(new Date()), -(days - 1));
 
   const logs = await db.consumptionLog.findMany({
-    where: { userId, consumedAt: { gte: since } },
+    where: { userId, consumedAt: { gte: dayStart(first) } },
     select: { consumedAt: true, calories: true, proteinGrams: true },
   });
 
   const buckets = new Map<string, { calories: number; protein: number }>();
-  for (let i = 0; i < days; i += 1) {
-    const day = new Date(since);
-    day.setDate(day.getDate() + i);
-    buckets.set(day.toISOString().slice(0, 10), { calories: 0, protein: 0 });
-  }
+  for (let i = 0; i < days; i += 1) buckets.set(addDays(first, i), { calories: 0, protein: 0 });
   for (const log of logs) {
-    const key = new Date(log.consumedAt).toISOString().slice(0, 10);
-    const bucket = buckets.get(key);
+    const bucket = buckets.get(localDay(new Date(log.consumedAt)));
     if (bucket) {
       bucket.calories += log.calories ?? 0;
       bucket.protein += log.proteinGrams ?? 0;

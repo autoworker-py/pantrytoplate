@@ -7,6 +7,7 @@ import type { FoodReference, InventoryItem } from '@prisma/client';
 import { prisma, type Tx } from '../db.js';
 import { badRequest, conflict, notFound } from '../errors.js';
 import { env } from '../env.js';
+import { daysBetween } from '../zone.js';
 import { loadConvertContext } from './conversions.js';
 import { nutritionFor } from './nutrition.js';
 import { clampZero, convert, gte, normalizeUnit, roundQuantity, isNegligible } from './units.js';
@@ -47,15 +48,14 @@ export interface InventoryView {
 }
 
 /**
- * Whole calendar days until a date, counted in LOCAL time.
+ * Whole calendar days until a date, on the person's own calendar (see zone.ts).
  *
- * Doing this in UTC meant that after 5pm Pacific the app rolled over to
- * tomorrow and told everyone their food expired a day sooner than it does.
+ * By the server's UTC clock the day rolled over at 6pm in Denver, and food
+ * looked a day closer to its use-by date all evening.
  */
 export function daysUntil(date: Date | null, now = new Date()): number | null {
   if (!date) return null;
-  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  return Math.round((startOfDay(date) - startOfDay(now)) / 86_400_000);
+  return daysBetween(now, date);
 }
 
 function expiryStatus(days: number | null, warningDays: number): InventoryView['expiryStatus'] {

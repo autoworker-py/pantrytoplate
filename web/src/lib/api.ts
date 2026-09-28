@@ -57,6 +57,8 @@ async function request<T>(method: string, path: string, body?: unknown, timeoutM
       headers: {
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        // the server's clock is UTC; "today" has to be the person's own, wherever they are
+        'X-Time-Zone': Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
