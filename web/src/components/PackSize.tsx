@@ -11,7 +11,13 @@
  */
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { formatAmount } from '../lib/format';
+import { packUnitFor, useUnitSystem } from '../lib/unitSystem';
 import { Icon } from '../ui/Icon';
+import { UnitSelect } from './UnitSelect';
+
+/** Whole grams and millilitres; hundredths of anything else. */
+const tidy = (amount: number, unit: string) => (['g', 'ml'].includes(unit) ? Math.round(amount) : Math.round(amount * 100) / 100);
 
 /** How much of a pack is going in: all of it, or what is left of one already open. */
 const FRACTIONS: Array<[number, string]> = [[1, 'Full'], [0.75, '¾'], [0.5, 'Half'], [0.25, 'Quarter']];
@@ -20,6 +26,10 @@ export interface Pack {
   foodReferenceId: string;
   name: string;
   defaultUnit: string;
+  /** the pack in its own unit: 500 ml, 12 count, 16 oz */
+  amount: number | null;
+  unit: string;
+  /** the same in grams, when it was given in grams */
   grams: number | null;
   estimated: boolean;
   known: boolean;
@@ -59,32 +69,35 @@ export function PackSize({
   unit: string;
   onPick: (quantity: number, unit: string) => void;
   /** the pack size has been taught, so the parent can refresh its shortcuts */
-  onSaved: (grams: number) => void;
+  onSaved: (amount: number, unit: string) => void;
 }) {
+  const system = useUnitSystem();
   const [entry, setEntry] = useState('');
+  const [entryUnit, setEntryUnit] = useState('g');
   const [busy, setBusy] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
-  // a fresh food means a fresh question
+  // a fresh food means a fresh question, in the unit it is likely sold in
   useEffect(() => {
-    setEntry(pack?.grams ? String(pack.grams) : '');
+    setEntry('');
+    setEntryUnit(pack ? packUnitFor(pack, system) : 'g');
     setDismissed(false);
-  }, [pack?.foodReferenceId, pack?.grams]);
+  }, [pack?.foodReferenceId, system]);
 
   if (!pack) return null;
 
   async function teach() {
-    const grams = Number(entry);
-    if (!(grams > 0) || !pack) return;
+    const amount = Number(entry);
+    if (!(amount > 0) || !pack) return;
     setBusy(true);
     try {
       await api.post(`/api/foods/${pack.foodReferenceId}/conversions`, {
         fromUnit: 'package',
-        toUnit: 'g',
-        multiplier: grams,
+        toUnit: entryUnit,
+        multiplier: amount,
       });
-      onSaved(grams);
-      onPick(grams, 'g');
+      onSaved(amount, entryUnit);
+      onPick(amount, entryUnit);
     } finally {
       setBusy(false);
     }
@@ -93,16 +106,16 @@ export function PackSize({
   // Known size: offer the amounts as shortcuts and get out of the way. The
   // pack size itself comes from the scan; picking less than all of it never
   // changes what a full pack is.
-  if (pack.known && pack.grams) {
-    const grams = pack.grams;
+  if (pack.known && pack.amount) {
+    const whole = pack.amount;
     return (
       <div className="chip-row" role="radiogroup" aria-label="How much of the pack">
         {FRACTIONS.map(([share, label]) => {
-          const amount = Math.round(grams * share);
-          const on = unit === 'g' && Math.abs(quantity - amount) < 0.5;
+          const amount = tidy(whole * share, pack.unit);
+          const on = unit === pack.unit && Math.abs(quantity - amount) <= Math.max(0.01, amount * 0.005);
           return (
-            <button key={share} type="button" role="radio" aria-checked={on} className={`chip${on ? ' chip-on' : ''}`} onClick={() => onPick(amount, 'g')}>
-              {share === 1 ? `Full · ${grams} g` : label}
+            <button key={share} type="button" role="radio" aria-checked={on} className={`chip${on ? ' chip-on' : ''}`} onClick={() => onPick(amount, pack.unit)}>
+              {share === 1 ? `Full · ${formatAmount(whole, pack.unit)}` : label}
             </button>
           );
         })}
@@ -121,8 +134,8 @@ export function PackSize({
           <strong>How big is one pack?</strong>
           <p className="muted">
             {pack.estimated && pack.grams
-              ? `We guessed about ${pack.grams} g from its category. Correct it once and we will remember.`
-              : 'Tell us once and “full pack” works everywhere afterwards.'}
+              ? `We guessed about ${pack.grams} g from its category. Say what the label says, in any unit, and we will remember.`
+              : 'Say what the label says, in any unit. Tell us once and “full pack” works everywhere afterwards.'}
           </p>
         </div>
       </div>
@@ -133,12 +146,12 @@ export function PackSize({
           min={0}
           step="any"
           inputMode="decimal"
-          placeholder={pack.grams ? String(pack.grams) : 'e.g. 500'}
+          placeholder={entryUnit === 'g' && pack.grams ? String(pack.grams) : 'Amount'}
           value={entry}
           onChange={(event) => setEntry(event.target.value)}
-          aria-label="Pack size in grams"
+          aria-label="How much one pack holds"
         />
-        <span className="unit-suffix">g</span>
+        <UnitSelect id={`pack-unit-${pack.foodReferenceId}`} value={entryUnit} onChange={setEntryUnit} suggested={packUnitFor(pack, system)} />
         <button type="button" onClick={teach} disabled={busy || !(Number(entry) > 0)}>
           {busy ? 'Saving…' : 'Save'}
         </button>

@@ -49,3 +49,27 @@ describe('the scanner knows what a full pack is', () => {
     expect(pack.grams).toBe(3785);
   });
 });
+
+describe('a pack size in any unit', () => {
+  let juiceId: string;
+  beforeAll(async () => {
+    const juice = await prisma.foodReference.create({ data: { name: 'Test Pack Juice', nameNorm: 'test pack juice', source: 'manual', category: 'Beverages', defaultUnit: 'g' } });
+    juiceId = juice.id;
+  });
+  afterAll(async () => {
+    await prisma.foodReference.delete({ where: { id: juiceId } }).catch(() => undefined);
+  });
+
+  it('keeps a pack taught in fluid ounces as fluid ounces', async () => {
+    await app.inject({ method: 'POST', url: `/api/foods/${juiceId}/conversions`, headers: auth, payload: { fromUnit: 'package', toUnit: 'floz', multiplier: 52 } });
+    const pack = JSON.parse((await app.inject({ method: 'GET', url: `/api/foods/${juiceId}/pack`, headers: auth })).body);
+    expect(pack).toMatchObject({ amount: 52, unit: 'floz', known: true });
+  });
+
+  it('lets a new pack size replace the old one, whatever its unit', async () => {
+    await app.inject({ method: 'POST', url: `/api/foods/${juiceId}/conversions`, headers: auth, payload: { fromUnit: 'package', toUnit: 'ml', multiplier: 1500 } });
+    const pack = JSON.parse((await app.inject({ method: 'GET', url: `/api/foods/${juiceId}/pack`, headers: auth })).body);
+    expect(pack).toMatchObject({ amount: 1500, unit: 'ml' });
+    expect(await prisma.unitConversion.count({ where: { foodReferenceId: juiceId, fromUnit: 'package' } })).toBe(1);
+  });
+});

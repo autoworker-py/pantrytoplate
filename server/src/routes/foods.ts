@@ -7,6 +7,7 @@ import {
   importUsdaFood,
   linkCanonical,
   packageGramsFor,
+  packageSizeFor,
   resolveBarcode,
   searchLocalFoods,
   searchUsda,
@@ -61,6 +62,9 @@ const routes: FastifyPluginAsync = async (app) => {
       // the add screen defaults to the package, not a single serving
       packageGrams: result.result.packageGrams,
       packageEstimated: result.result.packageEstimated,
+      // the pack in its own unit (500 ml, 12 count), when it is known rather than guessed
+      packageAmount: result.result.packageAmount,
+      packageUnit: result.result.packageUnit,
     };
   });
 
@@ -134,8 +138,10 @@ const routes: FastifyPluginAsync = async (app) => {
         carbsPerUnit: z.number().nonnegative().nullish(),
         fatPerUnit: z.number().nonnegative().nullish(),
         servingSizeGrams: z.number().positive().nullish(),
-        /** what one whole pack weighs, so "full pack" means something */
+        /** how much one whole pack holds, so "full pack" means something */
         packageGrams: z.number().positive().nullish(),
+        /** the unit that amount is in; grams when not said */
+        packageUnit: z.string().nullish(),
       })
       .parse(request.body);
 
@@ -162,17 +168,19 @@ const routes: FastifyPluginAsync = async (app) => {
       : await prisma.foodReference.create({ data });
 
     if (body.packageGrams) {
+      const packUnit = normalizeUnit(body.packageUnit ?? 'g');
       await prisma.unitConversion.upsert({
         where: {
           foodReferenceId_fromUnit_toUnit: {
             foodReferenceId: food.id,
             fromUnit: 'package',
-            toUnit: 'g',
+            toUnit: packUnit,
           },
         },
-        create: { foodReferenceId: food.id, fromUnit: 'package', toUnit: 'g', multiplier: body.packageGrams },
+        create: { foodReferenceId: food.id, fromUnit: 'package', toUnit: packUnit, multiplier: body.packageGrams },
         update: { multiplier: body.packageGrams },
       });
+      await prisma.unitConversion.deleteMany({ where: { foodReferenceId: food.id, fromUnit: 'package', NOT: { toUnit: packUnit } } });
     }
 
     /*
@@ -236,14 +244,17 @@ const routes: FastifyPluginAsync = async (app) => {
     const food = await prisma.foodReference.findUnique({ where: { id } });
     if (!food) throw notFound('Food not found.');
 
-    const pack = await packageGramsFor(food);
+    const pack = await packageSizeFor(food);
     return {
       foodReferenceId: food.id,
       name: food.name,
       defaultUnit: food.defaultUnit,
-      grams: pack.grams,
+      amount: pack.amount,
+      unit: pack.unit,
+      // for app versions that only know grams
+      grams: pack.unit === 'g' ? pack.amount : null,
       estimated: pack.estimated,
-      known: pack.grams !== null && !pack.estimated,
+      known: pack.amount !== null && !pack.estimated,
     };
   });
 
@@ -276,6 +287,10 @@ const routes: FastifyPluginAsync = async (app) => {
       create: { foodReferenceId: id, fromUnit, toUnit, multiplier: body.multiplier },
       update: { multiplier: body.multiplier },
     });
+    // one pack size at a time: a pack now given in ml replaces one given in g
+    if (fromUnit === 'package') {
+      await prisma.unitConversion.deleteMany({ where: { foodReferenceId: id, fromUnit: 'package', NOT: { toUnit } } });
+    }
     invalidateUniversalConversionCache();
     return reply.code(201).send({ conversion });
   });

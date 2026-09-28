@@ -138,6 +138,9 @@ export interface BarcodeResolution {
   packageGrams: number | null;
   /** true when that size is a typical-for-its-category guess, not a fact */
   packageEstimated: boolean;
+  /** the pack in its own unit when it is known: 500 ml, 12 count */
+  packageAmount: number | null;
+  packageUnit: string;
 }
 
 /**
@@ -157,6 +160,22 @@ export async function packageGramsFor(
 
   const guess = estimatePackageGrams(food.category, food.servingSizeGrams);
   return { grams: guess, estimated: guess !== null };
+}
+
+/**
+ * A pack's size in the unit it was given: the scanned grams, a size someone
+ * taught (500 ml, 12 count, 16 fl oz…), or a guess in grams from the category.
+ */
+export async function packageSizeFor(
+  food: { id: string; category: string | null; servingSizeGrams: number | null; packageGramsScanned?: number | null },
+  db: Tx = prisma,
+): Promise<{ amount: number | null; unit: string; estimated: boolean }> {
+  if (food.packageGramsScanned && food.packageGramsScanned > 0) return { amount: Math.round(food.packageGramsScanned), unit: 'g', estimated: false };
+  const taught = await db.unitConversion.findMany({ where: { foodReferenceId: food.id, fromUnit: 'package' } });
+  const row = taught.find((r) => r.toUnit === 'g') ?? taught[0];
+  if (row) return { amount: ['g', 'ml'].includes(row.toUnit) ? Math.round(row.multiplier) : Math.round(row.multiplier * 100) / 100, unit: row.toUnit, estimated: false };
+  const guess = estimatePackageGrams(food.category, food.servingSizeGrams);
+  return { amount: guess, unit: 'g', estimated: guess !== null };
 }
 
 /**
@@ -187,9 +206,10 @@ export async function resolveBarcode(
       }
     }
     const pack = await packageGramsFor(cached, db);
+    const size = await packageSizeFor(cached, db);
     return {
       ok: true,
-      result: { food: cached, cached: true, packageGrams: pack.grams, packageEstimated: pack.estimated },
+      result: { food: cached, cached: true, packageGrams: pack.grams, packageEstimated: pack.estimated, packageAmount: size.estimated ? null : size.amount, packageUnit: size.unit },
     };
   }
 
@@ -204,7 +224,7 @@ export async function resolveBarcode(
     : await packageGramsFor(food, db);
   return {
     ok: true,
-    result: { food, cached: false, packageGrams: pack.grams, packageEstimated: pack.estimated },
+    result: { food, cached: false, packageGrams: pack.grams, packageEstimated: pack.estimated, packageAmount: pack.estimated ? null : pack.grams, packageUnit: 'g' },
   };
 }
 

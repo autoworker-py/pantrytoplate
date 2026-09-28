@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { loadMemory, rememberFoods } from '../lib/receiptMemory';
 import { whereFor } from '../lib/where';
+import { packUnitFor, useUnitSystem } from '../lib/unitSystem';
 import { canReadReceipts } from '../lib/receiptText';
 import type { ExternalHit, Food, StorageLocation } from '../lib/types';
 import { dateInputToISO, formatDateInput } from '../lib/format';
@@ -29,7 +30,8 @@ const WHERE: Array<{ key: StorageLocation; label: string }> = [
   { key: 'freezer', label: 'Freezer' },
 ];
 
-export type Picked = { food: Food; packageGrams?: number | null };
+/** A food to put away, with its pack when that is known: in grams from a scan, or in its own unit (500 ml, 12 count). */
+export type Picked = { food: Food; packageGrams?: number | null; packageAmount?: number | null; packageUnit?: string | null };
 
 export default function AddFood() {
   const navigate = useNavigate();
@@ -90,7 +92,7 @@ export default function AddFood() {
           initialName={creating.name}
           barcode={creating.barcode}
           onClose={() => setCreating(null)}
-          onCreated={(food, packageGrams) => { setCreating(null); setPicked({ food, packageGrams }); }}
+          onCreated={(food, pack) => { setCreating(null); setPicked({ food, packageAmount: pack?.amount ?? null, packageUnit: pack?.unit ?? null }); }}
         />
       ) : null}
 
@@ -152,8 +154,8 @@ export function TypeFlow({
     setResolving(hit.code);
     setError(null);
     try {
-      const found = await api.get<{ food: Food; packageGrams?: number | null }>(`/api/foods/barcode/${encodeURIComponent(hit.code)}`);
-      onPick({ food: found.food, packageGrams: found.packageGrams });
+      const found = await api.get<{ food: Food; packageGrams?: number | null; packageAmount?: number | null; packageUnit?: string | null }>(`/api/foods/barcode/${encodeURIComponent(hit.code)}`);
+      onPick({ food: found.food, packageGrams: found.packageGrams, packageAmount: found.packageAmount, packageUnit: found.packageUnit });
     } catch (cause) {
       setError(errorText(cause, 'Could not add that product. Try again, or add it by name.'));
     } finally {
@@ -226,9 +228,9 @@ function ScanFlow({ onPick, onUnknown }: { onPick: (p: Picked) => void; onUnknow
     setError(null);
     setMissing(null);
     try {
-      const d = await api.get<{ food: Food; packageGrams: number | null }>(`/api/foods/barcode/${barcode}`);
+      const d = await api.get<{ food: Food; packageGrams: number | null; packageAmount?: number | null; packageUnit?: string | null }>(`/api/foods/barcode/${barcode}`);
       setSeen((s) => [...s, barcode]);
-      onPick({ food: d.food, packageGrams: d.packageGrams });
+      onPick({ food: d.food, packageGrams: d.packageGrams, packageAmount: d.packageAmount, packageUnit: d.packageUnit });
     } catch (cause) {
       const status = (cause as { status?: number }).status;
       if (status === 404) setMissing(barcode);
@@ -258,12 +260,14 @@ function ScanFlow({ onPick, onUnknown }: { onPick: (p: Picked) => void; onUnknow
 
 /* ---------- a food the app does not know ---------- */
 
-export function NewFoodSheet({ initialName, barcode, onClose, onCreated }: { initialName: string; barcode?: string; onClose: () => void; onCreated: (food: Food, packageGrams?: number | null) => void }) {
+export function NewFoodSheet({ initialName, barcode, onClose, onCreated }: { initialName: string; barcode?: string; onClose: () => void; onCreated: (food: Food, pack?: { amount: number; unit: string } | null) => void }) {
+  const system = useUnitSystem();
   const [name, setName] = useState(initialName);
   const [brand, setBrand] = useState('');
   const [category, setCategory] = useState<string | null>(null);
   const [kcal, setKcal] = useState('');
   const [packG, setPackG] = useState('');
+  const [packUnit, setPackUnit] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const countable = category === 'Produce' || category === 'Fruit' || category === 'Bakery';
@@ -281,8 +285,9 @@ export function NewFoodSheet({ initialName, barcode, onClose, onCreated }: { ini
     };
     try {
       if (barcode) {
-        const d = await api.post<{ food: Food }>(`/api/foods/barcode/${barcode}`, { ...body, brand: brand.trim() || null, packageGrams: Number(packG) > 0 ? Number(packG) : null });
-        onCreated(d.food, Number(packG) > 0 ? Number(packG) : null);
+        const pack = Number(packG) > 0 ? { amount: Number(packG), unit: packUnit ?? packUnitFor({ name, defaultUnit }, system) } : null;
+        const d = await api.post<{ food: Food }>(`/api/foods/barcode/${barcode}`, { ...body, brand: brand.trim() || null, packageGrams: pack?.amount ?? null, packageUnit: pack?.unit ?? null });
+        onCreated(d.food, pack);
       } else {
         const d = await api.post<{ food: Food; created: boolean }>('/api/foods', body);
         onCreated(d.food);
@@ -326,8 +331,11 @@ export function NewFoodSheet({ initialName, barcode, onClose, onCreated }: { ini
         </div>
         {barcode ? (
           <div className="field">
-            <label htmlFor="nf-pack">One pack weighs (g)</label>
-            <input id="nf-pack" type="number" inputMode="decimal" min={0} value={packG} onChange={(e) => setPackG(e.target.value)} placeholder="e.g. 400" />
+            <label htmlFor="nf-pack">One pack holds</label>
+            <div className="pack-entry">
+              <input id="nf-pack" type="number" inputMode="decimal" min={0} value={packG} onChange={(e) => setPackG(e.target.value)} placeholder="From the label" />
+              <UnitSelect id="nf-pack-unit" value={packUnit ?? packUnitFor({ name, defaultUnit }, system)} onChange={setPackUnit} suggested={packUnitFor({ name, defaultUnit }, system)} />
+            </div>
           </div>
         ) : null}
       </div>
@@ -345,9 +353,12 @@ function DetailsSheet({ picked, onClose, onAdded }: { picked: Picked; onClose: (
   const toast = useToast();
   const { user } = useAuth();
   const [food, setFood] = useState(picked.food);
-  const whole = (picked.packageGrams ?? 0) > 0;
-  const [quantity, setQuantity] = useState(whole ? picked.packageGrams! : 1);
-  const [unit, setUnit] = useState(whole ? 'g' : food.defaultUnit);
+  // the pack as the scan or the label gave it: 3785 g, 52 fl oz, 12 count
+  const packAmount = picked.packageAmount ?? picked.packageGrams ?? null;
+  const packUnit = picked.packageAmount ? picked.packageUnit ?? 'g' : 'g';
+  const whole = (packAmount ?? 0) > 0;
+  const [quantity, setQuantity] = useState(whole ? packAmount! : 1);
+  const [unit, setUnit] = useState(whole ? packUnit : food.defaultUnit);
   const [where, setWhere] = useState<StorageLocation>(() => whereFor(food));
   // where you put this last time beats any guess, until you pick for yourself
   const [placed, setPlaced] = useState(false);
@@ -370,9 +381,9 @@ function DetailsSheet({ picked, onClose, onAdded }: { picked: Picked; onClose: (
   // a known pack starts on Full, unless an amount has been picked already
   const [amountTouched, setAmountTouched] = useState(whole);
   useEffect(() => {
-    if (!amountTouched && loaded?.known && loaded.grams) {
-      setQuantity(loaded.grams);
-      setUnit('g');
+    if (!amountTouched && loaded?.known && loaded.amount) {
+      setQuantity(loaded.amount);
+      setUnit(loaded.unit);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
@@ -409,7 +420,7 @@ function DetailsSheet({ picked, onClose, onAdded }: { picked: Picked; onClose: (
         </div>
       ) : null}
 
-      <PackSize pack={pack} quantity={quantity} unit={unit} onPick={(q, u) => { setQuantity(q); setUnit(u); setAmountTouched(true); }} onSaved={(g) => setPack((p) => (p ? { ...p, grams: g, estimated: false, known: true } : p))} />
+      <PackSize pack={pack} quantity={quantity} unit={unit} onPick={(q, u) => { setQuantity(q); setUnit(u); setAmountTouched(true); }} onSaved={(amount, u) => setPack((p) => (p ? { ...p, amount, unit: u, grams: u === 'g' ? amount : null, estimated: false, known: true } : p))} />
 
       <div className="field-row">
         <div className="field">

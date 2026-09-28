@@ -16,10 +16,12 @@ export function formatAmount(quantity: number, unit: string): string {
   const rounded = round(quantity);
   if (unit === 'count') return `${rounded}`;
   const plural = rounded === 1 || NO_PLURAL.has(unit) ? unit : `${unit}s`;
-  return `${rounded} ${plural}`;
+  return `${rounded} ${SAID[plural] ?? plural}`;
 }
 
 const NO_PLURAL = new Set(['g', 'kg', 'mg', 'ml', 'l', 'oz', 'lb', 'tsp', 'tbsp', 'floz', 'dozen']);
+/** units stored one way and read another */
+const SAID: Record<string, string> = { floz: 'fl oz' };
 
 /**
  * The same amount, split so a ticket can set the figure large and its unit
@@ -30,7 +32,7 @@ export function amountParts(quantity: number, unit: string): { figure: string; u
   const rounded = round(quantity);
   if (unit === 'count') return { figure: `${rounded}`, unit: '' };
   const plural = rounded === 1 || NO_PLURAL.has(unit) ? unit : `${unit}s`;
-  return { figure: `${rounded}`, unit: plural };
+  return { figure: `${rounded}`, unit: SAID[plural] ?? plural };
 }
 
 export function expiryLabel(days: number | null, status: ExpiryStatus): string {
