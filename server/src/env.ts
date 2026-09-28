@@ -70,9 +70,10 @@ export const env = {
    * first, then Claude. Neither means photo reading is switched off.
    */
   geminiApiKey: process.env.GEMINI_API_KEY ?? '',
-  geminiModel: str('GEMINI_MODEL', 'gemini-3.8-flash'),
-  /** tried for the last attempts when the main model keeps answering "overloaded" */
-  geminiFallbackModel: str('GEMINI_FALLBACK_MODEL', 'gemini-3.5-flash'),
+  /** Flash-Lite: the cheapest model that reads a plate well; it thinks at "minimal" by default */
+  geminiModel: str('GEMINI_MODEL', 'gemini-3.1-flash-lite'),
+  /** tried for the last attempts when the main model keeps answering "overloaded"; Lite too, so cost stays down */
+  geminiFallbackModel: str('GEMINI_FALLBACK_MODEL', 'gemini-3.5-flash-lite'),
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
   anthropicModel: str('ANTHROPIC_MODEL', 'claude-sonnet-5'),
   /** meal photos an account may read before it needs Plus */

@@ -8,9 +8,10 @@
  * plate so the flow can be built and tested; a deployed one says photo
  * reading is not set up. The photo is never stored here.
  *
- * Estimates from a photo are rough, and the prompt asks for honesty about it:
- * hidden fats and sauces come back as their own items with a note saying what
- * they were inferred from, so the person can take them out.
+ * Every photo arrives as exactly 768 by 768 pixels, so each read costs the
+ * same, and the reply is only what the app uses. Estimates from a photo are
+ * rough: fats and sauces the model infers but cannot see come back as their
+ * own items, flagged, so the person can take them out.
  */
 import { z } from 'zod';
 import { env } from '../env.js';
@@ -35,65 +36,99 @@ export interface Plate {
   provider: 'gemini' | 'claude' | 'sample';
 }
 
-const PROMPT = `You are estimating the nutrition of a meal from one photo, for a calorie-tracking app.
+/*
+ * Output is billed by the token, so the reader answers with exactly what the
+ * app uses and nothing else: one-letter keys, whole numbers, no prose. A food
+ * it inferred rather than saw is a flag, and the server writes the sentence.
+ *   n name, g grams, k kcal, p c f protein, carbs and fat in grams,
+ *   x y the item's centre as a percentage of the square, e inferred
+ */
+const PROMPT =
+  'Estimate the nutrition of the meal in this photo for a calorie tracker. One entry per distinct food or drink; group identical pieces. ' +
+  'n: short everyday name, lower case. g: grams as served. k: kcal. p, c, f: protein, carbs and fat in grams. ' +
+  'x, y: the centre of the item, 0 to 100 across and down from the top left. ' +
+  'Add cooking fat or sauce you can infer but not see (an oil sheen, butter on toast) as its own entry with e true. ' +
+  'Judge size from the plate, cutlery and hands, and do not round to neat numbers. No food: an empty list.';
 
-List each distinct food or drink you can see. Group identical pieces ("sliced chicken breast", not each slice). For each item give:
-- name: a short everyday name, lower case except proper nouns ("grilled chicken", "white rice")
-- grams: your best estimate of its weight as served
-- portion: how a person would say the amount ("about 1 cup", "two slices", "about 150 g")
-- calories, protein, carbs, fat: for that portion; protein, carbs and fat in grams
-- x, y: where the item's centre sits in the photo, from 0 to 1, with 0,0 the top left
-- note: only when useful, one short sentence
+/** A plate's worth of entries is a few hundred tokens; a runaway reply stops here instead of being billed. */
+const MAX_OUTPUT_TOKENS = 1024;
 
-Include fats and sauces you can reasonably infer (an oil sheen, a dressing, butter on bread) as their own items, with a note saying what you inferred them from, so the person can remove them if they were not there. If you are unsure what something is, say so in the note. Judge portions from the plate, cutlery and hands for scale. Estimate honestly rather than rounding everything to neat numbers. If the photo shows no food, return an empty list.`;
+const INFERRED = 'Not visible in the photo, just likely. Leave it out if it wasn’t used.';
 
 const ItemSchema = z.object({
-  name: z.string().min(1).max(80),
-  grams: z.coerce.number().nonnegative().max(5000),
-  portion: z.string().max(80).default(''),
-  calories: z.coerce.number().nonnegative().max(10000),
-  protein: z.coerce.number().nonnegative().max(1000).default(0),
-  carbs: z.coerce.number().nonnegative().max(1000).default(0),
-  fat: z.coerce.number().nonnegative().max(1000).default(0),
-  x: z.coerce.number().default(0.5),
-  y: z.coerce.number().default(0.5),
-  note: z.string().max(200).nullish(),
+  n: z.string().trim().min(1).transform((name) => name.slice(0, 60)),
+  g: z.coerce.number().nonnegative().max(5000),
+  k: z.coerce.number().nonnegative().max(10000),
+  p: z.coerce.number().nonnegative().max(1000).default(0),
+  c: z.coerce.number().nonnegative().max(1000).default(0),
+  f: z.coerce.number().nonnegative().max(1000).default(0),
+  x: z.coerce.number().default(50),
+  y: z.coerce.number().default(50),
+  e: z.unknown().transform((flag) => flag === true || flag === 'true'),
 });
-const ReplySchema = z.object({ items: z.array(z.unknown()).default([]) });
+const ReplySchema = z.object({ i: z.array(z.unknown()).default([]) });
 
-/** The shape asked of Gemini, in its schema dialect. */
+/** The same shape, as Gemini's schema, so nothing else can come back. */
 const GEMINI_SCHEMA = {
   type: 'OBJECT',
   properties: {
-    items: {
+    i: {
       type: 'ARRAY',
       items: {
         type: 'OBJECT',
         properties: {
-          name: { type: 'STRING' },
-          grams: { type: 'NUMBER' },
-          portion: { type: 'STRING' },
-          calories: { type: 'NUMBER' },
-          protein: { type: 'NUMBER' },
-          carbs: { type: 'NUMBER' },
-          fat: { type: 'NUMBER' },
-          x: { type: 'NUMBER' },
-          y: { type: 'NUMBER' },
-          note: { type: 'STRING' },
+          n: { type: 'STRING' },
+          g: { type: 'INTEGER' },
+          k: { type: 'INTEGER' },
+          p: { type: 'INTEGER' },
+          c: { type: 'INTEGER' },
+          f: { type: 'INTEGER' },
+          x: { type: 'INTEGER' },
+          y: { type: 'INTEGER' },
+          e: { type: 'BOOLEAN' },
         },
-        required: ['name', 'grams', 'portion', 'calories', 'protein', 'carbs', 'fat', 'x', 'y'],
+        required: ['n', 'g', 'k', 'p', 'c', 'f', 'x', 'y'],
       },
     },
   },
-  required: ['items'],
+  required: ['i'],
 };
 
-const SAMPLE: Array<z.infer<typeof ItemSchema>> = [
-  { name: 'grilled chicken', grams: 150, portion: 'About 150 g, sliced', calories: 248, protein: 46, carbs: 0, fat: 5, x: 0.66, y: 0.66 },
-  { name: 'white rice', grams: 158, portion: 'About 1 cup', calories: 205, protein: 4, carbs: 45, fat: 0.4, x: 0.34, y: 0.4 },
-  { name: 'broccoli', grams: 91, portion: 'About 1 cup', calories: 31, protein: 3, carbs: 6, fat: 0.3, x: 0.7, y: 0.32 },
-  { name: 'butter or oil', grams: 14, portion: 'About 1 tbsp', calories: 102, protein: 0, carbs: 0, fat: 11.5, x: 0.52, y: 0.2, note: 'Guessed from the shine on the broccoli. Take it out if there wasn’t any.' },
+const SAMPLE: Array<z.input<typeof ItemSchema>> = [
+  { n: 'grilled chicken', g: 150, k: 248, p: 46, c: 0, f: 5, x: 66, y: 66 },
+  { n: 'white rice', g: 158, k: 205, p: 4, c: 45, f: 0, x: 34, y: 40 },
+  { n: 'broccoli', g: 91, k: 31, p: 3, c: 6, f: 0, x: 70, y: 32 },
+  { n: 'butter or oil', g: 14, k: 102, p: 0, c: 0, f: 12, x: 52, y: 20, e: true },
 ];
+
+/** The one size every photo is sent at. */
+export const PHOTO_SIDE = 768;
+
+/**
+ * A photo's width and height from its header, without decoding it: JPEG's
+ * start-of-frame marker, or PNG's IHDR chunk. Null when it is neither.
+ */
+export function photoSize(base64: string): { width: number; height: number } | null {
+  // the size sits in the first few kilobytes, after any camera metadata
+  const bytes = Buffer.from(base64.slice(0, 200_000), 'base64');
+  if (bytes.length > 24 && bytes.readUInt32BE(0) === 0x89504e47) return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+  if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
+  let at = 2;
+  while (at + 9 < bytes.length) {
+    if (bytes[at] !== 0xff) return null;
+    if (bytes[at + 1] === 0xff) {
+      at++; // padding between markers
+      continue;
+    }
+    const marker = bytes[at + 1]!;
+    // start of frame: every SOF except the three that are not (DHT, JPG, DAC)
+    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+      return { height: bytes.readUInt16BE(at + 5), width: bytes.readUInt16BE(at + 7) };
+    }
+    at += 2 + bytes.readUInt16BE(at + 2);
+  }
+  return null;
+}
 
 /** Busy, rate-limited or briefly down: worth another try after a wait. */
 export class RetryableError extends Error {
@@ -129,11 +164,11 @@ export function snapProvider(): Plate['provider'] | null {
   return env.nodeEnv === 'production' ? null : 'sample';
 }
 
-const round1 = (n: number) => Math.round(n * 10) / 10;
 const clamp01 = (n: number) => Math.min(1, Math.max(0, Number.isFinite(n) ? n : 0.5));
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-function tidy(raw: unknown[]): PlateItem[] {
+/** The compact reply, as the app's items: names, portions, the pin, and the sentence an inferred item needs. */
+export function tidy(raw: unknown[]): PlateItem[] {
   const items: PlateItem[] = [];
   for (const [i, candidate] of raw.slice(0, 12).entries()) {
     const parsed = ItemSchema.safeParse(candidate);
@@ -141,15 +176,15 @@ function tidy(raw: unknown[]): PlateItem[] {
     const it = parsed.data;
     items.push({
       id: `i${i}`,
-      name: capitalise(it.name.trim()),
-      grams: Math.round(it.grams),
-      portion: it.portion.trim() || `About ${Math.round(it.grams)} g`,
-      calories: Math.round(it.calories),
-      protein: round1(it.protein),
-      carbs: round1(it.carbs),
-      fat: round1(it.fat),
-      at: [clamp01(it.x), clamp01(it.y)],
-      ...(it.note ? { note: it.note.trim() } : {}),
+      name: capitalise(it.n.trim()),
+      grams: Math.round(it.g),
+      portion: `About ${Math.round(it.g)} g`,
+      calories: Math.round(it.k),
+      protein: Math.round(it.p),
+      carbs: Math.round(it.c),
+      fat: Math.round(it.f),
+      at: [clamp01(it.x / 100), clamp01(it.y / 100)],
+      ...(it.e ? { note: INFERRED } : {}),
     });
   }
   return items;
@@ -176,14 +211,14 @@ async function askGemini(image: string, mediaType: string, model: string): Promi
     headers: { 'content-type': 'application/json', 'x-goog-api-key': env.geminiApiKey },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ inline_data: { mime_type: mediaType, data: image } }, { text: PROMPT }] }],
-      generationConfig: { temperature: 0.2, responseMimeType: 'application/json', responseSchema: GEMINI_SCHEMA },
+      generationConfig: { temperature: 0.2, maxOutputTokens: MAX_OUTPUT_TOKENS, responseMimeType: 'application/json', responseSchema: GEMINI_SCHEMA },
     }),
   });
   if (RETRYABLE.has(response.status)) throw new RetryableError(response.status);
   if (!response.ok) throw new HttpError(502, 'That photo could not be read. Try again.', 'snap_failed');
   const data = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
   const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('') ?? '';
-  return parseJson(text || '{"items":[]}');
+  return parseJson(text || '{"i":[]}');
 }
 
 async function askClaude(image: string, mediaType: string): Promise<unknown> {
@@ -192,13 +227,13 @@ async function askClaude(image: string, mediaType: string): Promise<unknown> {
     headers: { 'content-type': 'application/json', 'x-api-key': env.anthropicApiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
       model: env.anthropicModel,
-      max_tokens: 1500,
+      max_tokens: MAX_OUTPUT_TOKENS,
       messages: [
         {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: mediaType, data: image } },
-            { type: 'text', text: `${PROMPT}\n\nReply with only a JSON object: {"items": [{"name", "grams", "portion", "calories", "protein", "carbs", "fat", "x", "y", "note"}]}.` },
+            { type: 'text', text: `${PROMPT} Reply with only JSON like {"i":[{"n":"white rice","g":150,"k":195,"p":4,"c":42,"f":0,"x":40,"y":55}]}` },
           ],
         },
       ],
@@ -207,7 +242,7 @@ async function askClaude(image: string, mediaType: string): Promise<unknown> {
   if (RETRYABLE.has(response.status)) throw new RetryableError(response.status);
   if (!response.ok) throw new HttpError(502, 'That photo could not be read. Try again.', 'snap_failed');
   const data = (await response.json()) as { content?: Array<{ type: string; text?: string }> };
-  return parseJson(data.content?.find((block) => block.type === 'text')?.text ?? '{"items":[]}');
+  return parseJson(data.content?.find((block) => block.type === 'text')?.text ?? '{"i":[]}');
 }
 
 export async function readPlate(image: string, mediaType: string): Promise<Plate> {
@@ -230,5 +265,5 @@ export async function readPlate(image: string, mediaType: string): Promise<Plate
     throw new HttpError(502, 'That photo could not be read. Try again.', 'snap_failed');
   }
   const parsed = ReplySchema.safeParse(reply);
-  return { provider, items: parsed.success ? tidy(parsed.data.items) : [] };
+  return { provider, items: parsed.success ? tidy(parsed.data.i) : [] };
 }

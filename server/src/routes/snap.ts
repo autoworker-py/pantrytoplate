@@ -4,7 +4,7 @@ import { prisma } from '../db.js';
 import { env } from '../env.js';
 import { badRequest, HttpError } from '../errors.js';
 import { isPlusCode } from '../content/plus.js';
-import { readPlate, snapProvider } from '../services/snap.js';
+import { PHOTO_SIDE, photoSize, readPlate, snapProvider } from '../services/snap.js';
 
 /**
  * Snap a meal. A few photos are free on every account; after that it is Plus,
@@ -28,11 +28,16 @@ const routes: FastifyPluginAsync = async (app) => {
 
   app.get('/status', async (request) => standing(request.userId));
 
-  // a phone photo, resized on the phone first: a few hundred kilobytes of base64
+  // a 768 x 768 JPEG made on the phone: around a hundred kilobytes of base64
   app.post('/', { bodyLimit: 8 * 1024 * 1024 }, async (request) => {
     const body = z
-      .object({ image: z.string().min(100), mediaType: z.enum(['image/jpeg', 'image/png', 'image/webp']).default('image/jpeg') })
+      .object({ image: z.string().min(100), mediaType: z.enum(['image/jpeg', 'image/png']).default('image/jpeg') })
       .parse(request.body);
+    // one square size, so every read costs the same: the app sends 768 x 768
+    const size = photoSize(body.image);
+    if (!size || size.width !== PHOTO_SIDE || size.height !== PHOTO_SIDE) {
+      throw badRequest(`Photos are read at ${PHOTO_SIDE} by ${PHOTO_SIDE} pixels. Update the app and try again.`, 'photo_size');
+    }
     const before = await standing(request.userId);
     if (!before.plus && (before.freeLeft ?? 0) <= 0) {
       throw new HttpError(402, 'Your free meal photos are used up. Pro reads as many as you like.', 'plus_required');
