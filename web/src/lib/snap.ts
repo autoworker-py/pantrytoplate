@@ -11,13 +11,6 @@ import { api } from './api';
 /** Every photo is read at exactly this size, so each read costs the same. */
 export const PHOTO_SIDE = 768;
 
-/** Where the photo sits inside the square it is read in, as fractions of the square's side. */
-export interface Frame {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
 
 export interface SnapStatus {
   plus: boolean;
@@ -34,8 +27,6 @@ export interface MealPhoto {
   mediaType: string;
   /** the photo as taken, for showing; empty for the development stand-in */
   dataUrl: string;
-  /** where that photo sits inside the square */
-  frame: Frame;
 }
 
 export interface ReadItem {
@@ -47,7 +38,6 @@ export interface ReadItem {
   protein: number;
   carbs: number;
   fat: number;
-  at: [number, number];
   note?: string;
 }
 
@@ -61,7 +51,7 @@ export const clearHandedPhoto = () => { handed = null; };
  * The whole photo, scaled to fit a 768 by 768 square and centred on black, so
  * nothing at the edges of the plate is cropped away and nothing is stretched.
  */
-export async function squared(source?: string): Promise<{ base64: string; frame: Frame }> {
+async function squared(source?: string): Promise<string> {
   const canvas = document.createElement('canvas');
   canvas.width = PHOTO_SIDE;
   canvas.height = PHOTO_SIDE;
@@ -69,7 +59,6 @@ export async function squared(source?: string): Promise<{ base64: string; frame:
   if (!context) throw new Error('This phone could not get the photo ready.');
   context.fillStyle = '#000';
   context.fillRect(0, 0, PHOTO_SIDE, PHOTO_SIDE);
-  let frame: Frame = { x: 0, y: 0, w: 1, h: 1 };
   if (source) {
     const image = new Image();
     image.src = source;
@@ -81,21 +70,14 @@ export async function squared(source?: string): Promise<{ base64: string; frame:
     const y = Math.floor((PHOTO_SIDE - h) / 2);
     context.imageSmoothingQuality = 'high';
     context.drawImage(image, x, y, w, h);
-    frame = { x: x / PHOTO_SIDE, y: y / PHOTO_SIDE, w: w / PHOTO_SIDE, h: h / PHOTO_SIDE };
   }
-  return { base64: canvas.toDataURL('image/jpeg', 0.85).split(',')[1] ?? '', frame };
-}
-
-/** A pin the reader placed on the square, moved onto the photo as it is shown. */
-export function unframe([x, y]: [number, number], frame: Frame): [number, number] {
-  const clamp = (n: number) => Math.min(1, Math.max(0, n));
-  return [clamp((x - frame.x) / frame.w), clamp((y - frame.y) / frame.h)];
+  return canvas.toDataURL('image/jpeg', 0.85).split(',')[1] ?? '';
 }
 
 /** A photo of the plate: the camera or the library, made into the square that is read; null when the person backs out. */
 export async function photographMeal(): Promise<MealPhoto | null> {
   // a browser has no camera here: development sends a blank square and reads the server's sample plate
-  if (!Capacitor.isNativePlatform()) return { ...(await squared()), mediaType: 'image/jpeg', dataUrl: '' };
+  if (!Capacitor.isNativePlatform()) return { base64: await squared(), mediaType: 'image/jpeg', dataUrl: '' };
   const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
   try {
     const photo = await Camera.getPhoto({
@@ -113,7 +95,7 @@ export async function photographMeal(): Promise<MealPhoto | null> {
     });
     if (!photo.base64String) return null;
     const dataUrl = `data:image/${photo.format === 'png' ? 'png' : 'jpeg'};base64,${photo.base64String}`;
-    return { ...(await squared(dataUrl)), mediaType: 'image/jpeg', dataUrl };
+    return { base64: await squared(dataUrl), mediaType: 'image/jpeg', dataUrl };
   } catch (cause) {
     if (/cancel/i.test(cause instanceof Error ? cause.message : String(cause))) return null;
     throw cause;
@@ -122,8 +104,6 @@ export async function photographMeal(): Promise<MealPhoto | null> {
 
 export const snapStatus = () => api.getFresh<SnapStatus>('/api/snap/status');
 // the server waits and retries when the reader is busy, so this can take a while
-export async function readMeal(photo: MealPhoto) {
-  const reply = await api.post<{ items: ReadItem[] } & SnapStatus>('/api/snap', { image: photo.base64, mediaType: photo.mediaType }, { timeoutMs: 100_000 });
-  return { ...reply, items: reply.items.map((item) => ({ ...item, at: unframe(item.at, photo.frame) })) };
-}
+export const readMeal = (photo: MealPhoto) =>
+  api.post<{ items: ReadItem[] } & SnapStatus>('/api/snap', { image: photo.base64, mediaType: photo.mediaType }, { timeoutMs: 100_000 });
 export const redeemPlus = (code: string) => api.post<SnapStatus>('/api/snap/redeem', { code });

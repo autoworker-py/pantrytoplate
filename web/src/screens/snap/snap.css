@@ -18,13 +18,7 @@
 .snap-sweep { position: absolute; left: -8px; right: -8px; top: 0; height: 2px; background: #f7d7a4; box-shadow: 0 0 16px 6px rgba(243, 201, 139, .55); animation: snap-sweep 1.8s var(--ease-in-out) infinite alternate; }
 @keyframes snap-sweep { to { top: 100%; } }
 
-/* what was found, pinned where it sits */
-.snap-pin { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; animation: pin-in .45s var(--ease) both; }
-.snap-pin i { order: 2; width: 14px; height: 14px; border-radius: 50%; background: rgba(243, 201, 139, .25); box-shadow: 0 0 0 2px #f6efe4, 0 0 12px 3px rgba(243, 201, 139, .6); }
-.snap-pin b { order: 1; height: 22px; padding: 0 9px; border-radius: 11px; display: inline-flex; align-items: center; white-space: nowrap; background: #f6efe4; color: #15171a; font-family: var(--display); font-size: 11.5px; font-weight: 700; box-shadow: 0 6px 14px -4px rgba(0, 0, 0, .7); }
-@keyframes pin-in { from { opacity: 0; transform: translate(-50%, -38%); } }
-
-@media (prefers-reduced-motion: reduce) { .snap-sweep, .snap-pin { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .snap-sweep { animation: none; } }
 
 /* ---------- Eaten: two ways to log what is not in the pantry ---------- */
 

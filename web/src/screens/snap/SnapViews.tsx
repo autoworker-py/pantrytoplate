@@ -23,8 +23,6 @@ export interface SnapItem {
   protein: number;
   carbs: number;
   fat: number;
-  /** where it sits in the photo, for the pin, as fractions of width and height */
-  at: [number, number];
   /** said when the model is unsure: hidden fats, sauces */
   note?: string;
 }
@@ -74,18 +72,12 @@ export function PlateArt() {
   );
 }
 
-/** The plate under the light (the photo, or a drawing in its place), with what has been found so far pinned on it. */
-export function SnapStage({ items, found, scanning = false, photo }: { items: SnapItem[]; found: number; scanning?: boolean; photo?: string }) {
+/** The plate under the light: the photo, or a drawing in its place. */
+export function SnapStage({ scanning = false, photo }: { scanning?: boolean; photo?: string }) {
   return (
     <div className={`snap-stage${scanning ? ' scanning' : ''}${photo ? ' has-photo' : ''}`}>
       <div className="snap-photo">
         {photo ? <img className="snap-shot" src={photo} alt="Your meal" /> : <PlateArt />}
-        {items.slice(0, found).filter((item) => item.at[0] >= 0).map((item) => (
-          <span key={item.id} className="snap-pin" style={{ left: `${item.at[0] * 100}%`, top: `${item.at[1] * 100}%` }}>
-            <i aria-hidden="true" />
-            <b>{item.name}</b>
-          </span>
-        ))}
         {scanning ? <span className="snap-sweep" aria-hidden="true" /> : null}
         <span className="snap-corners" aria-hidden="true" />
       </div>
@@ -118,10 +110,10 @@ export function LogActions({ status, onSnap, onOther }: { status: { plus: boolea
   );
 }
 
-export function SnapReading({ items, found, photo, slow = false }: { items: SnapItem[]; found: number; photo?: string; slow?: boolean }) {
+export function SnapReading({ found, photo, slow = false }: { found: number; photo?: string; slow?: boolean }) {
   return (
     <div className="snap-reading" aria-live="polite">
-      <SnapStage items={items} found={found} scanning photo={photo} />
+      <SnapStage scanning photo={photo} />
       <p className="reading-count">{found ? <><b className="num">{found}</b> {found === 1 ? 'food' : 'foods'} found so far</> : 'Reading your plate…'}</p>
       <p className="fine" style={{ textAlign: 'center', marginTop: 4 }}>{slow && !found ? 'The reader is busy, so it is trying again. Hang on.' : 'Working out portions from the plate’s size'}</p>
     </div>
@@ -159,7 +151,7 @@ export function SnapReview({
   const sum = (k: 'calories' | 'protein' | 'carbs' | 'fat') => Math.round(on.reduce((s, i) => s + i[k], 0));
   return (
     <div className="snap-review">
-      <SnapStage items={items} found={items.length} photo={photo} />
+      <SnapStage photo={photo} />
       <section className="snap-total">
         <div className="budget-top">
           <span className="big num">{sum('calories')}</span>
@@ -220,7 +212,7 @@ export function Paywall({ usedFree, busy = false, error, onRedeem }: { usedFree:
     <div className="paywall">
       <div className="test-mode"><Icon name="info" size={14} /> Test mode: payments aren’t switched on yet</div>
       <div className="paywall-hero">
-        <SnapStage items={[]} found={0} />
+        <SnapStage />
         <span className="plus-badge">Pro</span>
       </div>
       <h1 className="title-xl" style={{ marginTop: 20 }}>Snap a meal.<br />Skip the typing.</h1>

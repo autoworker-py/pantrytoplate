@@ -160,7 +160,7 @@ export default function SnapFlow() {
 
   return (
     <Page left={close} title={stage === 'paywall' ? 'Pantry2Plate Pro' : 'Snap a meal'}>
-      {stage === 'reading' ? <SnapReading items={base} found={found} photo={photo?.dataUrl || undefined} slow={slow} /> : null}
+      {stage === 'reading' ? <SnapReading found={found} photo={photo?.dataUrl || undefined} slow={slow} /> : null}
       {stage === 'review' ? (
         <SnapReview
           items={items}
@@ -179,7 +179,7 @@ export default function SnapFlow() {
       {stage === 'paywall' ? <Paywall usedFree={status?.freeTotal ?? 3} busy={busy} error={payError} onRedeem={(code) => void redeem(code)} /> : null}
       {stage === 'problem' && problem ? (
         <div>
-          <SnapStage items={[]} found={0} photo={photo?.dataUrl || undefined} />
+          <SnapStage photo={photo?.dataUrl || undefined} />
           <div className="snap-problem">
             <h2>{problem.title}</h2>
             <p>{problem.text}</p>
@@ -242,7 +242,7 @@ function AddItemSheet({ onClose, onAdd }: { onClose: () => void; onAdd: (item: S
         className="btn block"
         style={{ marginTop: 18 }}
         disabled={!name.trim() || !(calories > 0)}
-        onClick={() => onAdd({ id: `added-${Date.now()}`, name: name.trim(), foodName: name.trim(), grams: 0, portion: 'Added by you', calories, protein: grams(protein), carbs: grams(carbs), fat: grams(fat), at: [-1, -1] })}
+        onClick={() => onAdd({ id: `added-${Date.now()}`, name: name.trim(), foodName: name.trim(), grams: 0, portion: 'Added by you', calories, protein: grams(protein), carbs: grams(carbs), fat: grams(fat) })}
       >
         Add it
       </button>

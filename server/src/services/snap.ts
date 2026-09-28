@@ -26,8 +26,6 @@ export interface PlateItem {
   protein: number;
   carbs: number;
   fat: number;
-  /** where it sits in the photo, as fractions of width and height from the top left */
-  at: [number, number];
   note?: string;
 }
 
@@ -40,13 +38,13 @@ export interface Plate {
  * Output is billed by the token, so the reader answers with exactly what the
  * app uses and nothing else: one-letter keys, whole numbers, no prose. A food
  * it inferred rather than saw is a flag, and the server writes the sentence.
- *   n name, g grams, k kcal, p c f protein, carbs and fat in grams,
- *   x y the item's centre as a percentage of the square, e inferred
+ * Where each food sits in the photo is not asked for: it was never placed
+ * well enough to be worth its tokens.
+ *   n name, g grams, k kcal, p c f protein, carbs and fat in grams, e inferred
  */
 const PROMPT =
   'Estimate the nutrition of the meal in this photo for a calorie tracker. One entry per distinct food or drink; group identical pieces. ' +
   'n: short everyday name, lower case. g: grams as served. k: kcal. p, c, f: protein, carbs and fat in grams. ' +
-  'x, y: the centre of the item, 0 to 100 across and down from the top left. ' +
   'Add cooking fat or sauce you can infer but not see (an oil sheen, butter on toast) as its own entry with e true. ' +
   'Judge size from the plate, cutlery and hands, and do not round to neat numbers. No food: an empty list.';
 
@@ -62,8 +60,6 @@ const ItemSchema = z.object({
   p: z.coerce.number().nonnegative().max(1000).default(0),
   c: z.coerce.number().nonnegative().max(1000).default(0),
   f: z.coerce.number().nonnegative().max(1000).default(0),
-  x: z.coerce.number().default(50),
-  y: z.coerce.number().default(50),
   e: z.unknown().transform((flag) => flag === true || flag === 'true'),
 });
 const ReplySchema = z.object({ i: z.array(z.unknown()).default([]) });
@@ -83,11 +79,9 @@ const GEMINI_SCHEMA = {
           p: { type: 'INTEGER' },
           c: { type: 'INTEGER' },
           f: { type: 'INTEGER' },
-          x: { type: 'INTEGER' },
-          y: { type: 'INTEGER' },
           e: { type: 'BOOLEAN' },
         },
-        required: ['n', 'g', 'k', 'p', 'c', 'f', 'x', 'y'],
+        required: ['n', 'g', 'k', 'p', 'c', 'f'],
       },
     },
   },
@@ -95,10 +89,10 @@ const GEMINI_SCHEMA = {
 };
 
 const SAMPLE: Array<z.input<typeof ItemSchema>> = [
-  { n: 'grilled chicken', g: 150, k: 248, p: 46, c: 0, f: 5, x: 66, y: 66 },
-  { n: 'white rice', g: 158, k: 205, p: 4, c: 45, f: 0, x: 34, y: 40 },
-  { n: 'broccoli', g: 91, k: 31, p: 3, c: 6, f: 0, x: 70, y: 32 },
-  { n: 'butter or oil', g: 14, k: 102, p: 0, c: 0, f: 12, x: 52, y: 20, e: true },
+  { n: 'grilled chicken', g: 150, k: 248, p: 46, c: 0, f: 5 },
+  { n: 'white rice', g: 158, k: 205, p: 4, c: 45, f: 0 },
+  { n: 'broccoli', g: 91, k: 31, p: 3, c: 6, f: 0 },
+  { n: 'butter or oil', g: 14, k: 102, p: 0, c: 0, f: 12, e: true },
 ];
 
 /** The one size every photo is sent at. */
@@ -164,10 +158,9 @@ export function snapProvider(): Plate['provider'] | null {
   return env.nodeEnv === 'production' ? null : 'sample';
 }
 
-const clamp01 = (n: number) => Math.min(1, Math.max(0, Number.isFinite(n) ? n : 0.5));
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** The compact reply, as the app's items: names, portions, the pin, and the sentence an inferred item needs. */
+/** The compact reply, as the app's items: names, portions, and the sentence an inferred item needs. */
 export function tidy(raw: unknown[]): PlateItem[] {
   const items: PlateItem[] = [];
   for (const [i, candidate] of raw.slice(0, 12).entries()) {
@@ -183,7 +176,6 @@ export function tidy(raw: unknown[]): PlateItem[] {
       protein: Math.round(it.p),
       carbs: Math.round(it.c),
       fat: Math.round(it.f),
-      at: [clamp01(it.x / 100), clamp01(it.y / 100)],
       ...(it.e ? { note: INFERRED } : {}),
     });
   }
@@ -233,7 +225,7 @@ async function askClaude(image: string, mediaType: string): Promise<unknown> {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: mediaType, data: image } },
-            { type: 'text', text: `${PROMPT} Reply with only JSON like {"i":[{"n":"white rice","g":150,"k":195,"p":4,"c":42,"f":0,"x":40,"y":55}]}` },
+            { type: 'text', text: `${PROMPT} Reply with only JSON like {"i":[{"n":"white rice","g":150,"k":195,"p":4,"c":42,"f":0}]}` },
           ],
         },
       ],

@@ -70,7 +70,7 @@ describe('snap a meal', () => {
     const body = JSON.parse(response.body);
     expect(body.items.length).toBeGreaterThan(0);
     expect(body.items[0]).toMatchObject({ name: expect.any(String), portion: expect.any(String), calories: expect.any(Number) });
-    expect(body.items[0].at).toHaveLength(2);
+    expect(body.items[0]).not.toHaveProperty('at');
     expect(body.freeLeft).toBe(2);
   });
 
@@ -101,13 +101,13 @@ describe('the photo and the reply', () => {
 
   it('turns the compact reply into the items the app shows', () => {
     const items = tidy([
-      { n: 'white rice', g: 158, k: 205, p: 4, c: 45, f: 0, x: 34, y: 40 },
-      { n: 'butter', g: 10, k: 72, p: 0, c: 0, f: 8, x: 150, y: -5, e: true },
+      { n: 'white rice', g: 158, k: 205, p: 4, c: 45, f: 0 },
+      { n: 'butter', g: 10, k: 72, p: 0, c: 0, f: 8, e: true },
       { n: '', g: 10, k: 10 },
       'not an item',
     ]);
     expect(items).toHaveLength(2);
-    expect(items[0]).toEqual({ id: 'i0', name: 'White rice', grams: 158, portion: 'About 158 g', calories: 205, protein: 4, carbs: 45, fat: 0, at: [0.34, 0.4] });
-    expect(items[1]).toMatchObject({ name: 'Butter', at: [1, 0], note: expect.stringContaining('Not visible') });
+    expect(items[0]).toEqual({ id: 'i0', name: 'White rice', grams: 158, portion: 'About 158 g', calories: 205, protein: 4, carbs: 45, fat: 0 });
+    expect(items[1]).toMatchObject({ name: 'Butter', note: expect.stringContaining('Not visible') });
   });
 });
