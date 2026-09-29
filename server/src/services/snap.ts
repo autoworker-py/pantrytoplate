@@ -48,6 +48,15 @@ const PROMPT =
   'Add cooking fat or sauce you can infer but not see (an oil sheen, butter on toast) as its own entry with e true. ' +
   'Judge size from the plate, cutlery and hands, and do not round to neat numbers. No food: an empty list.';
 
+/**
+ * The prompt, with the person's own words for what is in the photo when they
+ * gave any. Their words name the foods; the photo still decides how much.
+ */
+export function promptFor(hint?: string): string {
+  const said = hint?.replace(/["\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140);
+  return said ? `${PROMPT} The person says it is: "${said}". Use that to name the foods; judge amounts from the photo.` : PROMPT;
+}
+
 /** A plate's worth of entries is a few hundred tokens; a runaway reply stops here instead of being billed. */
 const MAX_OUTPUT_TOKENS = 1024;
 
@@ -197,12 +206,12 @@ async function post(url: string, init: RequestInit): Promise<Response> {
   }
 }
 
-async function askGemini(image: string, mediaType: string, model: string): Promise<unknown> {
+async function askGemini(image: string, mediaType: string, model: string, prompt: string): Promise<unknown> {
   const response = await post(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-goog-api-key': env.geminiApiKey },
     body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ inline_data: { mime_type: mediaType, data: image } }, { text: PROMPT }] }],
+      contents: [{ role: 'user', parts: [{ inline_data: { mime_type: mediaType, data: image } }, { text: prompt }] }],
       generationConfig: { temperature: 0.2, maxOutputTokens: MAX_OUTPUT_TOKENS, responseMimeType: 'application/json', responseSchema: GEMINI_SCHEMA },
     }),
   });
@@ -213,7 +222,7 @@ async function askGemini(image: string, mediaType: string, model: string): Promi
   return parseJson(text || '{"i":[]}');
 }
 
-async function askClaude(image: string, mediaType: string): Promise<unknown> {
+async function askClaude(image: string, mediaType: string, prompt: string): Promise<unknown> {
   const response = await post('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': env.anthropicApiKey, 'anthropic-version': '2023-06-01' },
@@ -225,7 +234,7 @@ async function askClaude(image: string, mediaType: string): Promise<unknown> {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: mediaType, data: image } },
-            { type: 'text', text: `${PROMPT} Reply with only JSON like {"i":[{"n":"white rice","g":150,"k":195,"p":4,"c":42,"f":0}]}` },
+            { type: 'text', text: `${prompt} Reply with only JSON like {"i":[{"n":"white rice","g":150,"k":195,"p":4,"c":42,"f":0}]}` },
           ],
         },
       ],
@@ -237,7 +246,7 @@ async function askClaude(image: string, mediaType: string): Promise<unknown> {
   return parseJson(data.content?.find((block) => block.type === 'text')?.text ?? '{"i":[]}');
 }
 
-export async function readPlate(image: string, mediaType: string): Promise<Plate> {
+export async function readPlate(image: string, mediaType: string, hint?: string): Promise<Plate> {
   const provider = snapProvider();
   if (!provider) throw new HttpError(503, 'Photo reading is not set up on this server yet.', 'snap_off');
   if (provider === 'sample') return { provider, items: tidy(SAMPLE) };
@@ -246,7 +255,8 @@ export async function readPlate(image: string, mediaType: string): Promise<Plate
   const model = (n: number) => (n >= 3 && env.geminiFallbackModel ? env.geminiFallbackModel : env.geminiModel);
   let reply: unknown;
   try {
-    reply = await withRetries((n) => (provider === 'gemini' ? askGemini(image, mediaType, model(n)) : askClaude(image, mediaType)));
+    const prompt = promptFor(hint);
+    reply = await withRetries((n) => (provider === 'gemini' ? askGemini(image, mediaType, model(n), prompt) : askClaude(image, mediaType, prompt)));
   } catch (error) {
     if (error instanceof RetryableError) {
       throw error.status === 429

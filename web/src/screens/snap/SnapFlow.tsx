@@ -6,15 +6,15 @@ import { clearHandedPhoto, handedPhoto, photographMeal, readMeal, redeemPlus, sn
 import { Icon } from '../../ui/Icon';
 import { Page, Sheet, errorText, useToast } from '../../ui/kit';
 import { mealNow } from '../ItemSheet';
-import { Paywall, SnapReading, SnapReview, SnapStage, type SnapItem } from './SnapViews';
+import { Paywall, SnapDescribe, SnapReading, SnapReview, SnapStage, type SnapItem } from './SnapViews';
 
 /*
  * Snap a meal, from the photo Eaten hands over to the entry in the diary:
- * read, check, log. Free photos run out into the Pro paywall; a code unlocks
+ * say what it is if you like, read, check, log. Free photos run out into the Pro paywall; a code unlocks
  * Pro while payments are off. Everything logged can be undone from the toast.
  */
 
-type Stage = 'reading' | 'review' | 'paywall' | 'problem';
+type Stage = 'describe' | 'reading' | 'review' | 'paywall' | 'problem';
 
 const PORTIONS: Array<[number, string]> = [[0.5, 'Half that'], [1, 'As shown'], [1.5, 'Half as much again'], [2, 'Twice that']];
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -33,7 +33,9 @@ export default function SnapFlow() {
   const toast = useToast();
   const startOnPaywall = Boolean((useLocation().state as { paywall?: boolean } | null)?.paywall);
   const [photo, setPhoto] = useState<MealPhoto | null>(handedPhoto);
-  const [stage, setStage] = useState<Stage>(startOnPaywall ? 'paywall' : 'reading');
+  const [stage, setStage] = useState<Stage>(startOnPaywall ? 'paywall' : 'describe');
+  /** the person's own words for what is in the photo; empty leaves it to the reader */
+  const [hint, setHint] = useState('');
   const [status, setStatus] = useState<SnapStatus | null>(null);
   const [base, setBase] = useState<SnapItem[]>([]);
   const [factor, setFactor] = useState<Record<string, number>>({});
@@ -47,7 +49,7 @@ export default function SnapFlow() {
   const [payError, setPayError] = useState<string | null>(null);
   const [slow, setSlow] = useState(false);
   // one read per photo, however many times React starts the effect: each read is an AI request
-  const reading = useRef<{ photo: MealPhoto; answer: ReturnType<typeof readMeal> } | null>(null);
+  const reading = useRef<{ photo: MealPhoto; hint: string; answer: ReturnType<typeof readMeal> } | null>(null);
 
   useEffect(() => {
     clearHandedPhoto();
@@ -69,12 +71,16 @@ export default function SnapFlow() {
   }, [stage]);
 
   useEffect(() => {
+    if (stage === 'describe' && !photo) navigate('/eaten', { replace: true });
+  }, [stage, photo, navigate]);
+
+  useEffect(() => {
     if (stage !== 'reading') return;
     if (!photo) { navigate('/eaten', { replace: true }); return; }
     let live = true;
     void (async () => {
       try {
-        if (reading.current?.photo !== photo) reading.current = { photo, answer: readMeal(photo) };
+        if (reading.current?.photo !== photo || reading.current.hint !== hint) reading.current = { photo, hint, answer: readMeal(photo, hint) };
         const read = await reading.current.answer;
         if (!live) return;
         setStatus(read);
@@ -105,7 +111,7 @@ export default function SnapFlow() {
       }
     })();
     return () => { live = false; };
-  }, [stage, photo, navigate]);
+  }, [stage, photo, hint, navigate]);
 
   async function retake() {
     const next = await photographMeal().catch(() => null);
@@ -113,7 +119,7 @@ export default function SnapFlow() {
     setPhoto(next);
     setBase([]);
     setFound(0);
-    setStage('reading');
+    setStage('describe');
   }
 
   async function log() {
@@ -148,7 +154,7 @@ export default function SnapFlow() {
       reading.current = null;
       if (photo && !base.length) { setStage('reading'); return; }
       const next = await photographMeal().catch(() => null);
-      if (next) { setPhoto(next); setStage('reading'); } else navigate('/eaten');
+      if (next) { setPhoto(next); setStage('describe'); } else navigate('/eaten');
     } catch (cause) {
       setPayError(errorText(cause, 'That code did not work.'));
       setBusy(false);
@@ -160,6 +166,9 @@ export default function SnapFlow() {
 
   return (
     <Page left={close} title={stage === 'paywall' ? 'Pantry2Plate Pro' : 'Snap a meal'}>
+      {stage === 'describe' ? (
+        <SnapDescribe photo={photo?.dataUrl || undefined} hint={hint} onHint={setHint} onRead={() => setStage('reading')} onRetake={() => void retake()} />
+      ) : null}
       {stage === 'reading' ? <SnapReading found={found} photo={photo?.dataUrl || undefined} slow={slow} /> : null}
       {stage === 'review' ? (
         <SnapReview

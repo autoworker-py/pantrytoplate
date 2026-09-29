@@ -120,6 +120,22 @@ export function SnapReading({ found, photo, slow = false }: { found: number; pho
   );
 }
 
+/** Before it reads: the photo, and room to say what it is. Left empty, the reader works it out from the photo alone. */
+export function SnapDescribe({ photo, hint, onHint, onRead, onRetake }: { photo?: string; hint: string; onHint: (hint: string) => void; onRead: () => void; onRetake: () => void }) {
+  return (
+    <form className="snap-describe" onSubmit={(e) => { e.preventDefault(); onRead(); }}>
+      <SnapStage photo={photo} />
+      <div className="field">
+        <label htmlFor="snap-hint">What is it? (optional)</label>
+        <input id="snap-hint" value={hint} maxLength={140} onChange={(e) => onHint(e.target.value)} placeholder="Chicken burrito bowl" enterKeyHint="go" autoComplete="off" />
+        <span className="hint">A few words help it tell similar foods apart. Leave it empty and it works it out from the photo.</span>
+      </div>
+      <button type="submit" className="btn block" style={{ marginTop: 18 }}>Read it</button>
+      <button type="button" className="btn ghost block" onClick={onRetake}><Icon name="camera" size={18} /> Retake</button>
+    </form>
+  );
+}
+
 const MEALS: Array<[MealSlot, string]> = [['breakfast', 'Breakfast'], ['lunch', 'Lunch'], ['dinner', 'Dinner'], ['snack', 'Snack']];
 
 export function SnapReview({

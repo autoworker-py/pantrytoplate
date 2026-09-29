@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app.js';
 import { PRIVACY_VERSION } from '../src/content/privacy.js';
-import { photoSize, tidy } from '../src/services/snap.js';
+import { photoSize, promptFor, tidy } from '../src/services/snap.js';
 
 /** The start of a real JPEG, enough for its size to be read. */
 function jpeg(width: number, height: number): string {
@@ -74,6 +74,13 @@ describe('snap a meal', () => {
     expect(body.freeLeft).toBe(2);
   });
 
+  it('takes a few words about the food along with the photo', async () => {
+    const said = await app.inject({ method: 'POST', url: '/api/snap', headers: auth, payload: { ...photo, hint: 'chicken and rice' } });
+    expect(said.statusCode).toBe(200);
+    const tooLong = await app.inject({ method: 'POST', url: '/api/snap', headers: auth, payload: { ...photo, hint: 'x'.repeat(141) } });
+    expect(tooLong.statusCode).toBe(400);
+  });
+
   it('asks for Plus once the free photos are used', async () => {
     await snap();
     await snap();
@@ -92,6 +99,12 @@ describe('snap a meal', () => {
 });
 
 describe('the photo and the reply', () => {
+  it('passes along what the person says it is, and nothing when they say nothing', () => {
+    expect(promptFor()).toBe(promptFor('   '));
+    expect(promptFor('chicken "burrito"\nbowl')).toContain('The person says it is: "chicken burrito bowl".');
+    expect(promptFor('x'.repeat(500)).length).toBeLessThan(promptFor().length + 260);
+  });
+
   it('reads a photo size from the header alone', () => {
     expect(photoSize(jpeg(768, 768))).toEqual({ width: 768, height: 768 });
     expect(photoSize(jpeg(1280, 960))).toEqual({ width: 1280, height: 960 });

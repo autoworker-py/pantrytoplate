@@ -31,7 +31,12 @@ const routes: FastifyPluginAsync = async (app) => {
   // a 768 x 768 JPEG made on the phone: around a hundred kilobytes of base64
   app.post('/', { bodyLimit: 8 * 1024 * 1024 }, async (request) => {
     const body = z
-      .object({ image: z.string().min(100), mediaType: z.enum(['image/jpeg', 'image/png']).default('image/jpeg') })
+      .object({
+        image: z.string().min(100),
+        mediaType: z.enum(['image/jpeg', 'image/png']).default('image/jpeg'),
+        /** the person's own words for what it is, to help the reader; optional */
+        hint: z.string().trim().max(140).optional(),
+      })
       .parse(request.body);
     // one square size, so every read costs the same: the app sends 768 x 768
     const size = photoSize(body.image);
@@ -42,7 +47,7 @@ const routes: FastifyPluginAsync = async (app) => {
     if (!before.plus && (before.freeLeft ?? 0) <= 0) {
       throw new HttpError(402, 'Your free meal photos are used up. Pro reads as many as you like.', 'plus_required');
     }
-    const plate = await readPlate(body.image, body.mediaType);
+    const plate = await readPlate(body.image, body.mediaType, body.hint);
     if (!before.plus && plate.items.length > 0) {
       await prisma.user.update({ where: { id: request.userId }, data: { snapsUsed: { increment: 1 } } });
     }

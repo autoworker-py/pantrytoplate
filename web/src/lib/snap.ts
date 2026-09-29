@@ -104,6 +104,10 @@ export async function photographMeal(): Promise<MealPhoto | null> {
 
 export const snapStatus = () => api.getFresh<SnapStatus>('/api/snap/status');
 // the server waits and retries when the reader is busy, so this can take a while
-export const readMeal = (photo: MealPhoto) =>
-  api.post<{ items: ReadItem[] } & SnapStatus>('/api/snap', { image: photo.base64, mediaType: photo.mediaType }, { timeoutMs: 100_000 });
+export const readMeal = (photo: MealPhoto, hint = '') =>
+  api.post<{ items: ReadItem[] } & SnapStatus>(
+    '/api/snap',
+    { image: photo.base64, mediaType: photo.mediaType, ...(hint.trim() ? { hint: hint.trim() } : {}) },
+    { timeoutMs: 100_000 },
+  );
 export const redeemPlus = (code: string) => api.post<SnapStatus>('/api/snap/redeem', { code });
