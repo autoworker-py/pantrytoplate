@@ -127,7 +127,8 @@ export async function setCanonical(
 
   return db.foodReference.update({
     where: { id: foodReferenceId },
-    data: { canonicalId, canonicalSource: canonicalId ? 'user' : null },
+    // the person's answer either way; "not an ingredient" also keeps the guesser from linking it again
+    data: { canonicalId, canonicalSource: 'user' },
   });
 }
 

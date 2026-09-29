@@ -1,5 +1,6 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { artFor, drawArt, type ArtSpec } from './art';
+import { needsLink } from '../components/CountsAs';
 import { formatAmount } from '../lib/format';
 import type { InventoryItem, StorageLocation } from '../lib/types';
 import './fridge.css';
@@ -21,10 +22,19 @@ const CATEGORY_ORDER = ['Dairy & Eggs', 'Cheese', 'Meat & Seafood', 'Bakery', 'S
 
 interface Placed { item: InventoryItem; spec: ArtSpec; w: number; h: number; vw: number; vh: number; svg: string }
 
+/** A linked product is drawn as the food it counts as: a jug of milk, whatever the label calls it. */
+export function drawnAs(food: Pick<InventoryItem['food'], 'name' | 'category' | 'countsAs'>): { name: string; category: string | null } {
+  return { name: food.countsAs?.name ?? food.name, category: food.countsAs?.category ?? food.category };
+}
+
+/** The red ! on the picture of a scanned product that is not linked to a food yet. */
+export function LinkBadge({ style }: { style?: React.CSSProperties }) {
+  return <span className="link-badge" style={style} aria-hidden="true">!</span>;
+}
+
 function place(item: InventoryItem, s: number): Placed {
   const spec = artFor({
-    name: item.food.name,
-    category: item.food.category,
+    ...drawnAs(item.food),
     quantity: item.quantity,
     unit: item.unit,
     isLowStock: item.isLowStock,
@@ -108,12 +118,14 @@ function Column({
 }) {
   const tag = expiryTag(p.item);
   const expired = tag?.text === 'Expired';
+  const unlinked = mode === 'pantry' && needsLink(p.item.food);
   const content = (
     <>
       <div className="obj" style={{ height: objH }}>
         <span className="glow" aria-hidden="true" />
         <Art svg={p.svg} w={p.w} h={p.h} vw={p.vw} vh={p.vh} />
         {expired ? <span className="hatch" style={{ width: p.w, height: p.h }} aria-hidden="true" /> : null}
+        {unlinked ? <LinkBadge style={{ top: 'auto', right: 'auto', bottom: p.h - 10, left: `calc(50% + ${Math.round(p.w / 2) - 10}px)` }} /> : null}
         {lit ? <AmountTag label={lit} /> : null}
       </div>
       {mode === 'pantry' ? (
@@ -130,7 +142,7 @@ function Column({
   const cls = `col${lit ? ' lit' : ''}`;
   if (mode === 'pantry' && onItem) {
     return (
-      <button type="button" className={cls} style={{ width }} onClick={() => onItem(p.item)} data-id={p.item.id} aria-label={`${p.item.food.name}, ${formatAmount(p.item.quantity, p.item.unit)}${tag ? `, ${tag.text}` : ''}`}>
+      <button type="button" className={cls} style={{ width }} onClick={() => onItem(p.item)} data-id={p.item.id} aria-label={`${p.item.food.name}, ${formatAmount(p.item.quantity, p.item.unit)}${tag ? `, ${tag.text}` : ''}${unlinked ? ', not linked to a food' : ''}`}>
         {content}
       </button>
     );

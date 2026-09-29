@@ -39,7 +39,8 @@ export interface InventoryView {
     defaultUnit: string;
     caloriesPerUnit: number | null;
     /** the generic ingredient this product counts as, when it is a branded one */
-    countsAs: { id: string; name: string; source: string | null } | null;
+    countsAs: { id: string; name: string; category: string | null; source: string | null } | null;
+    notAnIngredient: boolean;
   };
   /** calories for the whole remaining lot; null when no conversion exists */
   caloriesRemaining: number | null;
@@ -80,7 +81,7 @@ export async function toInventoryView(
   const canonical = item.foodReference.canonicalId
     ? await db.foodReference.findUnique({
         where: { id: item.foodReference.canonicalId },
-        select: { id: true, name: true },
+        select: { id: true, name: true, category: true },
       })
     : null;
   const totals = nutritionFor(item.quantity, item.unit, item.foodReference, ctx);
@@ -109,6 +110,8 @@ export async function toInventoryView(
       countsAs: canonical
         ? { ...canonical, source: item.foodReference.canonicalSource }
         : null,
+      /** the person said this product is not a recipe ingredient, so it is not flagged as unlinked */
+      notAnIngredient: !item.foodReference.canonicalId && item.foodReference.canonicalSource === 'user',
     },
     caloriesRemaining: totals.calories === null ? null : roundQuantity(totals.calories),
     macrosRemaining: {

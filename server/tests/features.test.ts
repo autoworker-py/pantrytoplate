@@ -782,11 +782,16 @@ describe('branded products count as the ingredient they are', () => {
   it('lets a person correct a wrong guess, and never re-guesses over them', async () => {
     const product = await scanned('ORGANIC EXTRA VIRGIN OLIVE OIL', 'test-evoo-4', 8.84);
 
-    // "actually, do not treat this as olive oil"
+    // "actually, this is not an ingredient": kept as their answer, so nothing re-guesses it or flags it
     const cleared = await api('PUT', `/api/foods/${product.id}/counts-as`, { canonicalId: null });
     expect(cleared.status).toBe(200);
     expect(cleared.body.food.canonicalId).toBeNull();
-    expect(cleared.body.food.canonicalSource).toBeNull();
+    expect(cleared.body.food.canonicalSource).toBe('user');
+    const { linkCanonical: guessAgain } = await import('../src/services/foodRef.js');
+    await guessAgain(product.id, prisma);
+    expect((await prisma.foodReference.findUniqueOrThrow({ where: { id: product.id } })).canonicalId).toBeNull();
+    const stocked = await api('POST', '/api/inventory', { foodReferenceId: product.id, quantity: 500, unit: 'g' });
+    expect(stocked.body.item.food).toMatchObject({ countsAs: null, notAnIngredient: true });
 
     // and point it somewhere deliberately
     const vegOil = await prisma.foodReference.findFirstOrThrow({ where: { name: 'Vegetable Oil' } });
@@ -800,6 +805,22 @@ describe('branded products count as the ingredient they are', () => {
     const after = await prisma.foodReference.findUniqueOrThrow({ where: { id: product.id } });
     expect(after.canonicalId).toBe(vegOil.id);
     expect(after.canonicalSource).toBe('user');
+  });
+
+  it('tells the pantry which scanned products are not linked to a food yet', async () => {
+    const mystery = await scanned('ZQX MYSTERY SNACK BITES', 'test-mystery-1', 5);
+    const stocked = await api('POST', '/api/inventory', { foodReferenceId: mystery.id, quantity: 100, unit: 'g' });
+    // calories from the label, but no food it counts as, and nobody has said it is not one
+    expect(stocked.body.item.food).toMatchObject({ barcode: 'test-mystery-1', countsAs: null, notAnIngredient: false });
+    expect(stocked.body.item.caloriesRemaining).toBe(500);
+
+    const oil = await prisma.foodReference.findFirstOrThrow({ where: { name: 'Olive Oil' } });
+    await api('PUT', `/api/foods/${mystery.id}/counts-as`, { canonicalId: oil.id });
+    const list = await api('GET', '/api/inventory');
+    const linked = list.body.items.find((i: { id: string }) => i.id === stocked.body.item.id);
+    // linked, and drawn as the food it counts as
+    expect(linked.food.countsAs).toMatchObject({ id: oil.id, name: 'Olive Oil', category: oil.category, source: 'user' });
+    expect(linked.food.notAnIngredient).toBe(false);
   });
 
   it('converts a product stocked in servings into what a recipe asks for', async () => {

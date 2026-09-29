@@ -216,7 +216,7 @@ input, select, textarea { font: inherit; color: inherit; }
 .list-row .end { flex: none; text-align: right; }
 button.list-row, a.list-row { width: 100%; text-align: left; }
 button.list-row:active, a.list-row:active { background: rgba(255, 244, 228, .03); }
-.thumb { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: var(--r-sm); background: var(--bg-2); }
+.thumb { position: relative; width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: var(--r-sm); background: var(--bg-2); }
 .thumb svg { overflow: visible; }
 
 .group { background: var(--bg-1); border-radius: var(--r-lg); padding: 0 16px; box-shadow: inset 0 0 0 1px var(--line); }

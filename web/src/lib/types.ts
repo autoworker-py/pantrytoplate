@@ -27,8 +27,10 @@ export interface Food {
   caloriesPerUnit: number | null;
   servingSizeGrams?: number | null;
   /** the generic ingredient a branded product counts as */
-  countsAs?: { id: string; name: string; source: string | null } | null;
+  countsAs?: { id: string; name: string; category?: string | null; source: string | null } | null;
   canonicalId?: string | null;
+  /** the person said this product is not a recipe ingredient */
+  notAnIngredient?: boolean;
 }
 
 export interface Macros {

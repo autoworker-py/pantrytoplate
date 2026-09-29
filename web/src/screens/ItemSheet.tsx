@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import type { InventoryItem, MealSlot, RecipesForFood, RemovalReason, StorageLocation } from '../lib/types';
 import { dateInputToISO, expiryLabel, formatAmount, formatDateInput } from '../lib/format';
-import { FoodThumb, expiryTag } from '../fridge/Fridge';
+import { FoodThumb, LinkBadge, drawnAs, expiryTag } from '../fridge/Fridge';
 import { ZONES } from '../fridge/ZonePager';
-import { CountsAs } from '../components/CountsAs';
+import { CountsAs, needsLink } from '../components/CountsAs';
 import { UnitSelect } from '../components/UnitSelect';
 import { Icon, type IconName } from '../ui/Icon';
 import { Sheet, Switch, errorText, useToast } from '../ui/kit';
@@ -146,7 +146,10 @@ export function ItemSheet({ item, onClose, onChanged }: { item: InventoryItem; o
   return (
     <Sheet title={item.isLeftover ? `${item.food.name} (leftovers)` : item.food.name} sub={sub} onClose={onClose}>
       <div className="item-hero">
-        <FoodThumb name={item.food.name} category={item.food.category} quantity={item.quantity} unit={item.unit} isLeftover={item.isLeftover} size={96} />
+        <span className="thumb-wrap">
+          <FoodThumb {...drawnAs(item.food)} quantity={item.quantity} unit={item.unit} isLeftover={item.isLeftover} size={96} />
+          {needsLink(item.food) ? <LinkBadge /> : null}
+        </span>
         <div className="facts">
           {tag ? <span className={`tag ${tag.tone}`}>{tag.text}</span> : null}
           {item.isLowStock ? <span className="tag soon">Running low</span> : null}

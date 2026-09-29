@@ -15,17 +15,28 @@ import type { Food } from '../lib/types';
  * is added - not discovered three weeks later when a recipe insists you have no
  * olive oil while you are holding a bottle of it.
  */
+/**
+ * A scanned product that nobody has said the food of yet. The app has its
+ * calories from the label but not what it is, so recipes cannot count it:
+ * it is flagged in red, on its picture and here, until it is linked or the
+ * person says it is not an ingredient.
+ */
+export function needsLink(food: Pick<Food, 'barcode' | 'countsAs' | 'notAnIngredient'>): boolean {
+  return Boolean(food.barcode) && !food.countsAs && !food.notAnIngredient;
+}
+
 export function CountsAs({
   food,
   onChanged,
   autoOpen = false,
 }: {
-  food: Pick<Food, 'id' | 'name' | 'barcode'> & { countsAs?: { id: string; name: string; source: string | null } | null };
+  food: Pick<Food, 'id' | 'name' | 'barcode' | 'notAnIngredient'> & { countsAs?: { id: string; name: string; source: string | null } | null };
   onChanged: (next: { id: string; name: string } | null) => void;
   /** open straight into the picker when nothing was inferred */
   autoOpen?: boolean;
 }) {
   const guessed = food.countsAs ?? null;
+  const [declined, setDeclined] = useState(Boolean(food.notAnIngredient) && !guessed);
   const [editing, setEditing] = useState(autoOpen && !guessed);
   const [query, setQuery] = useState('');
   const [options, setOptions] = useState<Food[]>([]);
@@ -52,6 +63,7 @@ export function CountsAs({
     setError(null);
     try {
       await api.put(`/api/foods/${food.id}/counts-as`, { canonicalId });
+      setDeclined(!canonicalId);
       setEditing(false);
       setQuery('');
       onChanged(next);
@@ -63,8 +75,9 @@ export function CountsAs({
   }
 
   if (!editing) {
+    const alert = !guessed && !declined;
     return (
-      <div className="counts-as">
+      <div className={`counts-as${alert ? ' alert' : ''}`}>
         <div className="row">
           <div className="grow">
             {guessed ? (
@@ -76,17 +89,22 @@ export function CountsAs({
                     : 'Worked out from the name. Recipes asking for it will use this.'}
                 </span>
               </>
+            ) : declined ? (
+              <>
+                <span className="ticket-name">Not an ingredient</span>
+                <span className="ticket-print">You said recipes don’t use this.</span>
+              </>
             ) : (
               <>
-                <span className="ticket-name">Not linked to an ingredient</span>
+                <span className="ticket-name"><span className="link-mark" aria-hidden="true">!</span>Not linked to a food</span>
                 <span className="ticket-print">
-                  Recipes will not count this towards anything until you say what it is.
+                  The app knows its calories but not which food it is, so recipes won’t count it until you link it.
                 </span>
               </>
             )}
           </div>
           <button type="button" className="btn-secondary btn-sm" onClick={() => setEditing(true)}>
-            {guessed ? 'Change' : 'Set it'}
+            {guessed || declined ? 'Change' : 'Link it'}
           </button>
         </div>
       </div>
@@ -122,7 +140,7 @@ export function CountsAs({
       {error ? <p className="error tight">{error}</p> : null}
 
       <div className="btn-row" style={{ marginTop: 8 }}>
-        {guessed ? (
+        {!declined ? (
           <button type="button" className="btn-secondary btn-sm" disabled={busy} onClick={() => void save(null, null)}>
             Not an ingredient
           </button>

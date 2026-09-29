@@ -42,6 +42,15 @@
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .chip-row .chip-on { background: var(--ink); color: var(--on-light); box-shadow: none; }
 .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+/* a scanned product not linked to a food yet: red here and on its picture, so it is noticed */
+.counts-as.alert { background: rgba(226, 85, 63, .1); box-shadow: inset 0 0 0 1px rgba(226, 85, 63, .38); }
+.counts-as.alert .ticket-name { display: flex; align-items: center; gap: 8px; color: var(--red-ink); }
+.counts-as.alert .btn-secondary { background: var(--red); color: #fff; }
+.link-mark, .link-badge { display: grid; place-items: center; flex: none; border-radius: 50%; background: var(--red); color: #fff; font-family: var(--display); font-weight: 800; line-height: 1; }
+.link-mark { width: 18px; height: 18px; font-size: 12px; }
+.link-badge { position: absolute; top: -4px; right: -4px; z-index: 2; width: 17px; height: 17px; font-size: 11.5px; box-shadow: 0 0 0 2px var(--bg-1), 0 2px 6px rgba(0, 0, 0, .45); pointer-events: none; }
+.thumb-wrap { position: relative; display: inline-flex; flex: none; }
+
 .btn-secondary, .btn-ghost { height: 40px; padding: 0 14px; border-radius: var(--r-sm); font-family: var(--display); font-weight: 650; font-size: 14.5px; }
 .btn-secondary { background: var(--bg-3); }
 .btn-ghost { color: var(--ink-2); }

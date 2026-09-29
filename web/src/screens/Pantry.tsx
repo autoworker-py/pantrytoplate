@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import type { InventoryItem, StorageLocation } from '../lib/types';
 import { formatAmount } from '../lib/format';
-import { Fridge, FoodThumb, expiryTag } from '../fridge/Fridge';
+import { Fridge, FoodThumb, LinkBadge, drawnAs, expiryTag } from '../fridge/Fridge';
+import { needsLink } from '../components/CountsAs';
 import { ZONES, ZonePager } from '../fridge/ZonePager';
 import { Icon } from '../ui/Icon';
 import { Empty, Logo, Page, Sheet } from '../ui/kit';
@@ -143,7 +144,7 @@ function SearchSheet({ items, onClose, onPick }: { items: InventoryItem[]; onClo
           const tag = expiryTag(item);
           return (
             <button key={item.id} type="button" className="list-row" onClick={() => onPick(item)}>
-              <span className="thumb"><FoodThumb name={item.food.name} category={item.food.category} quantity={item.quantity} unit={item.unit} isLeftover={item.isLeftover} size={34} /></span>
+              <span className="thumb"><FoodThumb {...drawnAs(item.food)} quantity={item.quantity} unit={item.unit} isLeftover={item.isLeftover} size={34} />{needsLink(item.food) ? <LinkBadge /> : null}</span>
               <span className="grow">
                 <span className="t">{item.food.name}</span>
                 <span className="s">{formatAmount(item.quantity, item.unit)} · {where[item.storageLocation]}</span>
