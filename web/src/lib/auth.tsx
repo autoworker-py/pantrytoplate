@@ -9,6 +9,8 @@ interface User {
   onboarded: boolean;
   /** false when the notice has been revised since this person agreed */
   privacyCurrent: boolean;
+  /** Pantry2Plate Pro: no ads. Missing from an account cached before it existed, which means "not known yet" */
+  plus?: boolean;
 }
 
 interface AuthState {

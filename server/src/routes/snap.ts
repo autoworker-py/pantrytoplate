@@ -5,22 +5,38 @@ import { env } from '../env.js';
 import { badRequest, HttpError } from '../errors.js';
 import { isPlusCode } from '../content/plus.js';
 import { PHOTO_SIDE, photoSize, readPlate, snapProvider } from '../services/snap.js';
+import { localDay } from '../zone.js';
 
 /**
- * Snap a meal. A few photos are free on every account; after that it is Plus,
- * which while payments are switched off is unlocked by a code. Only a read that
- * found food uses up a free photo.
+ * Photos an account without Pro can earn a day by watching an ad, once its
+ * free ones are gone. The app reports each ad watched; until real ad units can
+ * have Google confirm them to the server, this cap is what bounds a report
+ * that never had an ad behind it: a few photos, a fraction of a cent.
+ */
+export const AD_PHOTOS_PER_DAY = 3;
+
+/**
+ * Snap a meal. A few photos are free on every account; after that a short ad
+ * earns one more, up to a few a day, or it is Pro, which while payments are
+ * switched off is unlocked by a code. Only a read that found food uses up a
+ * free photo.
  */
 const routes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', app.authenticate);
 
   async function standing(userId: string) {
-    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { plusSince: true, snapsUsed: true } });
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { plusSince: true, snapsUsed: true, snapsEarned: true, adPhotosDay: true, adPhotosThatDay: true },
+    });
     const plus = user.plusSince !== null;
+    const earnedToday = user.adPhotosDay === localDay(new Date()) ? user.adPhotosThatDay : 0;
     return {
       plus,
-      freeLeft: plus ? null : Math.max(0, env.freeSnaps - user.snapsUsed),
+      freeLeft: plus ? null : Math.max(0, env.freeSnaps + user.snapsEarned - user.snapsUsed),
       freeTotal: env.freeSnaps,
+      /** photos an ad can still earn today; Pro has no ads */
+      adPhotosLeft: plus ? 0 : Math.max(0, AD_PHOTOS_PER_DAY - earnedToday),
       /** false when this server has no photo reader configured */
       available: snapProvider() !== null,
     };
@@ -52,6 +68,27 @@ const routes: FastifyPluginAsync = async (app) => {
       await prisma.user.update({ where: { id: request.userId }, data: { snapsUsed: { increment: 1 } } });
     }
     return { items: plate.items, ...(await standing(request.userId)) };
+  });
+
+  /** An ad watched to the end, on an account whose free photos are gone: one more photo. */
+  app.post('/reward', async (request) => {
+    const before = await standing(request.userId);
+    if (before.plus) throw badRequest('Pro has no ads to watch.', 'no_ads');
+    if ((before.freeLeft ?? 0) > 0) throw badRequest('You still have a free photo to use first.', 'photos_left');
+    const today = localDay(new Date());
+    // the day's count starts again on a new day, and stops at the cap however many requests race
+    const fresh = await prisma.user.updateMany({
+      where: { id: request.userId, OR: [{ adPhotosDay: null }, { adPhotosDay: { not: today } }] },
+      data: { snapsEarned: { increment: 1 }, adPhotosDay: today, adPhotosThatDay: 1 },
+    });
+    const more = fresh.count
+      ? fresh
+      : await prisma.user.updateMany({
+          where: { id: request.userId, adPhotosDay: today, adPhotosThatDay: { lt: AD_PHOTOS_PER_DAY } },
+          data: { snapsEarned: { increment: 1 }, adPhotosThatDay: { increment: 1 } },
+        });
+    if (!more.count) throw new HttpError(429, 'That is all the photos ads can earn today. More tomorrow, or go Pro.', 'ad_photos_used');
+    return standing(request.userId);
   });
 
   app.post('/redeem', async (request) => {

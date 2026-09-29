@@ -1,3 +1,4 @@
+import { adsOnThisDevice } from '../../lib/ads';
 import { useState } from 'react';
 import type { MealSlot } from '../../lib/types';
 import { FoodThumb } from '../../fridge/Fridge';
@@ -86,14 +87,16 @@ export function SnapStage({ scanning = false, photo }: { scanning?: boolean; pho
 }
 
 /** Eaten's two ways to log what did not come from the pantry. Everyone starts without Pro; the line says where they stand. */
-export function LogActions({ status, onSnap, onOther }: { status: { plus: boolean; freeLeft: number | null } | null; onSnap: () => void; onOther: () => void }) {
+export function LogActions({ status, onSnap, onOther }: { status: { plus: boolean; freeLeft: number | null; adPhotosLeft?: number } | null; onSnap: () => void; onOther: () => void }) {
   const standing = !status
     ? 'Calories from a photo'
     : status.plus
       ? 'Pro: as many as you like'
       : (status.freeLeft ?? 0) > 0
         ? `${status.freeLeft} free ${status.freeLeft === 1 ? 'photo' : 'photos'} left`
-        : 'Needs Pro';
+        : adsOnThisDevice() && (status.adPhotosLeft ?? 0) > 0
+          ? 'One more with a short ad'
+          : 'Needs Pro';
   return (
     <div className="log-actions">
       <button type="button" className="snap-btn" onClick={onSnap}>
@@ -220,7 +223,27 @@ export function SnapReview({
 }
 
 /** Pantry2Plate Pro. Payments are not switched on yet, so a code is the only way in, and the page says so. */
-export function Paywall({ usedFree, busy = false, error, onRedeem }: { usedFree: number; busy?: boolean; error?: string | null; onRedeem: (code: string) => void }) {
+export function Paywall({
+  usedFree,
+  busy = false,
+  error,
+  onRedeem,
+  adPhotosLeft = 0,
+  watching = false,
+  adNote,
+  onWatchAd,
+}: {
+  usedFree: number;
+  busy?: boolean;
+  error?: string | null;
+  onRedeem: (code: string) => void;
+  /** photos a short ad can still earn today */
+  adPhotosLeft?: number;
+  watching?: boolean;
+  adNote?: string | null;
+  /** only where ads can play: the iPhone app */
+  onWatchAd?: () => void;
+}) {
   const [plan, setPlan] = useState<'year' | 'month'>('year');
   const [redeeming, setRedeeming] = useState(false);
   const [code, setCode] = useState('');
@@ -255,6 +278,23 @@ export function Paywall({ usedFree, busy = false, error, onRedeem }: { usedFree:
       </div>
       <button type="button" className="btn block" style={{ marginTop: 16 }} disabled>Start 7-day free trial</button>
       <p className="fine" style={{ textAlign: 'center', marginTop: 8 }}>Not available until payments are switched on.</p>
+
+      {onWatchAd ? (
+        <div className="ad-offer">
+          <span className="or">or</span>
+          {adPhotosLeft > 0 ? (
+            <>
+              <button type="button" className="btn secondary block" disabled={busy || watching} onClick={onWatchAd}>
+                <Icon name="play" size={18} /> {watching ? 'Getting the ad…' : 'Watch a short ad for 1 more photo'}
+              </button>
+              <p className="fine" style={{ textAlign: 'center', marginTop: 8 }}>{adPhotosLeft} more {adPhotosLeft === 1 ? 'photo' : 'photos'} this way today</p>
+            </>
+          ) : (
+            <p className="fine" style={{ textAlign: 'center' }}>You’ve watched today’s ads. More photos this way tomorrow.</p>
+          )}
+          {adNote ? <div className="banner error" style={{ marginTop: 10 }}>{adNote}</div> : null}
+        </div>
+      ) : null}
 
       {redeeming ? (
         <div className="redeem">

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './lib/auth';
 import { ToastProvider, Logo } from './ui/kit';
 import { TabBar } from './ui/TabBar';
+import { AdBanner } from './components/AdBanner';
 import Login from './screens/Login';
 import Onboarding from './screens/Onboarding';
 import Reconsent from './screens/Reconsent';
@@ -82,6 +83,7 @@ export default function App() {
           </Routes>
         </div>
         <TabBar />
+        <AdBanner plus={user.plus} />
       </div>
     </ToastProvider>
   );

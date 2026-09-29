@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api, type ApiError } from '../../lib/api';
 import type { MealSlot } from '../../lib/types';
-import { clearHandedPhoto, handedPhoto, photographMeal, readMeal, redeemPlus, snapStatus, type MealPhoto, type SnapStatus } from '../../lib/snap';
+import { clearHandedPhoto, earnAdPhoto, handedPhoto, photographMeal, readMeal, redeemPlus, snapStatus, type MealPhoto, type SnapStatus } from '../../lib/snap';
+import { adsOnThisDevice, watchAd } from '../../lib/ads';
+import { useAuth } from '../../lib/auth';
 import { Icon } from '../../ui/Icon';
 import { Page, Sheet, errorText, useToast } from '../../ui/kit';
 import { mealNow } from '../ItemSheet';
@@ -31,6 +33,7 @@ function mealName(items: SnapItem[]): string {
 export default function SnapFlow() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { refresh } = useAuth();
   const startOnPaywall = Boolean((useLocation().state as { paywall?: boolean } | null)?.paywall);
   const [photo, setPhoto] = useState<MealPhoto | null>(handedPhoto);
   const [stage, setStage] = useState<Stage>(startOnPaywall ? 'paywall' : 'describe');
@@ -48,6 +51,8 @@ export default function SnapFlow() {
   const [busy, setBusy] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [slow, setSlow] = useState(false);
+  const [watching, setWatching] = useState(false);
+  const [adNote, setAdNote] = useState<string | null>(null);
   // one read per photo, however many times React starts the effect: each read is an AI request
   const reading = useRef<{ photo: MealPhoto; hint: string; answer: ReturnType<typeof readMeal> } | null>(null);
 
@@ -148,6 +153,7 @@ export default function SnapFlow() {
     setPayError(null);
     try {
       setStatus(await redeemPlus(code));
+      void refresh(); // Pro for the whole app now: no more banner
       toast('Pro is on for this account.');
       setBusy(false);
       // straight back to the photo that was waiting (read afresh, now with Pro), or to taking one
@@ -158,6 +164,29 @@ export default function SnapFlow() {
     } catch (cause) {
       setPayError(errorText(cause, 'That code did not work.'));
       setBusy(false);
+    }
+  }
+
+  /** A short ad, chosen, for one more photo: then on to the photo that was waiting, or a new one. */
+  async function watchAdForPhoto() {
+    setWatching(true);
+    setAdNote(null);
+    try {
+      if (!(await watchAd())) {
+        setAdNote('No ad played through, so no photo was added. Try again in a minute.');
+        return;
+      }
+      setStatus(await earnAdPhoto());
+      setWatching(false);
+      toast('One more photo, thanks to that ad.');
+      reading.current = null;
+      if (photo && !base.length) { setStage('reading'); return; }
+      const next = await photographMeal().catch(() => null);
+      if (next) { setPhoto(next); setStage('describe'); } else navigate('/eaten');
+    } catch (cause) {
+      setAdNote(errorText(cause, 'That did not work. Try again.'));
+    } finally {
+      setWatching(false);
     }
   }
 
@@ -185,7 +214,16 @@ export default function SnapFlow() {
           onRetake={() => void retake()}
         />
       ) : null}
-      {stage === 'paywall' ? <Paywall usedFree={status?.freeTotal ?? 3} busy={busy} error={payError} onRedeem={(code) => void redeem(code)} /> : null}
+      {stage === 'paywall' ? <Paywall
+          usedFree={status?.freeTotal ?? 3}
+          busy={busy}
+          error={payError}
+          onRedeem={(code) => void redeem(code)}
+          adPhotosLeft={status?.adPhotosLeft ?? 0}
+          watching={watching}
+          adNote={adNote}
+          onWatchAd={adsOnThisDevice() ? () => void watchAdForPhoto() : undefined}
+        /> : null}
       {stage === 'problem' && problem ? (
         <div>
           <SnapStage photo={photo?.dataUrl || undefined} />

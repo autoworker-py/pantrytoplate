@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useNavigate } from 'react-router-dom';
 import { Overlay } from '../components/Overlay';
 import { Icon } from './Icon';
+import { coverBanner } from '../lib/ads';
 
 /* ---------- page ---------- */
 
@@ -75,6 +76,8 @@ export function Sheet({
 }) {
   const close = useRef(onClose);
   close.current = onClose;
+  // the ad banner floats above the page; a sheet rising from the bottom would slide under it
+  useEffect(() => coverBanner(), []);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => event.key === 'Escape' && close.current();
     window.addEventListener('keydown', onKey);

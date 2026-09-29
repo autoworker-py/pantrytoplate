@@ -9,8 +9,8 @@
  * next visit. Only bump it for changes that alter what is collected, why, who
  * receives it, or how long it is kept — not for typos.
  */
-export const PRIVACY_VERSION = '2026-09-27';
-export const PRIVACY_EFFECTIVE = '27 September 2026';
+export const PRIVACY_VERSION = '2026-09-29';
+export const PRIVACY_EFFECTIVE = '29 September 2026';
 
 export const PRIVACY_POLICY = `# Privacy Notice
 
@@ -80,8 +80,11 @@ months says a great deal about them. It is treated with the same care.
 - **Session tokens.** Signing in issues a token that your browser stores and
   sends with each request. It expires after 30 days.
 - **Local browser storage.** Your session token and your light/dark preference
-  are stored in your browser. No advertising, analytics or tracking cookies are
-  set. The app does not use Google Analytics or any equivalent.
+  are stored in your browser. No analytics or tracking cookies are set, and the
+  app does not use Google Analytics or any equivalent.
+- **Ads, on the iPhone app without Pro.** Google's advertising SDK collects some
+  information about the device in order to show ads. Section 5 says exactly
+  what, and how to limit it.
 
 ### 2.4 What is never collected
 
@@ -104,13 +107,17 @@ months says a great deal about them. It is treated with the same care.
 | Showing your diary and reports | Consumption and waste logs | Contract |
 | Looking up barcodes and nutrition | Barcode numbers, search terms | Legitimate interests |
 | Keeping the service working and secure | Server logs | Legitimate interests |
+| Showing ads to accounts without Pro (iPhone app) | Device and ad information collected by Google's SDK; the advertising identifier only if you allow tracking | Consent where the law requires it; otherwise legitimate interests |
 
 Consent for the calorie calculator is separate from your agreement to this
 notice, is asked for at the point of use, and can be withdrawn by deleting those
 fields. Withdrawing it does not affect the rest of the app.
 
-Your data is **never** used for advertising, sold, rented, shared with data
-brokers, or used to train machine-learning models.
+What you put into the app — your pantry, diary, recipes, body data and email —
+is **never** used for advertising, sold, rented, shared with data brokers, or
+used to train machine-learning models. The ads in section 5 are chosen by Google
+from the device information its own SDK collects; the app passes Google nothing
+about you.
 
 ---
 
@@ -118,8 +125,9 @@ brokers, or used to train machine-learning models.
 
 ### 4.1 Nobody, mostly
 
-The app has no analytics provider, no advertising network, no customer-support
-tool, and no third-party SDK. Other users of the same installation cannot see
+The app has no analytics provider and no customer-support tool. Its one
+third-party SDK is Google's advertising SDK in the iPhone app, described in
+section 5, and no ads are requested for Pro accounts. Other users of the same installation cannot see
 your pantry, your diary, or the recipes you import — that separation is enforced
 in the code and covered by automated tests.
 
@@ -167,13 +175,30 @@ tell you unless legally prohibited from doing so.
 
 ---
 
-## 5. Sponsored content
+## 5. Advertising
 
-The app may display clearly labelled sponsored placements. These are **static
-and local**: they are chosen from a list stored in this app's own database based
-on what is on your shopping list. No advertising network is contacted, no
-tracking pixel loads, no third party learns anything about you, and no data
-leaves the app. They can be switched off entirely in Settings.
+Accounts without Pro see a few ads in the iPhone app, and nowhere else: a slim
+banner on the Recipes and Eaten screens, and, once the free meal photos are
+used, a short ad you can choose to watch for one more. Pro accounts see no ads,
+and no ads are requested for them.
+
+The ads come from **Google AdMob**. To choose and show an ad, and to count views,
+clicks and fraud, Google's SDK collects information about the device: its model
+and operating system, its IP address, the app, and how you interact with the
+ads. It does not receive your pantry, your diary, your email or anything else
+you have put into the app.
+
+- **Personalised ads.** The first time an ad would appear, iOS asks whether the
+  app may track you. If you allow it, Google may use your device's advertising
+  identifier to personalise and measure ads. If you decline, it is not used.
+  You can change your answer at any time in the iPhone's Settings, under
+  Privacy & Security, Tracking.
+- **UK, EEA and Switzerland.** Before any ad is requested, Google's consent form
+  asks what you agree to, as the law there requires.
+
+What Google does with this information is governed by Google's privacy policy
+(policies.google.com/privacy), including how it uses information from apps that
+use its services (policies.google.com/technologies/partner-sites).
 
 ---
 
@@ -261,7 +286,10 @@ allergens.
 
 External food lookups go to services that may be hosted outside the UK and EEA,
 including the United States. Only an anonymous barcode number or search term is
-sent. No personal data is transferred internationally by the app itself.
+sent. On the iPhone app without Pro, Google's advertising SDK sends device
+information to Google, which may process it in the United States (section 5).
+Apart from that, no personal data is transferred internationally by the app
+itself.
 
 ---
 

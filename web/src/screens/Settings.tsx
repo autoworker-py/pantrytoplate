@@ -123,9 +123,6 @@ export default function Settings() {
                 }}
               />
             </Row>
-            <Row title="Sponsored suggestions" sub="Demo placements: plain brand names, always labelled, no tracking.">
-              <Switch on={s.adsEnabled} label="Sponsored suggestions" onChange={(v) => void save({ adsEnabled: v }, v ? 'Sponsored suggestions on.' : 'Sponsored suggestions off.')} />
-            </Row>
           </div>
 
           <div className="section"><h2>Your data</h2></div>

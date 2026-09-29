@@ -63,6 +63,10 @@
 .plan .price { font-family: var(--display); font-size: 21px; font-weight: 700; }
 .plan .price small { font-size: 13px; font-weight: 600; color: var(--ink-3); }
 .plan .s { font-size: 12.5px; color: var(--ink-3); }
+/* the free way: a short ad for one more photo, set apart from Pro by a quiet "or" */
+.ad-offer { margin-top: 18px; display: flex; flex-direction: column; }
+.ad-offer .or { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; color: var(--ink-3); font-size: 13px; }
+.ad-offer .or::before, .ad-offer .or::after { content: ''; flex: 1; height: 1px; background: var(--line-2); }
 .redeem { margin-top: 14px; padding: 4px 16px 16px; border-radius: var(--r); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line); }
 .redeem input { letter-spacing: .12em; font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
 .paywall-hero .snap-corners { display: none; }

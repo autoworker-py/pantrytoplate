@@ -91,6 +91,8 @@ const routes: FastifyPluginAsync = async (app) => {
         id: request.user.sub,
         email: request.user.email,
         onboarded: Boolean(user?.onboardedAt),
+        /** Pantry2Plate Pro: no ads, and as many meal photos as they like */
+        plus: user?.plusSince != null,
         /** false once the notice is revised, which re-gates the app */
         privacyCurrent: user?.privacyVersion === PRIVACY_VERSION,
         privacyVersion: user?.privacyVersion ?? null,

@@ -43,6 +43,11 @@ model User {
   plusSince           DateTime?
   /// meal photos read on the free allowance, before Plus
   snapsUsed           Int      @default(0)
+  /// meal photos earned by watching an ad, on top of the free allowance
+  snapsEarned         Int      @default(0)
+  /// the person's own calendar day of their last ad-earned photo, and how many they earned that day
+  adPhotosDay         String?
+  adPhotosThatDay     Int      @default(0)
   /// comma separated diet tags that filter every suggestion, e.g. "vegetarian"
   dietTags            String?
   /// daily reminder about food about to expire

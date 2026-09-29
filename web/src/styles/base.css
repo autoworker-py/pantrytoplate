@@ -118,9 +118,9 @@ input, select, textarea { font: inherit; color: inherit; }
 .page-scroll {
   flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
   -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;
-  padding: 4px var(--gutter) calc(var(--tabs-h) + 28px);
+  padding: 4px var(--gutter) calc(var(--tabs-h) + var(--ad-h, 0px) + 28px);
 }
-.page-fixed { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; padding-bottom: var(--tabs-h); }
+.page-fixed { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; padding-bottom: calc(var(--tabs-h) + var(--ad-h, 0px)); }
 .brand-mark { width: 44px; height: 44px; border-radius: 50%; }
 
 /* ---------- tabs ---------- */
@@ -294,7 +294,7 @@ button.list-row:active, a.list-row:active { background: rgba(255, 244, 228, .03)
 /* ---------- toast ---------- */
 
 .toast {
-  position: fixed; left: 0; right: 0; margin: 0 auto; bottom: calc(var(--tabs-h) + 14px); z-index: var(--z-toast);
+  position: fixed; left: 0; right: 0; margin: 0 auto; bottom: calc(var(--tabs-h) + var(--ad-h, 0px) + 14px); z-index: var(--z-toast);
   width: fit-content; min-height: 50px; max-width: min(calc(100vw - 32px), 460px); padding: 0 8px 0 18px; border-radius: 16px;
   display: flex; align-items: center; gap: 14px;
   background: var(--btn); color: var(--on-light); font-weight: 600; font-size: 15px;

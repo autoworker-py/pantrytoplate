@@ -124,3 +124,54 @@ describe('the photo and the reply', () => {
     expect(items[1]).toMatchObject({ name: 'Butter', note: expect.stringContaining('Not visible') });
   });
 });
+
+describe('a short ad for one more photo', () => {
+  let other: { authorization: string };
+  const as = (headers: { authorization: string }) => ({
+    snap: () => app.inject({ method: 'POST', url: '/api/snap', headers, payload: photo }),
+    reward: () => app.inject({ method: 'POST', url: '/api/snap/reward', headers }),
+    status: async () => JSON.parse((await app.inject({ method: 'GET', url: '/api/snap/status', headers })).body),
+  });
+
+  beforeAll(async () => {
+    const registered = await app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      payload: { email: `snap-ads-${Date.now()}@example.test`, password: 'testpassword', acceptPrivacyVersion: PRIVACY_VERSION },
+    });
+    other = { authorization: `Bearer ${JSON.parse(registered.body).token}` };
+  });
+
+  it('is only offered once the free photos are gone', async () => {
+    const me = as(other);
+    expect(await me.status()).toMatchObject({ freeLeft: 3, adPhotosLeft: 3 });
+    const early = await me.reward();
+    expect(early.statusCode).toBe(400);
+    expect(JSON.parse(early.body).error).toBe('photos_left');
+  });
+
+  it('earns one photo per ad, up to three a day', async () => {
+    const me = as(other);
+    for (let i = 0; i < 3; i++) expect((await me.snap()).statusCode).toBe(200);
+    expect((await me.snap()).statusCode).toBe(402);
+    for (let i = 0; i < 3; i++) {
+      const earned = await me.reward();
+      expect(earned.statusCode).toBe(200);
+      expect(JSON.parse(earned.body)).toMatchObject({ freeLeft: 1, adPhotosLeft: 2 - i });
+      expect((await me.snap()).statusCode).toBe(200);
+    }
+    const capped = await me.reward();
+    expect(capped.statusCode).toBe(429);
+    expect(JSON.parse(capped.body).error).toBe('ad_photos_used');
+    expect(await me.status()).toMatchObject({ freeLeft: 0, adPhotosLeft: 0 });
+  });
+
+  it('has no ads for Pro, and the account says it is Pro', async () => {
+    const me = as(other);
+    await app.inject({ method: 'POST', url: '/api/snap/redeem', headers: other, payload: { code: 'test plus code' } });
+    expect(await me.status()).toMatchObject({ plus: true, adPhotosLeft: 0 });
+    expect(JSON.parse((await me.reward()).body).error).toBe('no_ads');
+    const account = JSON.parse((await app.inject({ method: 'GET', url: '/api/auth/me', headers: other })).body);
+    expect(account.user.plus).toBe(true);
+  });
+});

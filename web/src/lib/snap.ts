@@ -19,6 +19,8 @@ export interface SnapStatus {
   freeTotal: number;
   /** false when the server has no photo reader set up */
   available: boolean;
+  /** photos a short ad can still earn today, once the free ones are gone; 0 with Pro */
+  adPhotosLeft?: number;
 }
 
 export interface MealPhoto {
@@ -111,3 +113,5 @@ export const readMeal = (photo: MealPhoto, hint = '') =>
     { timeoutMs: 100_000 },
   );
 export const redeemPlus = (code: string) => api.post<SnapStatus>('/api/snap/redeem', { code });
+/** After an ad was watched through: one more photo. */
+export const earnAdPhoto = () => api.post<SnapStatus>('/api/snap/reward', {});
