@@ -13,6 +13,9 @@
  * pantry does not know what the pack weighed when it was full.
  */
 
+import { EDGE, Kit, dark, gone, hl, light, lvl, type Drawn } from './art-kit';
+import { FOOD_ART } from './art-foods';
+
 export type ArtKind =
   | 'jug' | 'tub' | 'butter' | 'eggs' | 'block' | 'wedge' | 'tray' | 'sliced' | 'leftover' | 'leafy' | 'punnet'
   | 'berries' | 'produce' | 'long' | 'jar' | 'bottle' | 'tin' | 'box' | 'sack' | 'carton' | 'loaf' | 'flat'
@@ -28,8 +31,12 @@ export interface ArtSpec {
   color: string;
   /** the packaging's colour: lid, label, cap */
   accent: string;
-  /** shape variant for loose produce and trays */
-  shape?: 'round' | 'oval' | 'long' | 'curve' | 'bulb' | 'big' | 'pepper' | 'sausage' | 'fillet';
+  /**
+   * shape variant for loose produce and trays ('round', 'oval', 'long', 'curve',
+   * 'bulb', 'big', 'pepper', 'sausage', 'fillet'), or the name of a food drawn as
+   * itself in art-foods.ts ('broccoli', 'rice', 'steak'…)
+   */
+  shape?: string;
 }
 
 export interface ItemLike {
@@ -53,6 +60,244 @@ function hash(text: string): number {
   return Math.abs(h);
 }
 const pick = (name: string, salt = 0) => PALETTE[(hash(name) + salt) % PALETTE.length];
+
+/**
+ * The default ingredients, drawn as themselves (art-foods.ts). The kind is
+ * still what decides where a thing sits and which categories it may appear
+ * in; the shape names its drawing. Checked before the containers below, and
+ * the specific before the general: black pepper is not a pepper.
+ */
+const THEMSELVES: Array<[RegExp, ArtKind, string, string]> = [
+  // names that contain another food's name go first
+  [/pineapple/, 'produce', '#d9a441', 'pineapple'],
+  [/sweet potato fries|frozen chips|oven chips|french fries/, 'sack', '#f0c65a', 'frozenchips'],
+  [/hash brown/, 'sack', '#d9a44a', 'hashbrowns'],
+  [/frozen (mixed )?berr|frozen fruit|berries mixed/, 'sack', '#6b3a5e', 'frozenberries'],
+  [/frozen spinach/, 'sack', '#3f7a3a', 'frozenspinach'],
+  [/mixed veg|frozen veg/, 'sack', '#8fc25a', 'frozenveg'],
+  [/garden peas|frozen peas|petits? pois/, 'sack', '#6fae3a', 'frozenpeas'],
+  [/sugar snap|mange ?tout|snow peas?|edamame|pea pods?/, 'long', '#7fb04a', 'peapod'],
+  [/pickled onion/, 'jar', '#f1eadb', 'pickledonions'],
+  [/spring onion|scallion|green onion/, 'long', '#5d9a45', 'springonion'],
+  [/cherry tomato|baby tomato|vine tomato|tomatoes on the vine/, 'berries', '#d9432f', 'vinetomatoes'],
+  [/peanut butter|almond butter|cashew butter|nut butter/, 'jar', '#b9803f', 'nutbutter'],
+  [/chocolate spread|hazelnut spread|nutella/, 'jar', '#4a2e22', 'nutbutter'],
+  [/tahini/, 'jar', '#d9c08a', 'nutbutter'],
+  [/granola bar|cereal bar|protein bar|flapjack/, 'box', '#c9914a', 'chocolate'],
+  [/rice cake|rice cracker/, 'box', '#f1e8d0', 'ricecake'],
+  [/rice noodle|egg noodle|noodle nest|udon|soba/, 'box', '#f0d27a', 'nests'],
+  [/instant noodle|pot noodle|cup noodle|ramen/, 'box', '#f0d27a', 'cupnoodle'],
+  [/sausage roll/, 'loaf', '#d9a45a', 'sausageroll'],
+  [/puff pastry|shortcrust|filo|phyllo|pastry sheet/, 'box', '#f1e6cf', 'pastry'],
+  [/dried apricot/, 'sack', '#e8923a', 'driedfruit'],
+  [/prune/, 'sack', '#3a1f2a', 'driedfruit'],
+  [/raisin|sultana|currant/, 'sack', '#4a2a2a', 'driedfruit'],
+  [/\bdates\b|medjool/, 'sack', '#6a3a1f', 'driedfruit'],
+  [/dried cranberr|craisin/, 'sack', '#b3263a', 'driedfruit'],
+  [/dried fruit|dried mango|goji/, 'sack', '#8a4a2a', 'driedfruit'],
+  [/tuna(?! steak)|sardine|anchov|crab meat/, 'tin', '#3f6fa8', 'flattin'],
+  // meat and fish
+  [/nugget/, 'tray', '#d9953a', 'nuggets'],
+  [/drumstick/, 'tray', '#e8b49e', 'drumstick'],
+  [/\bwings?\b/, 'tray', '#e8b49e', 'wings'],
+  [/quorn|meat-?free mince|soya mince|veggie mince/, 'tray', '#c9a47a', 'mince'],
+  [/(chicken|turkey) mince|ground (chicken|turkey)/, 'tray', '#efc4b6', 'mince'],
+  [/pork mince|ground pork|sausage ?meat/, 'tray', '#e0928a', 'mince'],
+  [/mince|ground beef|ground lamb/, 'tray', '#b8453d', 'mince'],
+  [/stewing|diced|braising/, 'tray', '#a8453d', 'diced'],
+  [/duck/, 'tray', '#e8d0a8', 'duck'],
+  [/chicken|turkey breast|turkey fillet/, 'tray', '#efc4b6', 'breast'],
+  [/\bchops?\b/, 'tray', '#e9a79a', 'chop'],
+  [/pork belly|pork loin|pork shoulder|pork fillet/, 'tray', '#e9a79a', 'steak'],
+  [/tuna steak/, 'tray', '#b5485c', 'steak'],
+  [/steak|sirloin|ribeye|rib-eye|rump|venison|\bbeef\b|\blamb\b/, 'tray', '#b8453d', 'steak'],
+  [/salmon/, 'tray', '#f08a5d', 'salmon'],
+  [/kipper/, 'tray', '#c98a4a', 'wholefish'],
+  [/mackerel|sardine|trout|sea bass|herring|whole fish/, 'tray', '#8fa3b8', 'wholefish'],
+  [/prawn|shrimp/, 'tray', '#f3a08b', 'prawns'],
+  [/mussel|clam|cockle/, 'tray', '#2a3242', 'mussels'],
+  [/bacon|pancetta|streaky|lardon/, 'sliced', '#c8574c', 'bacon'],
+  [/chorizo/, 'sliced', '#c24a2a', 'salami'],
+  [/salami|pepperoni|saucisson/, 'sliced', '#a8323a', 'salami'],
+  [/\bham\b|gammon|prosciutto|parma|turkey slices/, 'sliced', '#ef9a96', 'ham'],
+  // dairy
+  [/brie|camembert/, 'block', '#f4efe2', 'wheel'],
+  [/gouda|edam/, 'block', '#e9b73a', 'wheel'],
+  [/mini cheese|babybel|cheese round/, 'block', '#d8283a', 'babybel'],
+  [/emmental|gruy[eè]re|jarlsberg|swiss cheese/, 'wedge', '#f2d98a', 'swiss'],
+  [/blue cheese|stilton|gorgonzola|roquefort|dolcelatte/, 'wedge', '#f3eedc', 'bluecheese'],
+  [/mozzarella|burrata/, 'tub', '#f2f1ea', 'mozzarella'],
+  [/ice cream|gelato/, 'box', '#f3e2c0', 'icecream'],
+  // bakery
+  [/baguette|french stick/, 'loaf', '#d9a45a', 'baguette'],
+  [/croissant/, 'loaf', '#d99a4a', 'croissant'],
+  [/bagel/, 'loaf', '#c98d4a', 'bagel'],
+  [/english muffin/, 'loaf', '#e9d3a4', 'muffin'],
+  [/crumpet/, 'loaf', '#e8c98a', 'crumpet'],
+  [/burger bun|brioche bun|hot dog bun|bread roll|\bbuns?\b/, 'loaf', '#d49a52', 'bun'],
+  [/sourdough|rye bread|boule|cob loaf|pumpernickel/, 'loaf', '#b9814a', 'boule'],
+  [/naan/, 'flat', '#e9cf9a', 'naan'],
+  [/pitta|pita/, 'flat', '#ecd8ae', 'pitta'],
+  [/quiche|\btart\b/, 'loaf', '#f5d77a', 'quiche'],
+  // cupboard: packets
+  [/wild rice/, 'sack', '#3a2a22', 'rice'],
+  [/brown rice/, 'sack', '#c9a878', 'rice'],
+  [/\brice\b(?! (pudding|vinegar|milk|flour))|basmati|arborio|jasmine|risotto/, 'sack', '#f4f1e8', 'rice'],
+  [/quinoa/, 'sack', '#efe6cf', 'rice'],
+  [/couscous/, 'sack', '#f0d890', 'rice'],
+  [/bulgur/, 'sack', '#c9a060', 'rice'],
+  [/barley/, 'sack', '#e8dcc0', 'rice'],
+  [/polenta|semolina|cornmeal/, 'sack', '#f0c85a', 'rice'],
+  [/red lentil/, 'sack', '#e0703a', 'rice'],
+  [/lentil/, 'sack', '#7a7a4a', 'rice'],
+  [/split pea/, 'sack', '#c9c05a', 'rice'],
+  [/breadcrumb|panko/, 'box', '#d9a45a', 'rice'],
+  [/wholemeal flour|whole ?wheat flour|rye flour|spelt flour/, 'sack', '#c9a878', 'flour'],
+  [/flour|cornstarch/, 'sack', '#f3ede0', 'flour'],
+  [/icing sugar|powdered sugar|caster sugar/, 'sack', '#fbfaf6', 'sugar'],
+  [/brown sugar|demerara|muscovado/, 'sack', '#b8804a', 'sugar'],
+  [/\bsugar\b/, 'sack', '#fbfaf6', 'sugar'],
+  [/rolled oats|porridge|\boats\b|oatmeal/, 'box', '#d9c08a', 'oats'],
+  [/cocoa|hot chocolate/, 'box', '#5a3222', 'cocoa'],
+  [/cornflakes|corn flakes/, 'box', '#f0c05a', 'cereal'],
+  [/bran flakes|all-?bran/, 'box', '#a8743a', 'cereal'],
+  [/wheat biscuit|weetabix|shredded wheat/, 'box', '#c9974a', 'cereal'],
+  [/granola|muesli|cereal|puffed rice|crispies/, 'box', '#c9914a', 'cereal'],
+  [/spaghetti|linguine|tagliatelle|fettuccine|lasagne|lasagna/, 'box', '#f0d27a', 'spaghetti'],
+  [/penne|rigatoni|ziti/, 'box', '#f0d27a', 'penne'],
+  [/fusilli|rotini/, 'box', '#f0d27a', 'fusilli'],
+  [/macaroni/, 'box', '#f0d27a', 'macaroni'],
+  [/orzo|risoni/, 'box', '#f0d27a', 'orzo'],
+  [/tortilla chips|nachos|corn chips/, 'sack', '#e9b84a', 'tortillachips'],
+  [/pretzel/, 'sack', '#8a4a1a', 'pretzels'],
+  [/popcorn/, 'sack', '#fbf3dc', 'popcorn'],
+  [/crisps|potato chips/, 'sack', '#f3c65a', 'crisps'],
+  [/dark chocolate/, 'sack', '#3a2418', 'chocolate'],
+  [/white chocolate/, 'sack', '#f1e4c4', 'chocolate'],
+  [/milk chocolate|chocolate bar|^chocolate$/, 'sack', '#6e4424', 'chocolate'],
+  [/oatcake/, 'box', '#c9a878', 'digestive'],
+  [/digestive|rich tea|hobnob/, 'box', '#c98d4a', 'digestive'],
+  [/cookie/, 'box', '#c98d4a', 'cookie'],
+  [/shortbread/, 'box', '#ecc98a', 'shortbread'],
+  [/cracker|crispbread|water biscuit/, 'box', '#e5c07b', 'cracker'],
+  [/tea bag|green tea|\btea\b/, 'box', '#6b4a33', 'tea'],
+  [/instant coffee/, 'jar', '#4a2e22', ''],
+  [/coffee/, 'sack', '#2e2019', 'coffee'],
+  [/tofu/, 'box', '#f6f3ea', 'tofu'],
+  [/tempeh/, 'box', '#d9c08a', 'tofu'],
+  [/pizza/, 'box', '#d0452f', 'pizza'],
+  [/fish finger|fish stick/, 'box', '#e9a84a', 'fishfingers'],
+  [/falafel/, 'produce', '#8a5a2a', 'falafel'],
+  // cupboard: jars
+  [/honey/, 'jar', '#e3a52f', 'honey'],
+  [/marmalade/, 'jar', '#e0822a', 'jam'],
+  [/\bjam\b|preserve|conserve|jelly|cranberry sauce/, 'jar', '#b3263a', 'jam'],
+  [/almond(?! milk| butter| extract)/, 'jar', '#b9803f', 'almonds'],
+  [/cashew/, 'jar', '#e8cf9a', 'cashews'],
+  [/walnut|pecan/, 'jar', '#c9985a', 'walnuts'],
+  [/peanut/, 'jar', '#d9b77c', 'peanuts'],
+  [/pine nut/, 'jar', '#efe2c0', 'pinenuts'],
+  [/trail mix|mixed nuts|nut mix/, 'jar', '#b98b4e', 'mixednuts'],
+  [/sesame seed/, 'jar', '#efe2c0', 'seeds'],
+  [/chia|poppy seed|nigella|black sesame/, 'jar', '#3a3a3a', 'seeds'],
+  [/sunflower seed|pumpkin seed|pepitas/, 'jar', '#8a8f7a', 'seeds'],
+  [/mustard seed/, 'jar', '#d9b44a', 'seeds'],
+  [/flax|linseed|caraway|fennel seed|cumin seed|coriander seed/, 'jar', '#8a6a3a', 'seeds'],
+  [/caper/, 'jar', '#6f7a3a', 'seeds'],
+  [/sprinkles|hundreds and thousands/, 'jar', '#e85a8a', 'sprinkles'],
+  [/green olive/, 'jar', '#7f8f3a', 'olives'],
+  [/black olive|kalamata|\bolives?\b(?! oil)/, 'jar', '#2c2a2a', 'olives'],
+  [/gherkin|pickle|cornichon/, 'jar', '#6f8a3a', 'gherkins'],
+  [/sauerkraut/, 'jar', '#e9e2b8', 'kraut'],
+  [/kimchi/, 'jar', '#d9543a', 'kraut'],
+  [/hummus|houmous/, 'jar', '#e3c98f', 'dip'],
+  [/guacamole/, 'jar', '#9cbc4a', 'dip'],
+  [/tzatziki|raita/, 'jar', '#f1efe6', 'dip'],
+  [/potato salad|coleslaw/, 'jar', '#f1e6c8', 'dip'],
+  // cupboard: bottles and cans
+  [/ketchup/, 'bottle', '#c0302a', 'squeeze'],
+  [/mayo|aioli|salad cream/, 'bottle', '#f4ecd2', 'squeeze'],
+  [/dijon|wholegrain mustard/, 'jar', '#c9a02a', ''],
+  [/mustard(?! seed| powder)/, 'bottle', '#e0b42a', 'squeeze'],
+  [/sriracha|hot sauce|tabasco/, 'bottle', '#d0402a', 'squeeze'],
+  [/bbq|barbecue|brown sauce/, 'bottle', '#5a2a1a', 'squeeze'],
+  [/passata/, 'bottle', '#c8323a', 'oil'],
+  [/lard|suet|dripping/, 'butter', '#f6f2e6', ''],
+  [/olive oil/, 'bottle', '#b5a23a', 'oliveoil'],
+  [/sesame oil/, 'bottle', '#b8742a', 'oil'],
+  [/coconut oil/, 'jar', '#f6f2e6', ''],
+  [/vegetable oil|sunflower oil|rapeseed|canola|groundnut oil|corn oil|\boil\b/, 'bottle', '#e8c84a', 'oil'],
+  [/balsamic/, 'bottle', '#3a1a14', 'oil'],
+  [/red wine vinegar/, 'bottle', '#8a2a3a', 'oil'],
+  [/cider vinegar/, 'bottle', '#d9a44a', 'oil'],
+  [/vinegar/, 'bottle', '#efe6c8', 'oil'],
+  [/soy sauce|tamari|fish sauce|oyster sauce|worcestershire|teriyaki|ponzu/, 'bottle', '#2a1a12', 'soy'],
+  [/maple|agave|golden syrup|treacle|molasses|syrup/, 'bottle', '#a8612a', 'maple'],
+  [/red wine|merlot|cabernet|shiraz|rioja/, 'bottle', '#2f3a2a', 'wine'],
+  [/white wine|dry white|sauvignon|chardonnay|pinot|\bwine\b/, 'bottle', '#c9d49a', 'wine'],
+  [/beer|lager|\bale\b|stout|cider/, 'bottle', '#6a3a12', 'beer'],
+  [/\bcola\b|\bcoke\b/, 'bottle', '#c8202a', 'can'],
+  [/tonic/, 'bottle', '#dfe9ef', 'can'],
+  [/sparkling water|soda water|fizzy water/, 'bottle', '#4a8fc8', 'can'],
+  [/lemonade/, 'bottle', '#f0d24a', 'can'],
+  [/stock cube|bouillon|oxo|gravy granule/, 'carton', '#d8a24a', 'stock'],
+  [/table salt|sea salt|rock salt|^salt$/, 'spice', '#f6f6f6', 'salt'],
+  [/black pepper|peppercorn/, 'spice', '#3a332c', 'grinder'],
+  // produce
+  [/broccoli|broccolini|tenderstem/, 'produce', '#3f7a3a', 'broccoli'],
+  [/cauliflower/, 'produce', '#f1e8cf', 'cauliflower'],
+  [/red cabbage/, 'produce', '#7a3a6a', 'cabbage'],
+  [/cabbage|savoy/, 'produce', '#a9c98a', 'cabbage'],
+  [/romaine|cos lettuce|iceberg|little gem|\blettuce\b/, 'produce', '#6fa84a', 'lettuce'],
+  [/watermelon/, 'produce', '#4f8f3e', 'watermelon'],
+  [/\bmelon\b|cantaloupe|honeydew|galia/, 'produce', '#c9b27a', 'melon'],
+  [/butternut/, 'produce', '#e2b06a', 'butternut'],
+  [/pumpkin(?! seed)/, 'produce', '#e07b2a', 'pumpkin'],
+  [/squash(?! concentrate)/, 'produce', '#35602f', 'pumpkin'],
+  [/celeriac/, 'produce', '#cbb58a', 'celeriac'],
+  [/grapefruit/, 'produce', '#f0906a', 'grapefruit'],
+  [/orange|clementine|satsuma|mandarin|tangerine/, 'produce', '#ef8f2b', 'orange'],
+  [/lemon(?!grass|ade| curd| juice)/, 'produce', '#f3d23f', 'lemon'],
+  [/\blimes?\b/, 'produce', '#7cae3a', 'lemon'],
+  [/\bapples?\b(?! sauce| juice| cider)/, 'produce', '#c9372c', 'apple'],
+  [/\bpears?\b/, 'produce', '#b9c24a', 'pear'],
+  [/peach|nectarine|apricot/, 'produce', '#f2a15a', 'peach'],
+  [/\bplums?\b/, 'produce', '#6c2d5a', 'plum'],
+  [/mango|papaya/, 'produce', '#f0b43a', 'mango'],
+  [/kiwi/, 'produce', '#8d6b3f', 'kiwi'],
+  [/avocado/, 'produce', '#3e5a2c', 'avocado'],
+  [/\bfigs?\b/, 'produce', '#5b3a55', 'fig'],
+  [/pomegranate/, 'produce', '#b3263a', 'pomegranate'],
+  [/strawberr/, 'berries', '#d8433c', 'strawberries'],
+  [/red grape/, 'berries', '#7c2a4a', 'grapes'],
+  [/\bgrapes?\b/, 'berries', '#9bbf4a', 'grapes'],
+  [/cherr(y|ies)\b/, 'berries', '#a81d2c', 'cherries'],
+  [/tomato(?!.*(paste|pur[eé]e|ketchup|sauce|chopped|tinned|canned|sun|passata|soup|salsa))/, 'produce', '#d9432f', 'tomato'],
+  [/red onion/, 'produce', '#8a3b5a', 'redonion'],
+  [/shallot/, 'produce', '#b86a4f', 'shallot'],
+  [/onion(?! powder| salt)/, 'produce', '#c9974a', 'onion'],
+  [/garlic(?! powder| salt| bread)/, 'produce', '#f1eadb', 'garlic'],
+  [/sweet potato/, 'produce', '#b8643a', 'sweetpotato'],
+  [/potato(?!.*(salad|chips|crisps|waffle))/, 'produce', '#b58a5c', 'potato'],
+  [/ginger|galangal|turmeric root/, 'produce', '#caa066', 'ginger'],
+  [/beetroot|\bbeets?\b/, 'produce', '#8e2f4f', 'beetroot'],
+  [/radish/, 'produce', '#d6394f', 'radish'],
+  [/brussels sprout/, 'produce', '#6f9a4a', 'sprouts'],
+  [/carrot/, 'long', '#ec8a2c', 'carrot'],
+  [/parsnip/, 'long', '#e8dcc0', 'parsnip'],
+  [/cucumber/, 'long', '#4f7d3b', 'cucumber'],
+  [/courgette|zucchini/, 'long', '#5b8f3e', 'courgette'],
+  [/aubergine|eggplant/, 'long', '#4b2a5a', 'aubergine'],
+  [/banana|plantain/, 'long', '#f1cf4b', 'banana'],
+  [/celery(?! salt| seed)/, 'long', '#a9cf7d', 'celery'],
+  [/\bleeks?\b/, 'long', '#7fae55', 'leek'],
+  [/asparagus/, 'long', '#6f9a4a', 'asparagus'],
+  [/green bean|runner bean|french bean|fine bean|string bean/, 'long', '#5d8f3a', 'greenbean'],
+  [/corn on the cob|corn cob|corncob|baby corn/, 'long', '#efc94c', 'corn'],
+  [/jalape/, 'long', '#4f8a3a', 'jalapeno'],
+  [/okra/, 'long', '#6f9a4a', 'chilli'],
+  [/chill?i(?! powder| flakes| sauce| paste| con)/, 'long', '#c8321f', 'chilli'],
+];
 
 /** name fragment → [kind, food colour, shape] — first match wins, so the specific come first */
 const RULES: Array<[RegExp, ArtKind, string?, ArtSpec['shape']?]> = [
@@ -184,18 +429,18 @@ const ALLOWED: Record<string, ArtKind[]> = {
   'Dairy & Eggs': ['jug', 'tub', 'butter', 'eggs', 'carton', 'block'],
   Cheese: ['block', 'wedge', 'tub'],
   'Meat & Seafood': ['tray', 'sliced', 'tin', 'leftover'],
-  Produce: ['produce', 'long', 'leafy', 'punnet', 'berries', 'bunch', 'sack'],
-  Fruit: ['produce', 'long', 'berries', 'punnet'],
+  Produce: ['produce', 'long', 'leafy', 'punnet', 'berries', 'bunch', 'sack', 'jar'],
+  Fruit: ['produce', 'long', 'berries', 'punnet', 'sack'],
   Herbs: ['bunch', 'spice', 'leafy'],
   Bakery: ['loaf', 'flat', 'produce', 'box'],
   Grains: ['sack', 'box'],
   Pasta: ['box', 'sack'],
-  Legumes: ['sack', 'tin', 'box', 'produce'],
+  Legumes: ['sack', 'tin', 'box', 'produce', 'tray', 'long'],
   Baking: ['sack', 'box', 'spice', 'bottle', 'jar'],
-  'Canned Goods': ['tin'],
+  'Canned Goods': ['tin', 'jar'],
   Condiments: ['jar', 'bottle', 'carton', 'spice', 'tin'],
   Sauces: ['jar', 'bottle'],
-  'Oils & Vinegars': ['bottle'],
+  'Oils & Vinegars': ['bottle', 'jar', 'butter'],
   Spices: ['spice', 'jar'],
   'Nuts & Seeds': ['jar', 'sack'],
   Snacks: ['box', 'sack', 'jar'],
@@ -213,10 +458,13 @@ export function artFor(item: ItemLike): ArtSpec {
     kind = 'leftover';
     color = '#8e3d24';
   } else {
-    const rule = RULES.find(([pattern]) => pattern.test(name));
     const allowed = item.category ? ALLOWED[item.category] : undefined;
-    if (rule && (!allowed || allowed.includes(rule[1]))) {
+    // the first rule that both names it and suits its kind of food: orange juice is a carton, not an orange
+    const fits = ([pattern, k]: [RegExp, ArtKind, ...unknown[]]) => pattern.test(name) && (!allowed || allowed.includes(k));
+    const rule = THEMSELVES.find(fits) ?? RULES.find(fits);
+    if (rule) {
       [, kind, color = color, shape] = rule;
+      if (shape === '') shape = undefined;
     } else if (item.category && BY_CATEGORY[item.category]) {
       [kind, color, shape] = BY_CATEGORY[item.category];
       // an unfamiliar tin or box still looks like its own product, not a clone
@@ -228,7 +476,8 @@ export function artFor(item: ItemLike): ArtSpec {
   // whatever it is, if it is counted in cans it is a tin on the shelf
   if (unit === 'can' || unit === 'tin') kind = 'tin';
   const q = Math.max(0, item.quantity);
-  let n = 1;
+  // weighed food shows a full set unless it is running low; counted food shows each one left
+  let n = item.isLowStock ? 1 : 12;
   let level = item.isLowStock ? 0.22 : 0.82;
   if (COUNT_UNITS.has(unit)) {
     n = Math.max(1, Math.round(q));
@@ -246,55 +495,6 @@ export function artFor(item: ItemLike): ArtSpec {
 
 /* ---------- drawing ---------- */
 
-let seq = 0;
-const uid = (p: string) => `${p}${(++seq).toString(36)}`;
-const EDGE = 'stroke="rgba(20,22,26,.28)" stroke-width=".8" stroke-linejoin="round"';
-
-function mix(hex: string, to: string, amount: number): string {
-  const a = parseInt(hex.slice(1), 16), b = parseInt(to.slice(1), 16);
-  const ch = (x: number, shift: number) => (x >> shift) & 255;
-  const m = (s: number) => Math.round(ch(a, s) + (ch(b, s) - ch(a, s)) * amount);
-  return `#${((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1)}`;
-}
-const light = (c: string, a = 0.35) => mix(c, '#ffffff', a);
-const dark = (c: string, a = 0.3) => mix(c, '#000000', a);
-
-class Kit {
-  defs: string[] = [];
-  grad(stops: Array<[number, string, number?]>, dir: 'v' | 'h' | 'd' | 'r' = 'v'): string {
-    const id = uid('g');
-    const s = stops.map(([o, c, a = 1]) => `<stop offset="${o}" stop-color="${c}" stop-opacity="${a}"/>`).join('');
-    if (dir === 'r') this.defs.push(`<radialGradient id="${id}" cx=".38" cy=".3" r=".78">${s}</radialGradient>`);
-    else {
-      const [x2, y2] = dir === 'h' ? [1, 0] : dir === 'd' ? [1, 1] : [0, 1];
-      this.defs.push(`<linearGradient id="${id}" x1="0" y1="0" x2="${x2}" y2="${y2}">${s}</linearGradient>`);
-    }
-    return `url(#${id})`;
-  }
-  /** a cylinder's light: bright left of centre, falling away to both edges */
-  cyl(c: string): string {
-    return this.grad([[0, dark(c, 0.18)], [0.28, light(c, 0.28)], [0.62, c], [1, dark(c, 0.3)]], 'h');
-  }
-  clip(shape: string): string {
-    const id = uid('c');
-    this.defs.push(`<clipPath id="${id}">${shape}</clipPath>`);
-    return `url(#${id})`;
-  }
-  shadow(cx: number, cy: number, rx: number, ry: number): string {
-    const id = uid('s');
-    this.defs.push(`<radialGradient id="${id}"><stop offset="0" stop-color="#000" stop-opacity=".45"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>`);
-    return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#${id})"/>`;
-  }
-  out(w: number, h: number, body: string) {
-    return { w, h, svg: `<defs>${this.defs.join('')}</defs>${body}` };
-  }
-}
-
-const hl = (x: number, y: number, w: number, h: number, o = 0.6) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(w, h) / 2}" fill="#fff" opacity="${o}"/>`;
-const lvl = (level: number, inner: string) => `<g class="lvl" style="transform:scaleY(${level})">${inner}</g>`;
-const gone = (i: number, n: number) => `class="gone-able${i >= n ? ' gone' : ''}" data-i="${i}"`;
-
-type Drawn = { w: number; h: number; svg: string };
 const DRAW: Record<ArtKind, (a: ArtSpec) => Drawn> = {
   jug(a) {
     const k = new Kit();
@@ -581,5 +781,6 @@ const DRAW: Record<ArtKind, (a: ArtSpec) => Drawn> = {
 };
 
 export function drawArt(spec: ArtSpec): Drawn {
-  return DRAW[spec.kind](spec);
+  const itself = spec.shape ? FOOD_ART[spec.shape] : undefined;
+  return itself ? itself(spec) : DRAW[spec.kind](spec);
 }
