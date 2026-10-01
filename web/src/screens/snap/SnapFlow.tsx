@@ -1,3 +1,4 @@
+import { proOnOffer } from '../../lib/native';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api, type ApiError } from '../../lib/api';
@@ -194,7 +195,7 @@ export default function SnapFlow() {
   const editingItem = items.find((item) => item.id === editing) ?? null;
 
   return (
-    <Page left={close} title={stage === 'paywall' ? 'Pantry2Plate Pro' : 'Snap a meal'}>
+    <Page left={close} title={stage === 'paywall' && proOnOffer ? 'Pantry2Plate Pro' : 'Snap a meal'}>
       {stage === 'describe' ? (
         <SnapDescribe photo={photo?.dataUrl || undefined} hint={hint} onHint={setHint} onRead={() => setStage('reading')} onRetake={() => void retake()} />
       ) : null}

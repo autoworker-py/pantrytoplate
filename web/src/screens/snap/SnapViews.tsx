@@ -1,4 +1,5 @@
 import { adsOnThisDevice } from '../../lib/ads';
+import { proOnOffer } from '../../lib/native';
 import { useState } from 'react';
 import type { MealSlot } from '../../lib/types';
 import { FoodThumb } from '../../fridge/Fridge';
@@ -95,8 +96,10 @@ export function LogActions({ status, onSnap, onOther }: { status: { plus: boolea
       : (status.freeLeft ?? 0) > 0
         ? `${status.freeLeft} free ${status.freeLeft === 1 ? 'photo' : 'photos'} left`
         : adsOnThisDevice() && (status.adPhotosLeft ?? 0) > 0
-          ? 'One more with a short ad'
-          : 'Needs Pro';
+          ? 'One more with an ad'
+          : proOnOffer
+            ? 'Needs Pro'
+            : 'More photos tomorrow';
   return (
     <div className="log-actions">
       <button type="button" className="snap-btn" onClick={onSnap}>
@@ -222,7 +225,11 @@ export function SnapReview({
   );
 }
 
-/** Pantry2Plate Pro. Payments are not switched on yet, so a code is the only way in, and the page says so. */
+/**
+ * The free photos are used up. On the website this is Pantry2Plate Pro, where
+ * payments are not switched on yet, so a code is the only way in and the page
+ * says so. The iPhone app offers only the ad (see proOnOffer).
+ */
 export function Paywall({
   usedFree,
   busy = false,
@@ -247,6 +254,20 @@ export function Paywall({
   const [plan, setPlan] = useState<'year' | 'month'>('year');
   const [redeeming, setRedeeming] = useState(false);
   const [code, setCode] = useState('');
+  const adOffer = onWatchAd ? <AdOffer adPhotosLeft={adPhotosLeft} busy={busy} watching={watching} adNote={adNote} onWatchAd={onWatchAd} alone={!proOnOffer} /> : null;
+
+  // the iPhone app sells nothing yet: the free photos are used, and an ad earns another
+  if (!proOnOffer) {
+    return (
+      <div className="paywall">
+        <div className="paywall-hero"><SnapStage /></div>
+        <h1 className="title-xl" style={{ marginTop: 20 }}>Snap a meal.<br />Skip the typing.</h1>
+        <p className="muted" style={{ marginTop: 8 }}>You’ve used your {usedFree} free photos. Watch a short ad and the next one is free too.</p>
+        {adOffer}
+      </div>
+    );
+  }
+
   return (
     <div className="paywall">
       <div className="test-mode"><Icon name="info" size={14} /> Test mode: payments aren’t switched on yet</div>
@@ -279,22 +300,7 @@ export function Paywall({
       <button type="button" className="btn block" style={{ marginTop: 16 }} disabled>Start 7-day free trial</button>
       <p className="fine" style={{ textAlign: 'center', marginTop: 8 }}>Not available until payments are switched on.</p>
 
-      {onWatchAd ? (
-        <div className="ad-offer">
-          <span className="or">or</span>
-          {adPhotosLeft > 0 ? (
-            <>
-              <button type="button" className="btn secondary block" disabled={busy || watching} onClick={onWatchAd}>
-                <Icon name="play" size={18} /> {watching ? 'Getting the ad…' : 'Watch a short ad for 1 more photo'}
-              </button>
-              <p className="fine" style={{ textAlign: 'center', marginTop: 8 }}>{adPhotosLeft} more {adPhotosLeft === 1 ? 'photo' : 'photos'} this way today</p>
-            </>
-          ) : (
-            <p className="fine" style={{ textAlign: 'center' }}>You’ve watched today’s ads. More photos this way tomorrow.</p>
-          )}
-          {adNote ? <div className="banner error" style={{ marginTop: 10 }}>{adNote}</div> : null}
-        </div>
-      ) : null}
+      {adOffer}
 
       {redeeming ? (
         <div className="redeem">
@@ -308,6 +314,26 @@ export function Paywall({
       ) : (
         <button type="button" className="btn ghost block" style={{ marginTop: 10 }} onClick={() => setRedeeming(true)}>Have a code? Redeem it</button>
       )}
+    </div>
+  );
+}
+
+/** A short ad for one more photo: next to Pro on the website, on its own in the iPhone app. */
+function AdOffer({ adPhotosLeft, busy, watching, adNote, onWatchAd, alone }: { adPhotosLeft: number; busy: boolean; watching: boolean; adNote?: string | null; onWatchAd: () => void; alone: boolean }) {
+  return (
+    <div className={`ad-offer${alone ? ' alone' : ''}`}>
+      {alone ? null : <span className="or">or</span>}
+      {adPhotosLeft > 0 ? (
+        <>
+          <button type="button" className={`btn ${alone ? '' : 'secondary '}block`} disabled={busy || watching} onClick={onWatchAd}>
+            <Icon name="play" size={18} /> {watching ? 'Getting the ad…' : 'Watch a short ad for 1 more photo'}
+          </button>
+          <p className="fine" style={{ textAlign: 'center', marginTop: 8 }}>{adPhotosLeft} more {adPhotosLeft === 1 ? 'photo' : 'photos'} this way today</p>
+        </>
+      ) : (
+        <p className="fine" style={{ textAlign: 'center' }}>You’ve watched today’s ads. More photos this way tomorrow.</p>
+      )}
+      {adNote ? <div className="banner error" style={{ marginTop: 10 }}>{adNote}</div> : null}
     </div>
   );
 }

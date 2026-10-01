@@ -79,3 +79,6 @@
 .snap-problem h2 { font-size: 19px; }
 .snap-problem p { margin-top: 6px; color: var(--ink-2); }
 .portion-chips { margin-top: 12px; }
+
+/* on the iPhone the ad is the only offer, so it stands on its own without the "or" */
+.ad-offer.alone { margin-top: 22px; }

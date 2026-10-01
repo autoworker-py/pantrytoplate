@@ -21,6 +21,14 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 
 const native = Capacitor.isNativePlatform();
 
+/**
+ * Whether Pro is offered here. Apple lets an app unlock a feature only through
+ * its own in-app purchase (App Review rule 3.1.1), which this app does not have
+ * yet, so the iPhone app neither sells Pro nor takes codes for it; the website
+ * still does. An account that already has Pro keeps it everywhere.
+ */
+export const proOnOffer = !native;
+
 const FIELDS = 'input, textarea, select, [contenteditable="true"]';
 
 export async function setUpNative(): Promise<void> {

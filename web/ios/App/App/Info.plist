@@ -77,7 +77,7 @@
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-3940256099942544~1458002511</string>
 	<key>NSUserTrackingUsageDescription</key>
-	<string>Lets the few ads in Pantry2Plate be more relevant to you. Pro has no ads at all.</string>
+	<string>Lets the few ads in Pantry2Plate be more relevant to you.</string>
 	<key>SKAdNetworkItems</key>
 	<array>
 		<dict>
