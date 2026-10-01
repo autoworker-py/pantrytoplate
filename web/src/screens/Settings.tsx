@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { api } from '../lib/api';
+import { api, tokenStore } from '../lib/api';
 import type { Settings as SettingsData, WeightGoal } from '../lib/types';
 import { useAuth } from '../lib/auth';
 import { forgetReceipts } from '../lib/receiptMemory';
@@ -206,8 +206,10 @@ function PasswordSheet({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      await api.post('/api/auth/password', { currentPassword: current, newPassword: next });
-      toast('Password changed.');
+      // a new password signs out every other device; this one keeps going on the token it is handed back
+      const { token } = await api.post<{ token?: string }>('/api/auth/password', { currentPassword: current, newPassword: next });
+      if (token) tokenStore.set(token);
+      toast('Password changed. Any other device you were signed in on is now signed out.');
       onClose();
     } catch (e) {
       setError(errorText(e, 'Could not change your password.'));

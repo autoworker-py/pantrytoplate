@@ -11,12 +11,13 @@
  * entry, and the response says which ones need a human eye.
  */
 import { prisma, type Tx } from '../db.js';
-import { badRequest } from '../errors.js';
+import { HttpError, badRequest } from '../errors.js';
 import { env } from '../env.js';
 import { parseIngredientLine, parseIsoDuration } from './ingredientParser.js';
 import { findOrCreateFoodByName, matchLocalFood } from './foodRef.js';
 import { normalizeUnit } from './units.js';
 import { sanitizeImportedText } from './text.js';
+import { BlockedAddressError, PageTooLargeError, fetchPublicPage } from '../external/safeFetch.js';
 
 interface JsonLdRecipe {
   '@type'?: string | string[];
@@ -210,23 +211,25 @@ export async function previewImport(url: string, db: Tx = prisma): Promise<Impor
   }
   if (env.offlineMode) throw badRequest('Offline mode is on, so links cannot be fetched.', 'offline');
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), env.externalTimeoutMs);
+  // only public pages, of a size a recipe page actually is (see safeFetch.ts)
   let html: string;
   try {
-    const response = await fetch(parsed.toString(), {
-      signal: controller.signal,
+    const page = await fetchPublicPage(parsed.toString(), {
+      timeoutMs: env.externalTimeoutMs,
+      maxBytes: 3 * 1024 * 1024,
       headers: { 'User-Agent': env.offUserAgent, Accept: 'text/html' },
     });
-    if (!response.ok) throw badRequest(`That page returned ${response.status}.`, 'fetch_failed');
-    html = await response.text();
+    if (page.status < 200 || page.status >= 300) throw badRequest(`That page returned ${page.status}.`, 'fetch_failed');
+    if (page.contentType && !/html|xml/i.test(page.contentType)) throw badRequest('That link is not a web page.', 'not_a_page');
+    html = page.body;
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
+    if (error instanceof HttpError) throw error;
+    if (error instanceof BlockedAddressError) throw badRequest('That link points somewhere the app cannot fetch.', 'blocked_address');
+    if (error instanceof PageTooLargeError) throw badRequest('That page is too big to read.', 'too_large');
+    if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
       throw badRequest('That page took too long to respond.', 'timeout');
     }
     throw badRequest('Could not fetch that page.', 'fetch_failed');
-  } finally {
-    clearTimeout(timer);
   }
 
   const blocks = [...html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
@@ -247,7 +250,8 @@ export async function previewImport(url: string, db: Tx = prisma): Promise<Impor
     );
   }
 
-  const lines = recipe.recipeIngredient ?? recipe.ingredients ?? [];
+  // a recipe has dozens of ingredients, not thousands; a page that claims more is cut short
+  const lines = (recipe.recipeIngredient ?? recipe.ingredients ?? []).slice(0, 100);
   const ingredients = [];
   for (const raw of lines) {
     const parsedLine = parseIngredientLine(String(raw));

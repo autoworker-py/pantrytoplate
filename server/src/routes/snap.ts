@@ -6,6 +6,7 @@ import { badRequest, HttpError } from '../errors.js';
 import { isPlusCode } from '../content/plus.js';
 import { PHOTO_SIDE, photoSize, readPlate, snapProvider } from '../services/snap.js';
 import { localDay } from '../zone.js';
+import { limit } from '../limits.js';
 
 /**
  * Photos an account without Pro can earn a day by watching an ad, once its
@@ -45,7 +46,8 @@ const routes: FastifyPluginAsync = async (app) => {
   app.get('/status', async (request) => standing(request.userId));
 
   // a 768 x 768 JPEG made on the phone: around a hundred kilobytes of base64
-  app.post('/', { bodyLimit: 8 * 1024 * 1024 }, async (request) => {
+  // each read is a paid AI request: a few a minute is any real meal, and no script's worth
+  app.post('/', { bodyLimit: 8 * 1024 * 1024, ...limit(10, '1 minute') }, async (request) => {
     const body = z
       .object({
         image: z.string().min(100),
@@ -71,7 +73,7 @@ const routes: FastifyPluginAsync = async (app) => {
   });
 
   /** An ad watched to the end, on an account whose free photos are gone: one more photo. */
-  app.post('/reward', async (request) => {
+  app.post('/reward', limit(20, '1 hour'), async (request) => {
     const before = await standing(request.userId);
     if (before.plus) throw badRequest('Pro has no ads to watch.', 'no_ads');
     if ((before.freeLeft ?? 0) > 0) throw badRequest('You still have a free photo to use first.', 'photos_left');
@@ -91,7 +93,7 @@ const routes: FastifyPluginAsync = async (app) => {
     return standing(request.userId);
   });
 
-  app.post('/redeem', async (request) => {
+  app.post('/redeem', limit(10, '15 minutes'), async (request) => {
     const { code } = z.object({ code: z.string().min(1).max(64) }).parse(request.body);
     if (!isPlusCode(code)) throw badRequest('That code is not valid.', 'bad_code');
     await prisma.user.update({ where: { id: request.userId }, data: { plusSince: new Date() } });

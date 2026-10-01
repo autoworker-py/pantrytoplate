@@ -14,4 +14,5 @@ export class HttpError extends Error {
 export const badRequest = (m: string, code = 'bad_request', d?: unknown) => new HttpError(400, m, code, d);
 export const unauthorized = (m = 'Not authenticated') => new HttpError(401, m, 'unauthorized');
 export const notFound = (m = 'Not found') => new HttpError(404, m, 'not_found');
+export const forbidden = (m: string, code = 'forbidden') => new HttpError(403, m, code);
 export const conflict = (m: string, code = 'conflict', d?: unknown) => new HttpError(409, m, code, d);

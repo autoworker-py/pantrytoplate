@@ -21,11 +21,11 @@ model User {
   createdAt    DateTime @default(now())
 
   /// "lose" | "maintain" | "gain" — drives recipe ranking and the calorie target
-  weightGoal          String  @default("maintain")
-  dailyCalorieTarget  Int     @default(2000)
-  proteinTargetGrams  Int?
-  carbsTargetGrams    Int?
-  fatTargetGrams      Int?
+  weightGoal         String @default("maintain")
+  dailyCalorieTarget Int    @default(2000)
+  proteinTargetGrams Int?
+  carbsTargetGrams   Int?
+  fatTargetGrams     Int?
 
   /// Demo monetisation: every ad surface disappears when this is false.
   /// Off by default — an app should not show anyone an advert they did not ask
@@ -38,43 +38,47 @@ model User {
   expiryWarningDays   Int     @default(3)
 
   /// "metric" | "imperial" — how amounts are shown back to you
-  unitSystem          String  @default("metric")
+  unitSystem      String    @default("metric")
   /// Pantry2Plate Plus: when it was unlocked (by a code, while payments are off)
-  plusSince           DateTime?
+  plusSince       DateTime?
   /// meal photos read on the free allowance, before Plus
-  snapsUsed           Int      @default(0)
+  snapsUsed       Int       @default(0)
   /// meal photos earned by watching an ad, on top of the free allowance
-  snapsEarned         Int      @default(0)
+  snapsEarned     Int       @default(0)
   /// the person's own calendar day of their last ad-earned photo, and how many they earned that day
-  adPhotosDay         String?
-  adPhotosThatDay     Int      @default(0)
+  adPhotosDay     String?
+  adPhotosThatDay Int       @default(0)
   /// comma separated diet tags that filter every suggestion, e.g. "vegetarian"
-  dietTags            String?
+  dietTags        String?
   /// daily reminder about food about to expire
-  notifyExpiry        Boolean @default(true)
+  notifyExpiry    Boolean   @default(true)
 
   /// ---- body data, used only to work out a calorie target ----
   /// All optional: the app is fully usable without any of it, and the target
   /// falls back to a plain default. Health data, so the privacy notice names it
   /// explicitly and it is deleted with the account.
-  heightCm            Float?
-  weightKg            Float?
-  birthYear           Int?
+  heightCm      Float?
+  weightKg      Float?
+  birthYear     Int?
   /// "male" | "female" | "unspecified" — Mifflin-St Jeor needs it; the third
   /// option averages the two constants rather than guessing.
-  sex                 String?
+  sex           String?
   /// "sedentary" | "light" | "moderate" | "active" | "very_active"
-  activityLevel       String?
+  activityLevel String?
   /// how much per week to lose or gain, in kg; null means the goal's default
-  weeklyRateKg        Float?
+  weeklyRateKg  Float?
   /// set once the first-run questions are done or deliberately skipped
-  onboardedAt         DateTime?
+  onboardedAt   DateTime?
 
   /// ---- consent ----
   /// When the privacy notice was accepted, and which version. A new version
   /// clears the gate and asks again rather than assuming past consent covers it.
-  privacyAcceptedAt   DateTime?
-  privacyVersion      String?
+  privacyAcceptedAt DateTime?
+  privacyVersion    String?
+
+  /// tokens issued before this no longer work: set by a password change, so a lost
+  /// phone's session ends when the owner changes their password
+  sessionsValidFrom DateTime?
 
   inventoryItems    InventoryItem[]
   consumptionLogs   ConsumptionLog[]
@@ -83,40 +87,41 @@ model User {
   recipeRatings     RecipeRating[]
   mealPlanEntries   MealPlanEntry[]
   recipes           Recipe[]
-  ownedFoods          FoodReference[] @relation("OwnedFoods")
+  ownedFoods        FoodReference[]    @relation("OwnedFoods")
+  packSizes         UserPackSize[]
 }
 
 /// The shared dictionary of foods. Both packaged barcode products and raw
 /// ingredients resolve to a row here, which is also the local cache for every
 /// USDA / Open Food Facts lookup we have ever made.
 model FoodReference {
-  id       String  @id @default(cuid())
-  name     String
+  id         String  @id @default(cuid())
+  name       String
   /// lowercased / de-pluralised form used by the name matcher
-  nameNorm String
-  brand    String?
-  barcode  String? @unique
+  nameNorm   String
+  brand      String?
+  barcode    String? @unique
   /// "usda" | "openfoodfacts" | "manual"
-  source   String
+  source     String
   /// USDA fdcId, or the OFF barcode, or null for manual entries
   externalId String?
   category   String?
 
   /// the unit that caloriesPerUnit / macros are expressed per
-  defaultUnit     String
-  caloriesPerUnit Float?
-  proteinPerUnit  Float?
-  fatPerUnit      Float?
-  carbsPerUnit    Float?
+  defaultUnit         String
+  caloriesPerUnit     Float?
+  proteinPerUnit      Float?
+  fatPerUnit          Float?
+  carbsPerUnit        Float?
   /// grams in ONE defaultUnit. Bridges count/serving units to mass units.
-  servingSizeGrams Float?
+  servingSizeGrams    Float?
   /// the pack size the product database gave when the barcode was scanned: the
   /// truth for "full pack", which a portion picked while adding never changes.
   /// 0 means scanned, but the database gave no size; null means never checked.
   packageGramsScanned Float?
 
   /// typical days from purchase to expiry; pre-fills the date on add
-  shelfLifeDays Int?
+  shelfLifeDays  Int?
   /// demo monetisation. Plain text only — no logos, no brand colours.
   sponsorName    String?
   sponsorTagline String?
@@ -127,7 +132,7 @@ model FoodReference {
   /// recipe asks for "Olive Oil" — without a link between them the app tells
   /// you that you are missing an ingredient you are holding. Recipe matching
   /// and deduction both resolve through this.
-  canonicalId String?
+  canonicalId     String?
   /// "auto" (we inferred it) | "user" (they confirmed or corrected it)
   canonicalSource String?
 
@@ -150,7 +155,7 @@ model FoodReference {
 
   owner     User?           @relation("OwnedFoods", fields: [ownerId], references: [id], onDelete: Cascade)
   canonical FoodReference?  @relation("ProductCanonical", fields: [canonicalId], references: [id])
-  variants  FoodReference[]  @relation("ProductCanonical")
+  variants  FoodReference[] @relation("ProductCanonical")
 
   inventoryItems    InventoryItem[]
   recipeIngredients RecipeIngredient[]
@@ -159,8 +164,9 @@ model FoodReference {
   unitConversions   UnitConversion[]
   synonyms          FoodSynonym[]
   inventoryRemovals InventoryRemoval[]
-  substituteFor     Substitution[] @relation("SubstituteIngredient")
-  substitutes       Substitution[] @relation("SubstituteReplacement")
+  substituteFor     Substitution[]     @relation("SubstituteIngredient")
+  substitutes       Substitution[]     @relation("SubstituteReplacement")
+  packSizes         UserPackSize[]
 
   @@index([nameNorm])
   @@index([canonicalId])
@@ -183,21 +189,21 @@ model FoodSynonym {
 /// cartons of eggs with different expiry dates stay separate and can be
 /// consumed first-expiring-first-out.
 model InventoryItem {
-  id              String    @id @default(cuid())
-  userId          String
-  foodReferenceId String
-  quantity        Float
-  unit            String
-  expirationDate  DateTime?
-  purchasedAt     DateTime  @default(now())
+  id                String    @id @default(cuid())
+  userId            String
+  foodReferenceId   String
+  quantity          Float
+  unit              String
+  expirationDate    DateTime?
+  purchasedAt       DateTime  @default(now())
   /// "pantry" | "fridge" | "freezer" — freezing pushes the expiry date out
-  storageLocation String    @default("pantry")
+  storageLocation   String    @default("pantry")
   /// when quantity drops below this, the item is auto-added to the shopping list
   lowStockThreshold Float?
   /// a portion of something you cooked, rather than an ingredient you bought
-  isLeftover        Boolean @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  isLeftover        Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   foodReference   FoodReference      @relation(fields: [foodReferenceId], references: [id])
@@ -209,35 +215,35 @@ model InventoryItem {
 }
 
 model Recipe {
-  id           String   @id @default(cuid())
+  id           String  @id @default(cuid())
   name         String
   description  String?
   instructions String
-  servings     Int      @default(1)
+  servings     Int     @default(1)
   /// "seeded" | "manual" | "user" | "imported"
-  source       String   @default("seeded")
+  source       String  @default("seeded")
 
-  prepMinutes  Int?
-  cookMinutes  Int?
+  prepMinutes Int?
+  cookMinutes Int?
   /// "easy" | "medium" | "hard"
-  difficulty   String?
-  cuisine      String?
+  difficulty  String?
+  cuisine     String?
   /// comma separated (SQLite has no arrays); e.g. "vegetarian,high-protein"
-  tags         String?
+  tags        String?
   /// where an imported recipe came from
-  sourceUrl    String?
+  sourceUrl   String?
 
   /// null = part of the shared recipe book everyone sees.
   /// set  = this person's own import or creation, and nobody else's business.
-  ownerId      String?
-  owner        User?    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String?
+  owner   User?   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   /// Soft delete. The row has to survive because the diary points at it: a
   /// meal you cooked in March is grouped under this recipe's name, and a hard
   /// delete would scatter it back into loose ingredients months later.
-  deletedAt    DateTime?
+  deletedAt DateTime?
 
-  createdAt    DateTime @default(now())
+  createdAt DateTime @default(now())
 
   ingredients     RecipeIngredient[]
   consumptionLogs ConsumptionLog[]
@@ -266,7 +272,7 @@ model RecipeIngredient {
 model ConsumptionLog {
   id String @id @default(cuid())
 
-  userId String
+  userId           String
   /// nullable: the lot may be purged later, and users can log a food they
   /// never had in inventory
   inventoryItemId  String?
@@ -274,22 +280,22 @@ model ConsumptionLog {
   quantityConsumed Float
   unit             String
   /// "manual" | "recipe" | "eating_out"
-  source     String
-  recipeId   String?
+  source           String
+  recipeId         String?
   /// "breakfast" | "lunch" | "dinner" | "snack"
-  mealSlot   String   @default("snack")
+  mealSlot         String   @default("snack")
   /// One id shared by every row written by a single cook, so the diary can show
   /// "Chicken Fried Rice" as one meal instead of six loose ingredients.
-  cookEventId String?
+  cookEventId      String?
   /// servings of a cooked recipe this meal was, so part of it can go back in the fridge
-  servings    Float?
+  servings         Float?
   /// nutrition at time of logging; null when no conversion to the food's
   /// nutrition basis was possible
-  calories   Float?
-  proteinGrams Float?
-  carbsGrams   Float?
-  fatGrams     Float?
-  consumedAt DateTime @default(now())
+  calories         Float?
+  proteinGrams     Float?
+  carbsGrams       Float?
+  fatGrams         Float?
+  consumedAt       DateTime @default(now())
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   inventoryItem InventoryItem? @relation(fields: [inventoryItemId], references: [id])
@@ -301,17 +307,17 @@ model ConsumptionLog {
 }
 
 model ShoppingListItem {
-  id              String  @id @default(cuid())
+  id              String   @id @default(cuid())
   userId          String
   /// null for free-text items the catalog does not know about
   foodReferenceId String?
   name            String
   quantityNeeded  Float
   unit            String
-  isChecked       Boolean @default(false)
+  isChecked       Boolean  @default(false)
   /// "recipe_gap" | "manual"
-  addedFrom String   @default("manual")
-  createdAt DateTime @default(now())
+  addedFrom       String   @default("manual")
+  createdAt       DateTime @default(now())
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   foodReference FoodReference? @relation(fields: [foodReferenceId], references: [id])
@@ -338,7 +344,7 @@ model UnitConversion {
 /// consumption_logs on purpose: a roommate eating your eggs must never land in
 /// your calorie diary.
 model InventoryRemoval {
-  id              String @id @default(cuid())
+  id              String   @id @default(cuid())
   userId          String
   inventoryItemId String?
   foodReferenceId String
@@ -359,8 +365,8 @@ model InventoryRemoval {
 /// Nobody types expiry dates voluntarily, which is why expiry tracking fails
 /// in every competing app.
 model ShelfLife {
-  id       String @id @default(cuid())
-  category String @unique
+  id          String @id @default(cuid())
+  category    String @unique
   /// days from purchase, by storage location
   pantryDays  Int?
   fridgeDays  Int?
@@ -369,7 +375,6 @@ model ShelfLife {
 
 /**
  * What you can use when you have run out of something.
- *
  * Missing one ingredient is the commonest reason a recipe sits just out of
  * reach, and half the time the kitchen already holds a workable stand-in. The
  * ratio matters: oil for butter is not one for one.
@@ -397,12 +402,12 @@ model Substitution {
 
 /// What someone thought of a recipe after cooking it.
 model RecipeRating {
-  id       String @id @default(cuid())
-  userId   String
-  recipeId String
+  id        String   @id @default(cuid())
+  userId    String
+  recipeId  String
   /// 1 to 5
-  rating   Int
-  note     String?
+  rating    Int
+  note      String?
   updatedAt DateTime @updatedAt
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -414,18 +419,35 @@ model RecipeRating {
 
 /// A recipe pencilled in for a day, so its ingredients are spoken for.
 model MealPlanEntry {
-  id       String   @id @default(cuid())
-  userId   String
-  recipeId String
+  id         String    @id @default(cuid())
+  userId     String
+  recipeId   String
   plannedFor DateTime
-  servings Int      @default(1)
+  servings   Int       @default(1)
   /// "breakfast" | "lunch" | "dinner" | "snack"
-  mealSlot String   @default("dinner")
-  cookedAt DateTime?
-  createdAt DateTime @default(now())
+  mealSlot   String    @default("dinner")
+  cookedAt   DateTime?
+  createdAt  DateTime  @default(now())
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 
   @@index([userId, plannedFor])
+}
+
+/// How big one pack of a food is, for one person. A sack of rice is 1 kg in one
+/// kitchen and 5 kg in the next, so a person's answer is theirs alone rather than
+/// rewriting the catalogue for everybody. Scanned products keep the size their
+/// barcode database gives.
+model UserPackSize {
+  userId          String
+  foodReferenceId String
+  amount          Float
+  unit            String
+  updatedAt       DateTime @updatedAt
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foodReference FoodReference @relation(fields: [foodReferenceId], references: [id], onDelete: Cascade)
+
+  @@id([userId, foodReferenceId])
 }

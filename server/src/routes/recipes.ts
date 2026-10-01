@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { limit } from '../limits.js';
 import { z } from 'zod';
 import { prisma } from '../db.js';
 import { notFound } from '../errors.js';
@@ -111,7 +112,7 @@ const routes: FastifyPluginAsync = async (app) => {
   });
 
   /** Paste a link: read the page's structured recipe data, change nothing yet. */
-  app.post('/import/preview', async (request) => {
+  app.post('/import/preview', limit(20, '10 minutes'), async (request) => {
     const { url } = z.object({ url: z.string().min(4) }).parse(request.body);
     return { preview: await previewImport(url) };
   });
@@ -121,7 +122,7 @@ const routes: FastifyPluginAsync = async (app) => {
    * so the client can open the recipe straight away — you imported it because
    * you wanted to read it, not to go looking for it in a list afterwards.
    */
-  app.post('/import', async (request, reply) => {
+  app.post('/import', limit(20, '10 minutes'), async (request, reply) => {
     const { url } = z.object({ url: z.string().min(4) }).parse(request.body);
     const preview = await previewImport(url);
     const saved = await saveImport(preview, request.userId);

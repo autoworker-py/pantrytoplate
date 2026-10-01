@@ -70,6 +70,8 @@ describe('a pack size in any unit', () => {
     await app.inject({ method: 'POST', url: `/api/foods/${juiceId}/conversions`, headers: auth, payload: { fromUnit: 'package', toUnit: 'ml', multiplier: 1500 } });
     const pack = JSON.parse((await app.inject({ method: 'GET', url: `/api/foods/${juiceId}/pack`, headers: auth })).body);
     expect(pack).toMatchObject({ amount: 1500, unit: 'ml' });
-    expect(await prisma.unitConversion.count({ where: { foodReferenceId: juiceId, fromUnit: 'package' } })).toBe(1);
+    // the answer is this person's alone, one size at a time, and the shared food is untouched
+    expect(await prisma.userPackSize.count({ where: { foodReferenceId: juiceId } })).toBe(1);
+    expect(await prisma.unitConversion.count({ where: { foodReferenceId: juiceId, fromUnit: 'package' } })).toBe(0);
   });
 });

@@ -4,10 +4,12 @@ import { changePassword, registerUser, verifyCredentials } from '../services/aut
 import { prisma } from '../db.js';
 import { PRIVACY_POLICY, PRIVACY_VERSION, PRIVACY_EFFECTIVE } from '../content/privacy.js';
 import { estimateEnergy, ACTIVITY_LABELS } from '../services/energy.js';
+import { byEmail, limit } from '../limits.js';
 
 const credentials = z.object({
-  email: z.string().email('Enter a valid email address.'),
-  password: z.string().min(8, 'Password must be at least 8 characters.'),
+  email: z.string().max(254).email('Enter a valid email address.'),
+  // bcrypt reads 72 bytes; the ceiling stops a megabyte "password" being hashed
+  password: z.string().min(8, 'Password must be at least 8 characters.').max(128, 'Passwords can be up to 128 characters.'),
 });
 
 const routes: FastifyPluginAsync = async (app) => {
@@ -18,7 +20,7 @@ const routes: FastifyPluginAsync = async (app) => {
     markdown: PRIVACY_POLICY,
   }));
 
-  app.post('/register', async (request, reply) => {
+  app.post('/register', limit(10, '1 hour'), async (request, reply) => {
     const body = credentials
       .extend({
         /**
@@ -67,20 +69,23 @@ const routes: FastifyPluginAsync = async (app) => {
     return { accepted: true, version: PRIVACY_VERSION };
   });
 
-  app.post('/login', async (request) => {
+  // ten tries per email per address every fifteen minutes: slow for a guesser, invisible to a person
+  app.post('/login', limit(10, '15 minutes', byEmail), async (request) => {
     const { email, password } = credentials.parse(request.body);
     const user = await verifyCredentials(email, password);
     return { token: app.jwt.sign({ sub: user.id, email: user.email }), user };
   });
 
-  app.post('/password', { preHandler: [app.authenticate] }, async (request) => {
+  app.post('/password', { preHandler: [app.authenticate], ...limit(10, '15 minutes') }, async (request) => {
     const body = z
       .object({
-        currentPassword: z.string().min(1, 'Enter your current password.'),
-        newPassword: z.string().min(8, 'New password must be at least 8 characters.'),
+        currentPassword: z.string().min(1, 'Enter your current password.').max(128),
+        newPassword: z.string().min(8, 'New password must be at least 8 characters.').max(128, 'Passwords can be up to 128 characters.'),
       })
       .parse(request.body);
-    return changePassword(request.userId, body.currentPassword, body.newPassword);
+    const result = await changePassword(request.userId, body.currentPassword, body.newPassword);
+    // every other device is signed out now; this one carries on with a new token
+    return { ...result, token: app.jwt.sign({ sub: request.user.sub, email: request.user.email }) };
   });
 
   app.get('/me', { preHandler: [app.authenticate] }, async (request) => {
@@ -185,8 +190,8 @@ const routes: FastifyPluginAsync = async (app) => {
    * schema carry that out: inventory, diary, waste, shopping list, ratings,
    * plans and any recipes this person added all go with the row.
    */
-  app.post('/delete-account', { preHandler: [app.authenticate] }, async (request, reply) => {
-    const { password } = z.object({ password: z.string().min(1) }).parse(request.body);
+  app.post('/delete-account', { preHandler: [app.authenticate], ...limit(10, '15 minutes') }, async (request, reply) => {
+    const { password } = z.object({ password: z.string().min(1).max(128) }).parse(request.body);
     const user = await prisma.user.findUnique({ where: { id: request.userId } });
     if (!user) return reply.code(404).send({ error: 'not_found', message: 'No such account.' });
 

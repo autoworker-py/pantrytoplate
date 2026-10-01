@@ -1,6 +1,8 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
 import jwt from '@fastify/jwt';
+import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -8,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 import { ZodError } from 'zod';
 import { env } from './env.js';
 import { HttpError } from './errors.js';
+import { prisma } from './db.js';
+import { ceiling } from './limits.js';
 import { inZone, zoneOrDefault } from './zone.js';
 import './types.js';
 
@@ -27,6 +31,8 @@ import snapRoutes from './routes/snap.js';
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
     logger: env.nodeEnv === 'test' ? false : { transport: undefined, level: 'info' },
+    // behind Render's proxy: the caller's address is the forwarded one, which rate limits key on
+    trustProxy: true,
   });
 
   /**
@@ -46,11 +52,40 @@ export async function buildApp(): Promise<FastifyInstance> {
         : [...env.corsOrigin.split(',').map((o) => o.trim()).filter(Boolean), ...NATIVE_ORIGINS],
     credentials: true,
   });
+  /*
+   * Standard browser protections for the web build this server also serves:
+   * no framing, no MIME sniffing, HTTPS only. The page's own scripts are the
+   * app's, so no content policy is set here to break them; the iPhone app
+   * loads its pages from the phone, not from here.
+   */
+  await app.register(helmet, {
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  });
+
+  await app.register(rateLimit, {
+    global: true,
+    max: ceiling(300),
+    timeWindow: '1 minute',
+    errorResponseBuilder: (_request, context) => new HttpError(429, `Too many tries. Wait ${context.after} and try again.`, 'rate_limited'),
+  });
+
   await app.register(jwt, { secret: env.jwtSecret, sign: { expiresIn: '30d' } });
 
+  /*
+   * A token is good while its account exists and was issued after the account
+   * last said "sign everyone out" (a password change does). Without the check,
+   * a token taken from a lost phone keeps working for thirty days whatever the
+   * owner does, and one for a deleted account fails halfway through a request.
+   */
   app.decorate('authenticate', async (request, reply) => {
     try {
       await request.jwtVerify();
+      const issued = (request.user as { iat?: number }).iat ?? 0;
+      const account = await prisma.user.findUnique({ where: { id: request.user.sub }, select: { sessionsValidFrom: true } });
+      if (!account) throw new Error('no such account');
+      if (account.sessionsValidFrom && issued < Math.floor(account.sessionsValidFrom.getTime() / 1000)) throw new Error('signed out');
       request.userId = request.user.sub;
     } catch {
       await reply.code(401).send({ error: 'unauthorized', message: 'Sign in to continue.' });

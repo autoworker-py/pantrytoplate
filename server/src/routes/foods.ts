@@ -1,7 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../db.js';
-import { badRequest, notFound } from '../errors.js';
+import { badRequest, conflict, forbidden, notFound } from '../errors.js';
+import { limit } from '../limits.js';
+import type { FoodReference } from '@prisma/client';
 import {
   findOrCreateFoodByName,
   importUsdaFood,
@@ -18,13 +20,28 @@ import { invalidateUniversalConversionCache } from '../services/conversions.js';
 import { normalizeName } from '../services/matching.js';
 import { KNOWN_UNITS, normalizeUnit } from '../services/units.js';
 
+/**
+ * A food this person may see: the shared catalogue, every product with a
+ * barcode (whoever first described it, the next person to scan it sees it),
+ * and their own entries, but never someone else's typed-in food ("Nan's
+ * stuffing" is theirs). Anything else reads as missing, not forbidden.
+ */
+async function visibleFood(id: string, userId: string): Promise<FoodReference> {
+  const food = await prisma.foodReference.findUnique({ where: { id } });
+  if (!food || (food.ownerId && food.ownerId !== userId && !food.barcode)) throw notFound('Food not found.');
+  return food;
+}
+
+/** lookups that reach an outside service, per address: plenty for a person, short of a script */
+const LOOKUPS = limit(60, '1 minute');
+
 const routes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', app.authenticate);
 
   /** Local catalog search — the manual-add autocomplete. */
   app.get('/search', async (request) => {
-    const { q = '', limit = '10' } = request.query as { q?: string; limit?: string };
-    const foods = await searchLocalFoods(q, Number(limit) || 10, undefined, request.userId);
+    const { q = '', limit: count = '10' } = request.query as { q?: string; limit?: string };
+    const foods = await searchLocalFoods(q.slice(0, 100), Math.min(Number(count) || 10, 50), undefined, request.userId);
     return { foods };
   });
 
@@ -33,9 +50,9 @@ const routes: FastifyPluginAsync = async (app) => {
    * know the product. Never fatal: a failure here just means the person adds
    * the food by hand, exactly as before.
    */
-  app.get('/search/external', async (request) => {
-    const { q = '', limit = '12' } = request.query as { q?: string; limit?: string };
-    const result = await searchProducts(q, Number(limit) || 12);
+  app.get('/search/external', LOOKUPS, async (request) => {
+    const { q = '', limit: count = '12' } = request.query as { q?: string; limit?: string };
+    const result = await searchProducts(q.slice(0, 100), Math.min(Number(count) || 12, 24));
     if (!result.ok) return { results: [], unavailable: result.reason };
     return { results: result.data };
   });
@@ -46,7 +63,7 @@ const routes: FastifyPluginAsync = async (app) => {
    * Barcode lookup: local cache first, Open Food Facts second. A failure here
    * is not fatal — the client falls back to manual entry.
    */
-  app.get('/barcode/:code', async (request, reply) => {
+  app.get('/barcode/:code', LOOKUPS, async (request, reply) => {
     const { code } = request.params as { code: string };
     const result = await resolveBarcode(code);
     if (!result.ok) {
@@ -69,10 +86,10 @@ const routes: FastifyPluginAsync = async (app) => {
   });
 
   /** USDA free-text search for raw ingredients not yet in the catalog. */
-  app.get('/usda/search', async (request, reply) => {
+  app.get('/usda/search', LOOKUPS, async (request, reply) => {
     const { q } = request.query as { q?: string };
     if (!q?.trim()) return { results: [] };
-    const result = await searchUsda(q);
+    const result = await searchUsda(q.slice(0, 100));
     if (!result.ok) {
       return reply.code(502).send({ error: result.reason, message: result.message, fallback: 'manual_entry' });
     }
@@ -80,7 +97,7 @@ const routes: FastifyPluginAsync = async (app) => {
   });
 
   /** Import a USDA food into the local catalog (and cache it forever). */
-  app.post('/usda/import', async (request, reply) => {
+  app.post('/usda/import', LOOKUPS, async (request, reply) => {
     const { fdcId } = z.object({ fdcId: z.string().min(1) }).parse(request.body);
     const result = await importUsdaFood(fdcId);
     if (!result.ok) {
@@ -93,8 +110,8 @@ const routes: FastifyPluginAsync = async (app) => {
   app.post('/', async (request, reply) => {
     const body = z
       .object({
-        name: z.string().min(1),
-        defaultUnit: z.string().default('count'),
+        name: z.string().min(1).max(120),
+        defaultUnit: z.string().max(30).default('count'),
         category: z.string().nullish(),
         caloriesPerUnit: z.number().nonnegative().nullish(),
         proteinPerUnit: z.number().nonnegative().nullish(),
@@ -121,16 +138,16 @@ const routes: FastifyPluginAsync = async (app) => {
    * same product resolves locally and instantly, which is the app's promise —
    * enter a food once.
    */
-  app.post('/barcode/:code', async (request, reply) => {
+  app.post('/barcode/:code', LOOKUPS, async (request, reply) => {
     const { code } = request.params as { code: string };
     const barcode = code.replace(/\D/g, '');
-    if (barcode.length < 6) throw badRequest('That does not look like a barcode.');
+    if (barcode.length < 6 || barcode.length > 14) throw badRequest('That does not look like a barcode.');
 
     const body = z
       .object({
-        name: z.string().min(1, 'Give the product a name.'),
-        brand: z.string().nullish(),
-        defaultUnit: z.string().default('g'),
+        name: z.string().min(1, 'Give the product a name.').max(120),
+        brand: z.string().max(80).nullish(),
+        defaultUnit: z.string().max(30).default('g'),
         category: z.string().nullish(),
         /** per one of defaultUnit — the label's per-100g figures divided by 100 */
         caloriesPerUnit: z.number().nonnegative().nullish(),
@@ -146,6 +163,11 @@ const routes: FastifyPluginAsync = async (app) => {
       .parse(request.body);
 
     const existing = await prisma.foodReference.findUnique({ where: { barcode } });
+    // one person's description of a product is theirs to correct; a product someone else
+    // described, or one from the barcode database, is not theirs to rewrite for everybody
+    if (existing && existing.ownerId !== request.userId) {
+      throw conflict('That barcode is already known. Scan it again to add it.', 'barcode_known');
+    }
     const data = {
       name: body.name.trim(),
       nameNorm: normalizeName(body.name),
@@ -159,10 +181,12 @@ const routes: FastifyPluginAsync = async (app) => {
       carbsPerUnit: body.carbsPerUnit ?? null,
       fatPerUnit: body.fatPerUnit ?? null,
       servingSizeGrams: body.servingSizeGrams ?? null,
+      // anyone who scans it later sees this description; only its author can change it
+      ownerId: request.userId,
     };
 
-    // a second scan of a product someone already described corrects it rather
-    // than failing on the unique barcode
+    // a second scan by the same person corrects their description rather than
+    // failing on the unique barcode
     const food = existing
       ? await prisma.foodReference.update({ where: { id: existing.id }, data })
       : await prisma.foodReference.create({ data });
@@ -199,11 +223,11 @@ const routes: FastifyPluginAsync = async (app) => {
 
   app.get('/:id', async (request) => {
     const { id } = request.params as { id: string };
+    await visibleFood(id, request.userId);
     const food = await prisma.foodReference.findUnique({
       where: { id },
       include: { unitConversions: true, synonyms: true },
     });
-    if (!food) throw notFound('Food not found.');
     return { food };
   });
 
@@ -221,6 +245,11 @@ const routes: FastifyPluginAsync = async (app) => {
       .object({ canonicalId: z.string().nullable() })
       .parse(request.body);
 
+    // only a scanned product counts as something; the catalogue's own foods are not anyone's to relink
+    const product = await visibleFood(id, request.userId);
+    if (!product.barcode) throw forbidden('Only a scanned product can be linked to a food.', 'not_a_product');
+    if (canonicalId) await visibleFood(canonicalId, request.userId);
+
     const food = await setCanonical(id, canonicalId);
     return { food };
   });
@@ -228,6 +257,7 @@ const routes: FastifyPluginAsync = async (app) => {
   /** Ask the app to guess again (used after the catalog grows). */
   app.post('/:id/counts-as/suggest', async (request) => {
     const { id } = request.params as { id: string };
+    await visibleFood(id, request.userId);
     return { suggestion: await linkCanonical(id) };
   });
 
@@ -241,8 +271,13 @@ const routes: FastifyPluginAsync = async (app) => {
    */
   app.get('/:id/pack', async (request) => {
     const { id } = request.params as { id: string };
-    const food = await prisma.foodReference.findUnique({ where: { id } });
-    if (!food) throw notFound('Food not found.');
+    const food = await visibleFood(id, request.userId);
+
+    // the person's own answer for this food comes first: their packs, not the catalogue's guess
+    const mine = food.packageGramsScanned ? null : await prisma.userPackSize.findUnique({ where: { userId_foodReferenceId: { userId: request.userId, foodReferenceId: id } } });
+    if (mine) {
+      return { foodReferenceId: food.id, name: food.name, defaultUnit: food.defaultUnit, amount: mine.amount, unit: mine.unit, grams: mine.unit === 'g' ? mine.amount : null, estimated: false, known: true };
+    }
 
     const pack = await packageSizeFor(food);
     return {
@@ -266,14 +301,13 @@ const routes: FastifyPluginAsync = async (app) => {
     const { id } = request.params as { id: string };
     const body = z
       .object({
-        fromUnit: z.string().min(1),
-        toUnit: z.string().min(1),
-        multiplier: z.number().positive(),
+        fromUnit: z.string().min(1).max(30),
+        toUnit: z.string().min(1).max(30),
+        multiplier: z.number().positive().max(100_000),
       })
       .parse(request.body);
 
-    const food = await prisma.foodReference.findUnique({ where: { id } });
-    if (!food) throw notFound('Food not found.');
+    const food = await visibleFood(id, request.userId);
 
     const fromUnit = normalizeUnit(body.fromUnit);
     const toUnit = normalizeUnit(body.toUnit);
@@ -282,6 +316,15 @@ const routes: FastifyPluginAsync = async (app) => {
       const kept = await prisma.unitConversion.findFirst({ where: { foodReferenceId: id, fromUnit, toUnit } });
       return reply.code(200).send({ conversion: kept, kept: 'scanned' });
     }
+    // how big your pack is, is yours: one person's 5 kg sack of rice is not everyone's.
+    // Only a food you added yourself (and so a product you described) changes for everyone.
+    if (fromUnit === 'package' && food.ownerId !== request.userId) {
+      const key = { userId: request.userId, foodReferenceId: id };
+      await prisma.userPackSize.upsert({ where: { userId_foodReferenceId: key }, create: { ...key, amount: body.multiplier, unit: toUnit }, update: { amount: body.multiplier, unit: toUnit } });
+      return reply.code(201).send({ conversion: { foodReferenceId: id, fromUnit, toUnit, multiplier: body.multiplier }, scope: 'yours' });
+    }
+    // any other conversion changes the food for everyone who has it: only for foods you added
+    if (food.ownerId !== request.userId) throw forbidden('Only foods you added can be changed.', 'not_yours');
     const conversion = await prisma.unitConversion.upsert({
       where: { foodReferenceId_fromUnit_toUnit: { foodReferenceId: id, fromUnit, toUnit } },
       create: { foodReferenceId: id, fromUnit, toUnit, multiplier: body.multiplier },

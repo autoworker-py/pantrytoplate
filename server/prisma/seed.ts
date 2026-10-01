@@ -332,8 +332,10 @@ async function main() {
    * deployed one, where somebody may be using that account for real food. So
    * re-seeding to pick up new recipes leaves accounts alone unless asked.
    */
-  if (process.env.SEED_DEMO_USER === 'false') {
-    console.log('Skipping the demo user (SEED_DEMO_USER=false).');
+  // a deployed server never gets an account whose password is in the README; a laptop does unless told not to
+  const wanted = process.env.SEED_DEMO_USER ? process.env.SEED_DEMO_USER === 'true' : process.env.NODE_ENV !== 'production';
+  if (!wanted) {
+    console.log('Skipping the demo user (production, or SEED_DEMO_USER=false).');
     console.log('Done.');
     return;
   }
