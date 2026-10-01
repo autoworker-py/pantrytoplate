@@ -9,8 +9,14 @@
  * next visit. Only bump it for changes that alter what is collected, why, who
  * receives it, or how long it is kept — not for typos.
  */
-export const PRIVACY_VERSION = '2026-09-29';
-export const PRIVACY_EFFECTIVE = '29 September 2026';
+import { env } from '../env.js';
+
+export const PRIVACY_VERSION = '2026-10-01';
+export const PRIVACY_EFFECTIVE = '1 October 2026';
+
+/** who runs the app and how to reach them: OPERATOR_NAME and SUPPORT_EMAIL on the server */
+const WHO = env.operatorName || 'its developer';
+const REACH = env.supportEmail ? `email ${env.supportEmail}` : 'use the contact details on the app’s App Store page';
 
 export const PRIVACY_POLICY = `# Privacy Notice
 
@@ -25,14 +31,13 @@ ask.
 
 ## 1. Who is responsible
 
-The app is operated privately by the individual who runs this installation
-("the operator"). It is not a company, and there is no support department. The
-operator is the data controller for everything described below and is the person
-to contact about any of it.
+Pantry2Plate is made and run by ${WHO} ("we"). We are the data controller for
+everything described below. To ask about any of it, or to use any of your
+rights, ${REACH}.
 
-Because this is a self-hosted, personal deployment, the operator can read the
-database. That is a plain consequence of self-hosting rather than a hidden
-practice, and it is stated here so nobody is surprised by it.
+The people who run the app can technically read its database, as anyone running
+a server can. We only look at an account's data to fix a problem you have
+reported, or when the law requires it.
 
 ---
 
@@ -79,9 +84,10 @@ months says a great deal about them. It is treated with the same care.
   and are not used to build a profile of you.
 - **Session tokens.** Signing in issues a token that your browser stores and
   sends with each request. It expires after 30 days.
-- **Local browser storage.** Your session token and your light/dark preference
-  are stored in your browser. No analytics or tracking cookies are set, and the
-  app does not use Google Analytics or any equivalent.
+- **Storage on your device.** Your session token, and the receipt lines you have
+  matched to foods, are stored on your phone or in your browser. No analytics or
+  tracking cookies are set, and the app does not use Google Analytics or any
+  equivalent.
 - **Ads, on the iPhone app without Pro.** Google's advertising SDK collects some
   information about the device in order to show ads. Section 5 says exactly
   what, and how to limit it.
@@ -91,9 +97,11 @@ months says a great deal about them. It is treated with the same care.
 - Payment or card details. The app takes no payments.
 - Precise location. The app never requests it.
 - Contacts, calendar, microphone, or files.
-- **Camera images.** The barcode scanner runs entirely inside your browser. The
-  video never leaves your device, is never uploaded, and is never recorded. Only
-  the decoded barcode number is sent to the server.
+- **Camera images, apart from meal photos.** Barcodes and receipts are read on
+  your phone: the camera picture never leaves it, is never uploaded and is never
+  recorded. Only the barcode number, or the words read off a receipt, go to the
+  server to find the food. The one exception is a photo you take in Snap a meal,
+  described in section 4.3.
 
 ---
 
@@ -106,6 +114,9 @@ months says a great deal about them. It is treated with the same care.
 | Calculating a calorie target and macros | Height, weight, age, sex, activity | **Explicit consent** |
 | Showing your diary and reports | Consumption and waste logs | Contract |
 | Looking up barcodes and nutrition | Barcode numbers, search terms | Legitimate interests |
+| Estimating a meal from a photo (Snap a meal) | The photo, and anything you type about it | Contract |
+| Confirming your email and resetting a forgotten password | Your email address and the codes sent to it | Contract |
+| Refusing a password already leaked elsewhere | The first five characters of a one-way hash of the new password | Legitimate interests |
 | Keeping the service working and secure | Server logs | Legitimate interests |
 | Showing ads to accounts without Pro (iPhone app) | Device and ad information collected by Google's SDK; the advertising identifier only if you allow tracking | Consent where the law requires it; otherwise legitimate interests |
 
@@ -135,7 +146,7 @@ in the code and covered by automated tests.
 
 When you scan a barcode or search for a food, a request goes to:
 
-- **Open Food Facts** (open-food-facts.org), a non-profit food database. It
+- **Open Food Facts** (openfoodfacts.org), a non-profit food database. It
   receives the barcode number and an identifying user-agent string. Their
   privacy policy governs what they do with it.
 - **USDA FoodData Central** (fdc.nal.usda.gov), a United States government
@@ -151,27 +162,36 @@ linked to will see the server's IP address, not yours.
 ### 4.3 Meal photos, only if you use Snap a meal
 
 If you photograph a meal with Snap a meal, the photo is sent to an outside AI
-service so it can estimate what is on the plate: Google's Gemini, or
-Anthropic's Claude if this installation is set up that way. It is sent without
+service so it can estimate what is on the plate: Google's Gemini (or, if that is
+ever unavailable, Anthropic's Claude). It is sent without
 your name, email or anything else about you, and this app does not keep the
 photo: once the estimate comes back, it is discarded. What you then log is
 stored like any other diary entry.
 
-That service's own terms govern what it does with the photo. On Google's free
-tier, Google may use what it receives to improve its products, and people may
-review it. Nothing is sent unless you take or choose a photo in Snap a meal.
+That service's own terms govern what it does with the photo. The app uses
+Google's paid service, under which Google does not use what it receives to
+improve its products or train its models, and keeps it only for a limited time
+to detect abuse. Nothing is sent unless you take or choose a photo in Snap a
+meal.
 
 ### 4.4 Hosting
 
-Wherever this installation runs — a personal machine, a cloud server, or a
-managed platform — that provider necessarily stores the data on their hardware
-and may have technical access to it. Ask the operator where this instance runs
-if it matters to you.
+The app's server runs on Render (render.com) in Oregon, in the United States,
+and keeps your data in a database hosted by Neon (neon.tech). Both store it on
+their hardware under contract, may have technical access to it, and process it
+only to provide their service.
 
-### 4.5 Legal requests
+### 4.5 Email
 
-If validly compelled by law, the operator may have to disclose data. They will
-tell you unless legally prohibited from doing so.
+When you sign up, and if you ask to reset your password, a six-digit code is
+emailed to you through Resend (resend.com), an email delivery service in the
+United States. Resend receives your email address and that email, and nothing
+else about you. The app sends no other email: no newsletters, no marketing.
+
+### 4.6 Legal requests
+
+If validly compelled by law, we may have to disclose data. We will tell you
+unless legally prohibited from doing so.
 
 ---
 
@@ -216,8 +236,11 @@ use its services (policies.google.com/technologies/partner-sites).
   from the database, not a flag. It cannot be undone and there is no grace
   period.
 
-Backups, if the operator keeps any, may retain a copy until they age out on
-their normal cycle.
+- **Email codes** are kept only as a one-way hash and deleted as soon as they are
+  used; an unused one stops working after fifteen minutes.
+
+The database host keeps short-term backups, which may hold a copy for a few days
+until they age out on their normal cycle.
 
 ---
 
@@ -236,30 +259,37 @@ Under UK and EU data protection law you have the right to:
   Commissioner's Office (ico.org.uk).
 
 You do not need to ask permission to exercise the first four; the app implements
-them as buttons.
+them as buttons. For anything else, ${REACH}.
 
 ---
 
 ## 8. Security
 
-- Passwords are hashed with bcrypt (cost factor 10). Nobody, including the
-  operator, can read your password.
-- Sessions use signed tokens with a 30-day expiry.
-- The app should be served over HTTPS. The barcode scanner will not function
-  otherwise, because browsers refuse camera access on insecure connections.
+- Passwords are hashed with bcrypt (cost factor 10). Nobody, including us, can
+  read your password.
+- A new password is checked against Have I Been Pwned's list of passwords
+  exposed in other sites' breaches, and refused if it is on it. Only the first
+  five characters of a one-way hash of it are sent, which cannot be turned back
+  into the password.
+- Signing in is rate limited, and an email code works only for fifteen minutes
+  and a few tries, so neither can be guessed.
+- Sessions use signed tokens with a 30-day expiry. Changing or resetting your
+  password signs out every other device.
+- Everything between the app and the server is encrypted (HTTPS).
 - Each account's data is isolated by queries scoped to the signed-in user, and
   that isolation is covered by automated tests.
 
-No system is perfectly secure. This one is a personal project, not a bank, and
-it has not had a professional security audit. Use a password you do not use
-anywhere else.
+No system is perfectly secure. Pantry2Plate is a small app, not a bank, and it
+has not had an independent security audit. Use a password you do not use
+anywhere else. If we learn that your data has been exposed, we will tell you,
+and the authorities where the law requires, without undue delay.
 
 ---
 
 ## 9. Children
 
 The app is not intended for anyone under 16, and accounts should not be created
-for them. It is not designed for supervised or clinical use, and calorie
+for them: signing up asks you to confirm you are 16 or older. It is not designed for supervised or clinical use, and calorie
 tracking can be harmful for people with a history of disordered eating. If that
 applies to you, please speak to a professional before using the calorie
 features — or use the pantry and recipe features alone, which work perfectly
@@ -284,12 +314,12 @@ allergens.
 
 ## 11. International transfers
 
-External food lookups go to services that may be hosted outside the UK and EEA,
-including the United States. Only an anonymous barcode number or search term is
-sent. On the iPhone app without Pro, Google's advertising SDK sends device
-information to Google, which may process it in the United States (section 5).
-Apart from that, no personal data is transferred internationally by the app
-itself.
+The app's server and the services it uses (sections 4.3 to 4.5) are in the
+United States, so if you use the app from anywhere else, your data is
+transferred there. External food lookups receive only an anonymous barcode
+number or search term. On the iPhone app without Pro, Google's advertising SDK
+sends device information to Google, which may process it in the United States
+(section 5).
 
 ---
 
@@ -306,11 +336,25 @@ The version you accepted, and when, is recorded against your account.
 
 ## 13. Contact
 
-Contact the operator of this installation. For a private deployment that is
-whoever gave you the link.
+To ask about this notice or your data, ${REACH}.
 
 ---
 
-**By creating an account you confirm you have read this notice and agree to your
-data being handled as described.**
+## 14. Consumer health data (Washington, Nevada and similar laws)
+
+Some US state laws, such as Washington's My Health My Data Act, treat
+information about your body and what you eat as consumer health data. In
+Pantry2Plate that is the body data in section 2.2 and your food diary.
+
+- **Collected** only from what you type in: the diary to keep your diary, and
+  the body data, only if you choose to enter it, to work out your calorie target.
+- **Shared with nobody.** It is not sold, not given to advertisers, and never
+  passed to Google's advertising SDK, which receives nothing you enter.
+- **Yours to see, export and delete** at any time in Settings. For anything
+  else, ${REACH}.
+
+---
+
+**By creating an account you confirm you are 16 or older, have read this notice,
+and agree to your data being handled as described.**
 `;

@@ -299,3 +299,16 @@ form .row button[type='submit'] { flex: none; padding: 0 16px; border-radius: va
   background-image: linear-gradient(45deg, transparent 50%, var(--ink-3) 50%), linear-gradient(135deg, var(--ink-3) 50%, transparent 50%);
   background-position: calc(100% - 21px) 50%, calc(100% - 15px) 50%; background-size: 6px 6px; background-repeat: no-repeat; }
 .pack-entry { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* the credit a reused database asks for, where its data is shown */
+.source-credit { margin-top: 14px; }
+.source-credit a, .list-row .s a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---------- the public pages: /privacy and /support ---------- */
+.public-page { flex: 1; overflow-y: auto; width: 100%; padding: calc(var(--safe-top) + 32px) 22px calc(var(--safe-bottom) + 40px); }
+.public-page > * { max-width: 680px; margin-left: auto; margin-right: auto; }
+.public-mark { display: block; width: max-content; margin-bottom: 22px; }
+.public-page a { color: var(--warm); }
+.public-faq { margin-top: 26px; display: flex; flex-direction: column; gap: 22px; }
+.public-faq h2 { font-size: 18px; }
+.public-faq p { margin-top: 6px; color: var(--ink-2); line-height: 1.5; }

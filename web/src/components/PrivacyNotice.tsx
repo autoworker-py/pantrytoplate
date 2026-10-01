@@ -29,7 +29,7 @@ function inline(text: string, key: string) {
   );
 }
 
-function render(markdown: string) {
+export function render(markdown: string) {
   const blocks: React.ReactNode[] = [];
   const lines = markdown.split('\n');
   let list: string[] = [];

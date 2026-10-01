@@ -197,6 +197,12 @@ export function ItemSheet({ item, onClose, onChanged }: { item: InventoryItem; o
               <CountsAs food={item.food} onChanged={onChanged} />
             </div>
           ) : null}
+          {item.food.source === 'openfoodfacts' ? (
+            <p className="fine source-credit">
+              Product details from <a href={`https://world.openfoodfacts.org/product/${item.food.barcode ?? ''}`} target="_blank" rel="noreferrer">Open Food Facts</a>, under the{' '}
+              <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noreferrer">Open Database License</a>.
+            </p>
+          ) : null}
 
           <button type="button" className="btn ghost danger-ink" style={{ marginTop: 16 }} onClick={destroy} disabled={busy}>
             <Icon name="trash" size={18} /> Remove from pantry

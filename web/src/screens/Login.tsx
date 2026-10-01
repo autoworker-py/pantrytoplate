@@ -112,7 +112,7 @@ export default function Login() {
             <label className="check">
               <input type="checkbox" checked={agreed} disabled={!version} onChange={(e) => setAgreed(e.target.checked)} />
               <span>
-                I have read and agree to the <button type="button" className="link-btn" onClick={() => setReading(true)}>privacy notice</button>. It covers what the app stores, that camera images never leave your phone, and how to delete everything.
+                I am 16 or older, and I have read and agree to the <button type="button" className="link-btn" onClick={() => setReading(true)}>privacy notice</button>. It covers what the app stores, which photos leave your phone (only meals you snap), and how to delete everything.
               </span>
             </label>
           </>

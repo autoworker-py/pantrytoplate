@@ -20,5 +20,7 @@ export function AdBanner({ plus }: { plus: boolean | undefined }) {
   }, [wanted]);
   useEffect(() => () => void hideBanner(), []);
 
-  return null;
+  // the plain band the banner sits in, a gap clear of the tab bar below and the page above;
+  // it has no height until a banner has a size
+  return <div className="ad-band" aria-hidden="true" />;
 }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { accountByEmail, changePassword, changeUnconfirmedEmail, registerUser, resetPassword, verifyCredentials } from '../services/auth.js';
 import { checkCode, sendCode, type Check, type Sending } from '../services/emailCodes.js';
 import { emailCodesOn } from '../services/mail.js';
+import { env } from '../env.js';
 import { HttpError, badRequest } from '../errors.js';
 import { prisma } from '../db.js';
 import { PRIVACY_POLICY, PRIVACY_VERSION, PRIVACY_EFFECTIVE } from '../content/privacy.js';
@@ -48,8 +49,8 @@ const routes: FastifyPluginAsync = async (app) => {
     markdown: PRIVACY_POLICY,
   }));
 
-  /** What the sign-in screen can offer: a forgotten password can only be reset once email is set up. */
-  app.get('/options', async () => ({ emailCodes: emailCodesOn() }));
+  /** What the sign-in and support screens can offer: a password reset once email is set up, and where to write. */
+  app.get('/options', async () => ({ emailCodes: emailCodesOn(), support: env.supportEmail || null }));
 
   app.post('/register', limit(10, '1 hour'), async (request, reply) => {
     const body = credentials
@@ -213,7 +214,8 @@ const routes: FastifyPluginAsync = async (app) => {
       .object({
         heightCm: z.number().min(120).max(250).nullish(),
         weightKg: z.number().min(30).max(350).nullish(),
-        birthYear: z.number().int().min(1900).max(new Date().getFullYear() - 12).nullish(),
+        // the app is for people 16 and over, as sign-up asks them to confirm
+        birthYear: z.number().int().min(1900).max(new Date().getFullYear() - 16, 'Pantry2Plate is for people 16 and over.').nullish(),
         sex: z.enum(['male', 'female', 'unspecified']).nullish(),
         activityLevel: z.enum(['sedentary', 'light', 'moderate', 'active', 'very_active']).nullish(),
         weightGoal: z.enum(['lose', 'maintain', 'gain']).nullish(),

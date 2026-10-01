@@ -19,12 +19,17 @@ import Eaten from './screens/Eaten';
 import SnapFlow from './screens/snap/SnapFlow';
 import Settings from './screens/Settings';
 import ConfirmEmail from './screens/ConfirmEmail';
+import { PrivacyPage, SupportPage } from './screens/PublicPages';
 
 export default function App() {
   const { user, loading } = useAuth();
   const location = useLocation();
   // swipe in from the edge to go back, on screens opened from somewhere; not on the tabs
   useEffect(() => allowSwipeBack(location.pathname), [location.pathname]);
+
+  // readable by anyone, signed in or not: the App Store listing links to these
+  if (location.pathname === '/privacy') return <PrivacyPage />;
+  if (location.pathname === '/support') return <SupportPage />;
 
   /*
    * Only reached with a token but no cached account (a first launch after

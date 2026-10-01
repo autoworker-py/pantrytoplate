@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../db.js';
 import { badRequest, conflict, forbidden, unauthorized } from '../errors.js';
 import { env } from '../env.js';
+import { refuseLeaked } from './leakedPasswords.js';
 
 const ROUNDS = 10;
 
@@ -27,6 +28,7 @@ export async function registerUser(email: string, password: string) {
 
   const existing = await prisma.user.findUnique({ where: { email: normalized } });
   if (existing) throw conflict('An account with that email already exists.', 'email_taken');
+  await refuseLeaked(password);
 
   const user = await prisma.user.create({
     data: { email: normalized, passwordHash: await bcrypt.hash(password, ROUNDS) },
@@ -59,6 +61,7 @@ export async function changePassword(userId: string, current: string, next: stri
 
   const valid = await bcrypt.compare(current, user.passwordHash);
   if (!valid) throw unauthorized('That is not your current password.');
+  await refuseLeaked(next);
 
   // a new password signs out every other device; the route hands this one a fresh token
   await prisma.user.update({
@@ -80,6 +83,7 @@ export async function accountByEmail(email: string) {
  * too, and every device that was signed in is signed out.
  */
 export async function resetPassword(userId: string, next: string) {
+  await refuseLeaked(next);
   await prisma.user.update({
     where: { id: userId },
     data: { passwordHash: await bcrypt.hash(next, ROUNDS), sessionsValidFrom: new Date(), emailUnconfirmed: false },

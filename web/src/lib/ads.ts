@@ -42,9 +42,9 @@ function prepare(): Promise<boolean> {
     }
     if ((await AdMob.trackingAuthorizationStatus()).status === 'notDetermined') await AdMob.requestTrackingAuthorization();
     await AdMob.initialize({ initializeForTesting: TESTING });
-    // pages leave room for the banner while it shows, and none while it is hidden
+    // pages leave room for the banner and its clear band while it shows, and none while it is hidden
     void AdMob.addListener(BannerAdPluginEvents.SizeChanged, ({ height }) => {
-      document.documentElement.style.setProperty('--ad-h', `${Math.round(height)}px`);
+      document.documentElement.style.setProperty('--ad-h', height > 0 ? `${Math.round(height) + 2 * AD_GAP}px` : '0px');
     });
     // a banner that finishes loading after its screen was left must not appear on the next one
     void AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
@@ -66,7 +66,15 @@ let wanted = false;
 let queue: Promise<unknown> = Promise.resolve();
 const inTurn = (step: () => Promise<unknown>) => (queue = queue.then(step).catch(() => undefined));
 
-/** How far the tab bar reaches above the phone's safe area: the banner sits right on top of it. */
+/**
+ * Clear space between the banner and what can be tapped on either side of it:
+ * Google counts a banner pressed up against a tab bar as one built for
+ * accidental clicks, and can stop serving ads to the app for it. The band it
+ * sits in (AdBanner) catches a tap that falls just short.
+ */
+export const AD_GAP = 10;
+
+/** How far the tab bar reaches above the phone's safe area: the banner sits a clear gap above it. */
 function tabBarLift(): number {
   const tabs = document.querySelector('.tabs');
   const probe = document.createElement('div');
@@ -93,7 +101,7 @@ export function showBanner() {
       }
     }
     if (banner === 'none') {
-      await AdMob.showBanner({ adId: BANNER_ID, adSize: BannerAdSize.ADAPTIVE_BANNER, position: BannerAdPosition.BOTTOM_CENTER, margin: tabBarLift(), isTesting: TESTING, npa: !personalised });
+      await AdMob.showBanner({ adId: BANNER_ID, adSize: BannerAdSize.ADAPTIVE_BANNER, position: BannerAdPosition.BOTTOM_CENTER, margin: tabBarLift() + AD_GAP, isTesting: TESTING, npa: !personalised });
       banner = 'up';
     }
   });

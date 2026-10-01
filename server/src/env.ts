@@ -87,4 +87,7 @@ export const env = {
   resendApiKey: process.env.RESEND_API_KEY ?? '',
   /** the sender; Resend's own test address only delivers to the Resend account's owner */
   emailFrom: str('EMAIL_FROM', 'Pantry2Plate <onboarding@resend.dev>'),
+  /** who runs the app and how to reach them, as named in the privacy notice and on the support page */
+  operatorName: process.env.OPERATOR_NAME ?? '',
+  supportEmail: process.env.SUPPORT_EMAIL ?? '',
 };

@@ -16,6 +16,7 @@ import { PRIVACY_VERSION } from '../src/content/privacy.js';
 import { DUMMY_HASH } from '../src/services/auth.js';
 import { enforceLimits } from '../src/limits.js';
 import { BlockedAddressError, fetchPublicPage, isPrivateAddress } from '../src/external/safeFetch.js';
+import { refuseLeaked, timesLeaked } from '../src/services/leakedPasswords.js';
 
 let app: FastifyInstance;
 const stamp = Date.now();
@@ -180,5 +181,25 @@ describe('recipe import stays on the public internet', () => {
     for (const url of ['http://127.0.0.1/', 'http://169.254.169.254/latest/meta-data/', 'http://[::1]/', 'http://localhost/', 'http://printer.local/', 'https://example.com:8443/', 'http://user:pass@example.com/', 'file:///etc/passwd']) {
       await expect(fetchPublicPage(url, { timeoutMs: 2000, maxBytes: 1000, headers: {} }), url).rejects.toBeInstanceOf(BlockedAddressError);
     }
+  });
+});
+
+describe('passwords already leaked elsewhere', () => {
+  // the hashes Pwned Passwords would return for the prefix of "password123", one of them its own
+  const leakedRange = async (prefix: string) => {
+    expect(prefix).toBe('CBFDA'); // only five characters of the hash ever leave
+    return ['0018A45C4D1DEF81644B54AB7F969B88D65:1', 'C6D2AF1E4BE9D97EB2A1A4E9F5E27D0E6F3:0', 'C7F1E0D6E2A43A2C66BB2D5B4F8E35C5B5A:2', '25F7C1F6BEAC0C5A2CD94E8D0D8C1E2F7A0:7'].join('\r\n');
+  };
+
+  it('knows a leaked password from its hash prefix alone', async () => {
+    const { createHash } = await import('node:crypto');
+    const hash = createHash('sha1').update('password123').digest('hex').toUpperCase();
+    const range = async (prefix: string) => `${(await leakedRange(prefix)).replace('25F7C1F6BEAC0C5A2CD94E8D0D8C1E2F7A0', hash.slice(5))}`;
+    expect(await timesLeaked('password123', range)).toBe(7);
+    await expect(refuseLeaked('password123', range)).rejects.toMatchObject({ code: 'password_leaked' });
+  });
+
+  it('lets a password through when the list cannot be reached', async () => {
+    expect(await timesLeaked('anything-at-all', async () => { throw new Error('offline'); })).toBe(0);
   });
 });

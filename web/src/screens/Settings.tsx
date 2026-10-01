@@ -131,6 +131,21 @@ export default function Settings() {
             <Row title="Privacy notice" onClick={() => setSheet('privacy')}><Icon name="chevron" size={18} className="faint" /></Row>
           </div>
 
+          <div className="section"><h2>About</h2></div>
+          <div className="group">
+            <Row
+              title="Where the food data comes from"
+              sub={
+                <>
+                  Packaged products from <a href="https://world.openfoodfacts.org" target="_blank" rel="noreferrer">Open Food Facts</a>, under the{' '}
+                  <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noreferrer">Open Database License</a>. Nutrition for
+                  everyday foods from <a href="https://fdc.nal.usda.gov" target="_blank" rel="noreferrer">USDA FoodData Central</a>. Calories from a meal photo are an
+                  estimate by AI, and every number here is a guide, not medical advice.
+                </>
+              }
+            />
+          </div>
+
           <div className="section"><h2>Account</h2><span className="aside">{user?.email ?? s.email}</span></div>
           <div className="group">
             <Row title="Change password" onClick={() => setSheet('password')}><Icon name="chevron" size={18} className="faint" /></Row>
