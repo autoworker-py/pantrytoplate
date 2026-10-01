@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { Icon, type IconName } from './Icon';
+import { tick } from '../lib/native';
 
 const TABS: Array<{ to: string; label: string; icon: IconName; end?: boolean }> = [
   { to: '/', label: 'Cook', icon: 'cook', end: true },
@@ -16,6 +17,9 @@ export function TabBar() {
           key={tab.to}
           to={tab.to}
           end={tab.end}
+          onClick={(event) => {
+            if (!event.currentTarget.classList.contains('active')) tick();
+          }}
           className={({ isActive }) => {
             // a recipe opened from Cook still belongs to Cook
             const cookish = tab.to === '/' && /^\/recipes/.test(window.location.pathname);

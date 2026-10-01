@@ -115,6 +115,14 @@ input, select, textarea { font: inherit; color: inherit; }
 .page-head > .slot-l { justify-self: start; display: flex; gap: 8px; }
 .page-head > .slot-r { justify-self: end; display: flex; gap: 8px; }
 .page-head .head-title { font-family: var(--display); font-size: 18px; font-weight: 700; letter-spacing: -.01em; text-align: center; }
+/* A list scrolled up passes under the header and fades into the room, as it
+   slides under the bar in any iPhone app, instead of ending on a hard line. */
+.page-head::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 22px; pointer-events: none;
+  background: linear-gradient(var(--bg), rgba(12, 13, 15, 0));
+  opacity: 0; transition: opacity var(--fast) ease;
+}
+.page[data-scrolled] .page-head::after { opacity: 1; }
 .page-scroll {
   flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
   -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;
@@ -316,3 +324,18 @@ button.list-row:active, a.list-row:active { background: rgba(255, 244, 228, .03)
 
 /* two small actions side by side in a header slot */
 .head-actions { display: flex; gap: 8px; }
+
+/* ---------- made for the iPhone ---------- */
+
+/* Holding a finger on a button, a label or a picture does what it does in any
+   app: nothing. Text is selectable where it is typed. */
+html.native body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+html.native input, html.native textarea, html.native [contenteditable="true"] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+
+/* While typing, the tab bar steps away as it would in any app, and the room
+   it kept at the bottom of each page goes with it. */
+html.kb-open .tabs { display: none; }
+html.kb-open .page-scroll { padding-bottom: 28px; }
+html.kb-open .page-fixed { padding-bottom: 0; }
+html.kb-open .toast { bottom: 14px; }
+html.kb-open .sheet { padding-bottom: 18px; }

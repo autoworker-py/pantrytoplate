@@ -3,6 +3,8 @@ import { useAuth } from './lib/auth';
 import { ToastProvider, Logo } from './ui/kit';
 import { TabBar } from './ui/TabBar';
 import { AdBanner } from './components/AdBanner';
+import { allowSwipeBack } from './lib/native';
+import { useEffect } from 'react';
 import Login from './screens/Login';
 import Onboarding from './screens/Onboarding';
 import Reconsent from './screens/Reconsent';
@@ -20,6 +22,8 @@ import Settings from './screens/Settings';
 export default function App() {
   const { user, loading } = useAuth();
   const location = useLocation();
+  // swipe in from the edge to go back, on screens opened from somewhere; not on the tabs
+  useEffect(() => allowSwipeBack(location.pathname), [location.pathname]);
 
   /*
    * Only reached with a token but no cached account (a first launch after

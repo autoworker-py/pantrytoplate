@@ -8,8 +8,10 @@ import { AuthProvider } from './lib/auth';
 import './styles/base.css';
 import './styles/screens.css';
 import { registerServiceWorker } from './lib/notify';
+import { setUpNative } from './lib/native';
 
 void registerServiceWorker();
+void setUpNative();
 
 /* Night is the only theme for now; say so to the browser before first paint. */
 document.documentElement.setAttribute('data-theme', 'dark');

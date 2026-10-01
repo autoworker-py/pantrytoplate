@@ -20,5 +20,30 @@ class MainViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(LiveActivityPlugin())
         bridge?.registerPluginInstance(ReceiptTextPlugin())
+        bridge?.registerPluginInstance(SwipeBackPlugin())
+    }
+}
+
+/**
+ The iPhone's back gesture: swipe in from the left edge to go back a screen.
+
+ The web view has it built in but off. The app turns it on for screens that
+ were opened from somewhere (a recipe, Settings, adding food) and off on the
+ four tabs, where an iPhone app has nothing to go back to.
+ */
+@objc(SwipeBackPlugin)
+public class SwipeBackPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "SwipeBackPlugin"
+    public let jsName = "SwipeBack"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "setEnabled", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func setEnabled(_ call: CAPPluginCall) {
+        let enabled = call.getBool("enabled") ?? false
+        DispatchQueue.main.async {
+            self.bridge?.webView?.allowsBackForwardNavigationGestures = enabled
+            call.resolve()
+        }
     }
 }

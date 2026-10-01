@@ -50,6 +50,16 @@ const config: CapacitorConfig = {
       showSpinner: false,
       launchAutoHide: true,
     },
+    /*
+     * The web view shrinks above the keyboard, so a field near the bottom (every
+     * sheet has one) rises with it instead of being typed blind beneath it; the
+     * dark keyboard matches the room.
+     */
+    Keyboard: {
+      resize: 'native',
+      style: 'DARK',
+      resizeOnFullScreen: true,
+    },
     StatusBar: {
       style: 'DARK', // light glyphs, for a dark ground
       backgroundColor: '#0c0d0f',

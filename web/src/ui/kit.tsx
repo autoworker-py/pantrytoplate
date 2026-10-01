@@ -1,8 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode, type UIEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Overlay } from '../components/Overlay';
 import { Icon } from './Icon';
 import { coverBanner } from '../lib/ads';
+import { done } from '../lib/native';
 
 /* ---------- page ---------- */
 
@@ -35,9 +36,15 @@ export function Page({
         {center ?? (title ? <h1 className="head-title">{title}</h1> : <span />)}
         <div className="slot-r">{right}</div>
       </header>
-      {fixed ? <div className="page-fixed">{children}</div> : <div className="page-scroll">{children}</div>}
+      {fixed ? <div className="page-fixed">{children}</div> : <div className="page-scroll" onScroll={underHeader}>{children}</div>}
     </div>
   );
+}
+
+/** Marks the page once its column has scrolled, so the list fades under the header instead of being cut off. */
+function underHeader(event: UIEvent<HTMLDivElement>) {
+  const column = event.currentTarget;
+  column.parentElement?.toggleAttribute('data-scrolled', column.scrollTop > 2);
 }
 
 export function Logo({ size = 44 }: { size?: number }) {
@@ -129,6 +136,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     window.clearTimeout(timer.current);
     const id = Date.now();
     setToast({ id, message, action });
+    // an undoable toast means something was just done: the phone says so too
+    if (action) done();
     timer.current = window.setTimeout(() => setToast((t) => (t?.id === id ? null : t)), action ? 5200 : 3200);
   }, []);
 
