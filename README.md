@@ -413,6 +413,8 @@ All routes except `/api/health` and `/api/auth/*` require
 | `GET` | `/api/recipes/for-food/:foodId` | What you can make with one pantry item |
 | `DELETE` | `/api/recipes/:id` | Delete a recipe you added (soft; diary survives) |
 | `POST` | `/api/auth/password` | Change your own password |
+| `POST` | `/api/auth/email/confirm`, `/api/auth/email/send-code`, `/api/auth/email/change` | Confirm a new account's email with the emailed code |
+| `POST` | `/api/auth/password/forgot`, `/api/auth/password/reset` | Forgot password: a code by email, then a new password |
 | `GET` | `/api/foods/:id/pack` | Pack size, and whether it is known or guessed |
 | `GET` | `/api/consumption/today`, `/api/consumption/history` | Calories, macros, meals |
 | `GET` `DELETE` | `/api/consumption/:id` | Entry breakdown / **undo** |

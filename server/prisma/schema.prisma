@@ -80,6 +80,11 @@ model User {
   /// phone's session ends when the owner changes their password
   sessionsValidFrom DateTime?
 
+  /// true from signing up until the six-digit code emailed to the address has
+  /// been typed in. Accounts made before email codes were switched on were
+  /// never asked, so for them it stays false.
+  emailUnconfirmed  Boolean   @default(false)
+
   inventoryItems    InventoryItem[]
   consumptionLogs   ConsumptionLog[]
   shoppingListItems ShoppingListItem[]
@@ -89,6 +94,7 @@ model User {
   recipes           Recipe[]
   ownedFoods        FoodReference[]    @relation("OwnedFoods")
   packSizes         UserPackSize[]
+  emailCodes        EmailCode[]
 }
 
 /// The shared dictionary of foods. Both packaged barcode products and raw
@@ -450,4 +456,28 @@ model UserPackSize {
   foodReference FoodReference @relation(fields: [foodReferenceId], references: [id], onDelete: Cascade)
 
   @@id([userId, foodReferenceId])
+}
+
+/// A six-digit code sent by email: to confirm the address after signing up, or
+/// to set a new password. Only a keyed hash of it is kept and there is one live
+/// code per purpose. A code stops working after fifteen minutes or five wrong
+/// tries, and an account gets at most ten codes and ten wrong tries a day per
+/// purpose, so guessing one is out of reach however many addresses ask.
+model EmailCode {
+  userId      String
+  /// "confirm" | "reset"
+  purpose     String
+  codeHash    String
+  /// wrong tries at this code
+  tries       Int      @default(0)
+  sentAt      DateTime @default(now())
+  expiresAt   DateTime
+  /// the day-long window the two counts below belong to
+  windowStart DateTime @default(now())
+  sends       Int      @default(0)
+  misses      Int      @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, purpose])
 }

@@ -13,6 +13,7 @@ import { HttpError } from './errors.js';
 import { prisma } from './db.js';
 import { ceiling } from './limits.js';
 import { inZone, zoneOrDefault } from './zone.js';
+import { emailCodesOn } from './services/mail.js';
 import './types.js';
 
 import authRoutes from './routes/auth.js';
@@ -80,15 +81,22 @@ export async function buildApp(): Promise<FastifyInstance> {
    * owner does, and one for a deleted account fails halfway through a request.
    */
   app.decorate('authenticate', async (request, reply) => {
+    let unconfirmed = false;
     try {
       await request.jwtVerify();
       const issued = (request.user as { iat?: number }).iat ?? 0;
-      const account = await prisma.user.findUnique({ where: { id: request.user.sub }, select: { sessionsValidFrom: true } });
+      const account = await prisma.user.findUnique({ where: { id: request.user.sub }, select: { sessionsValidFrom: true, emailUnconfirmed: true } });
       if (!account) throw new Error('no such account');
       if (account.sessionsValidFrom && issued < Math.floor(account.sessionsValidFrom.getTime() / 1000)) throw new Error('signed out');
       request.userId = request.user.sub;
+      unconfirmed = account.emailUnconfirmed;
     } catch {
       await reply.code(401).send({ error: 'unauthorized', message: 'Sign in to continue.' });
+      return;
+    }
+    // a new account reaches only its own sign-in screens until the code emailed to it is typed in
+    if (unconfirmed && !request.routeOptions.config.unconfirmedOk && emailCodesOn()) {
+      await reply.code(403).send({ error: 'email_unconfirmed', message: 'Confirm your email to carry on: the code is in your inbox.' });
     }
   });
 

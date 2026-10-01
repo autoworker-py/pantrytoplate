@@ -18,6 +18,7 @@ import Shopping from './screens/Shopping';
 import Eaten from './screens/Eaten';
 import SnapFlow from './screens/snap/SnapFlow';
 import Settings from './screens/Settings';
+import ConfirmEmail from './screens/ConfirmEmail';
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -46,9 +47,18 @@ export default function App() {
   }
 
   /*
-   * Two gates before the app proper, in order: a revised privacy notice must be
-   * re-read, then the first-run questions, asked once and skippable.
+   * Three gates before the app proper, in order: a new account types in the
+   * code emailed to it, a revised privacy notice must be re-read, then the
+   * first-run questions, asked once and skippable.
    */
+  if (user.emailConfirmed === false) {
+    return (
+      <ToastProvider>
+        <div className="app"><ConfirmEmail /></div>
+      </ToastProvider>
+    );
+  }
+
   if (!user.privacyCurrent) {
     return (
       <ToastProvider>

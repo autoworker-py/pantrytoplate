@@ -45,6 +45,10 @@ Who the token belongs to.
   user: {
     id: string;
     email: string;
+    /** false until the code emailed to a new account is typed in; everything else answers 403 until then */
+    emailConfirmed: boolean;
+    onboarded: boolean;
+    privacyCurrent: boolean;
   };
 }
 ```
@@ -807,6 +811,12 @@ These change state, so they are described rather than called.
 | `POST` | `/api/auth/register` | `{ email, password }` | Creates an account, returns { token, user }. |
 | `POST` | `/api/auth/login` | `{ email, password }` | Returns { token, user }. |
 | `POST` | `/api/auth/password` | `{ currentPassword, newPassword }` | Changes your own password. |
+| `GET` | `/api/auth/options` | — | `{ emailCodes }`: whether this server can email codes. |
+| `POST` | `/api/auth/email/confirm` | `{ code }` | Confirms a new account's email. |
+| `POST` | `/api/auth/email/send-code` | — | Emails another code, at most every 30 s. |
+| `POST` | `/api/auth/email/change` | `{ email }` | Fixes the address before it is confirmed; returns a new token. |
+| `POST` | `/api/auth/password/forgot` | `{ email }` | Emails a reset code if the account exists; always `{ sent: true }`. |
+| `POST` | `/api/auth/password/reset` | `{ email, code, newPassword }` | Sets the new password, signs out other devices, returns `{ token, user }`. |
 | `POST` | `/api/inventory` | `{ foodReferenceId | name, quantity, unit, expirationDate?, storageLocation? }` | Adds a lot. |
 | `PATCH` | `/api/inventory/:id` | `{ quantity?, unit?, expirationDate?, lowStockThreshold? }` | Corrects a lot. |
 | `POST` | `/api/inventory/:id/consume` | `{ quantity, unit, mealSlot }` | Eat some. Writes the diary. |

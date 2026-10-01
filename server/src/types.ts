@@ -10,6 +10,10 @@ declare module 'fastify' {
     /** id of the authenticated user; only present behind `authenticate` */
     userId: string;
   }
+  interface FastifyContextConfig {
+    /** reachable by a new account before its emailed code is typed in (see `authenticate`) */
+    unconfirmedOk?: boolean;
+  }
 }
 
 declare module '@fastify/jwt' {

@@ -73,3 +73,14 @@ services:
         value: "false"
       - key: EXPIRY_WARNING_DAYS
         value: "3"
+
+      # Email codes: confirming an address after sign-up, and "Forgot password".
+      # Until RESEND_API_KEY has a value, no email is sent and nobody is asked
+      # for a code, so the app works exactly as it did. Paste the key from
+      # resend.com in the dashboard once your domain is verified there, and
+      # set EMAIL_FROM to an address on that domain, like
+      # "Pantry2Plate <no-reply@yourdomain.com>".
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false

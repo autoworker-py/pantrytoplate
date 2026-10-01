@@ -3,13 +3,14 @@ import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
 import { PrivacyNotice } from '../components/PrivacyNotice';
 import { errorText } from '../ui/kit';
+import { ForgotPassword } from './ForgotPassword';
 
 /* the demo account only exists on a development database, so only offer it there */
 const DEV = !import.meta.env.VITE_API_URL;
 
 export default function Login() {
   const { login, register } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [email, setEmail] = useState(DEV ? 'demo@pantry.local' : '');
   const [password, setPassword] = useState(DEV ? 'pantrydemo' : '');
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +20,17 @@ export default function Login() {
   const [version, setVersion] = useState<string | null>(null);
   const [noticeFailed, setNoticeFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // whether this server can email codes: what makes "Forgot password?" possible
+  const [emailCodes, setEmailCodes] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    api
+      .get<{ emailCodes: boolean }>('/api/auth/options')
+      .then((d) => live && setEmailCodes(d.emailCodes))
+      .catch(() => undefined);
+    return () => { live = false; };
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -58,10 +70,15 @@ export default function Login() {
           <div className="inside"><i style={{ top: 64 }} /><i style={{ top: 118 }} /></div>
           <div className="panel"><img src="/logo-mark.png" alt="" /></div>
         </div>
-        <h1>{mode === 'login' ? 'Welcome back' : 'Make your pantry'}</h1>
-        <p className="lede">Enter your food once. After that, eating it or cooking with it is a tap.</p>
+        <h1>{mode === 'login' ? 'Welcome back' : mode === 'register' ? 'Make your pantry' : 'Reset your password'}</h1>
+        <p className="lede">
+          {mode === 'forgot' ? 'We will email you a code, and the code lets you choose a new password.' : 'Enter your food once. After that, eating it or cooking with it is a tap.'}
+        </p>
       </div>
 
+      {mode === 'forgot' ? (
+        <ForgotPassword startEmail={email.trim()} onBack={() => { setMode('login'); setError(null); }} />
+      ) : (
       <form className="auth-form" onSubmit={submit} noValidate>
         <div className="seg" role="tablist" style={{ marginBottom: 6 }}>
           <button type="button" role="tab" aria-selected={mode === 'login'} className={mode === 'login' ? 'on' : ''} onClick={() => { setMode('login'); setError(null); }}>Sign in</button>
@@ -73,11 +90,15 @@ export default function Login() {
         <div className="field">
           <label htmlFor="email">Email</label>
           <input id="email" type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          {mode === 'register' && emailCodes ? <span className="hint">We will email you a code to confirm it.</span> : null}
         </div>
         <div className="field">
           <label htmlFor="password">Password</label>
           <input id="password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required />
           {mode === 'register' ? <span className="hint">At least 8 characters.</span> : null}
+          {mode === 'login' && emailCodes ? (
+            <button type="button" className="link-btn forgot-link" onClick={() => { setMode('forgot'); setError(null); }}>Forgot password?</button>
+          ) : null}
         </div>
 
         {mode === 'register' ? (
@@ -103,6 +124,7 @@ export default function Login() {
 
         {DEV ? <p className="fine" style={{ marginTop: 16, textAlign: 'center' }}>Demo account: demo@pantry.local / pantrydemo</p> : null}
       </form>
+      )}
 
       {reading ? <PrivacyNotice onClose={() => setReading(false)} /> : null}
     </div>

@@ -70,6 +70,18 @@ that question answerable — or to refuse it honestly when it is not.
   `privacyCurrent: false` and must re-accept via `POST /api/auth/privacy/accept`
   before the app is usable. This is deliberate: the app holds health data.
 - `POST /api/auth/delete-account` is a real cascade. Nothing is kept.
+- **Email codes** (on only where email can be sent: `RESEND_API_KEY` in
+  production, the server log on a laptop; `GET /api/auth/options` says which).
+  A new account gets a six-digit code by email and `GET /api/auth/me` reports
+  `emailConfirmed: false`; until `POST /api/auth/email/confirm { code }`, every
+  other route answers 403 `email_unconfirmed`. `POST /api/auth/email/send-code`
+  sends another (30 s apart), and `POST /api/auth/email/change { email }` fixes a
+  typo before confirming. Forgot password is `POST /api/auth/password/forgot
+  { email }` (same answer whether or not the account exists) then
+  `POST /api/auth/password/reset { email, code, newPassword }`, which signs out
+  every other device and returns `{ token, user }`. A code lasts 15 minutes and
+  5 wrong tries; an account gets 10 codes and 10 wrong tries a day per purpose.
+  Accounts made before email codes were on are never asked.
 
 **Error shape, everywhere:**
 

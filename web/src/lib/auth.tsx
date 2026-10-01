@@ -11,6 +11,8 @@ interface User {
   privacyCurrent: boolean;
   /** Pantry2Plate Pro: no ads. Missing from an account cached before it existed, which means "not known yet" */
   plus?: boolean;
+  /** false from signing up until the emailed code is typed in. Missing from an account cached before it existed, which means confirmed */
+  emailConfirmed?: boolean;
 }
 
 interface AuthState {
@@ -18,6 +20,8 @@ interface AuthState {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, acceptPrivacyVersion: string) => Promise<void>;
+  /** a forgotten password: the emailed code and a new password, which signs in */
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
   logout: () => void;
   /** re-read the account after onboarding or accepting a revised notice */
   refresh: () => Promise<void>;
@@ -85,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login: (email, password) => authenticate('/api/auth/login', { email, password }),
       register: (email, password, acceptPrivacyVersion) =>
         authenticate('/api/auth/register', { email, password, acceptPrivacyVersion }),
+      resetPassword: (email, code, newPassword) => authenticate('/api/auth/password/reset', { email, code, newPassword }),
       logout: () => {
         tokenStore.clear();
         sessionStore.clear();

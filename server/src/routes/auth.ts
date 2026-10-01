@@ -1,6 +1,9 @@
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyPluginAsync, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { z } from 'zod';
-import { changePassword, registerUser, verifyCredentials } from '../services/auth.js';
+import { accountByEmail, changePassword, changeUnconfirmedEmail, registerUser, resetPassword, verifyCredentials } from '../services/auth.js';
+import { checkCode, sendCode, type Check, type Sending } from '../services/emailCodes.js';
+import { emailCodesOn } from '../services/mail.js';
+import { HttpError, badRequest } from '../errors.js';
 import { prisma } from '../db.js';
 import { PRIVACY_POLICY, PRIVACY_VERSION, PRIVACY_EFFECTIVE } from '../content/privacy.js';
 import { estimateEnergy, ACTIVITY_LABELS } from '../services/energy.js';
@@ -12,6 +15,31 @@ const credentials = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters.').max(128, 'Passwords can be up to 128 characters.'),
 });
 
+/** the six digits from the email, forgiving a space or dash typed between them */
+const code = z
+  .string()
+  .max(20)
+  .transform((typed) => typed.replace(/\D/g, ''))
+  .pipe(z.string().length(6, 'Enter the 6-digit code from the email.'));
+
+function codeRefused(check: Exclude<Check, 'ok'>): HttpError {
+  if (check === 'wrong') return badRequest('That code is not right. Check the email and try again.', 'code_wrong');
+  if (check === 'used_up') return badRequest('That code has had too many wrong tries. Send a new one.', 'code_used_up');
+  if (check === 'locked') return new HttpError(429, 'Too many wrong codes today. Try again tomorrow.', 'code_locked');
+  return badRequest('That code has expired. Send a new one.', 'code_expired');
+}
+
+function notSent(reply: FastifyReply, sending: Exclude<Sending, { sent: true }>) {
+  return sending.reason === 'wait'
+    ? reply.code(429).send({ error: 'code_wait', message: `A code was sent a moment ago. Try again in ${sending.waitSeconds} seconds.`, details: { waitSeconds: sending.waitSeconds } })
+    : reply.code(429).send({ error: 'code_limit', message: 'That is a lot of codes for one day. Try again tomorrow.' });
+}
+
+const emailFailed = () => new HttpError(503, 'The email could not be sent just now. Try again in a minute.', 'email_failed');
+
+/** A route a new account can reach before its email is confirmed (see authenticate). */
+const beforeConfirming = (options: RouteShorthandOptions = {}): RouteShorthandOptions => ({ ...options, config: { ...options.config, unconfirmedOk: true } });
+
 const routes: FastifyPluginAsync = async (app) => {
   /** The notice itself, readable before signing up rather than only after. */
   app.get('/privacy', async () => ({
@@ -19,6 +47,9 @@ const routes: FastifyPluginAsync = async (app) => {
     effective: PRIVACY_EFFECTIVE,
     markdown: PRIVACY_POLICY,
   }));
+
+  /** What the sign-in screen can offer: a forgotten password can only be reset once email is set up. */
+  app.get('/options', async () => ({ emailCodes: emailCodesOn() }));
 
   app.post('/register', limit(10, '1 hour'), async (request, reply) => {
     const body = credentials
@@ -41,10 +72,14 @@ const routes: FastifyPluginAsync = async (app) => {
     }
 
     const user = await registerUser(body.email, body.password);
+    // with email set up, the address is confirmed by a code before the app opens
+    const confirming = emailCodesOn();
     await prisma.user.update({
       where: { id: user.id },
-      data: { privacyAcceptedAt: new Date(), privacyVersion: PRIVACY_VERSION },
+      data: { privacyAcceptedAt: new Date(), privacyVersion: PRIVACY_VERSION, emailUnconfirmed: confirming },
     });
+    // a failed send is not a failed sign-up: the code screen offers to send another
+    if (confirming) await sendCode(user, 'confirm').catch((error: unknown) => request.log.error(error, 'confirmation code not sent'));
     const token = app.jwt.sign({ sub: user.id, email: user.email });
     return reply.code(201).send({ token, user, privacyVersion: PRIVACY_VERSION });
   });
@@ -73,7 +108,9 @@ const routes: FastifyPluginAsync = async (app) => {
   app.post('/login', limit(10, '15 minutes', byEmail), async (request) => {
     const { email, password } = credentials.parse(request.body);
     const user = await verifyCredentials(email, password);
-    return { token: app.jwt.sign({ sub: user.id, email: user.email }), user };
+    // signing in before confirming, say on a second phone: send a fresh code for the screen that follows
+    if (user.emailUnconfirmed && emailCodesOn()) void sendCode(user, 'confirm').catch((error: unknown) => request.log.error(error, 'confirmation code not sent'));
+    return { token: app.jwt.sign({ sub: user.id, email: user.email }), user: { id: user.id, email: user.email, createdAt: user.createdAt } };
   });
 
   app.post('/password', { preHandler: [app.authenticate], ...limit(10, '15 minutes') }, async (request) => {
@@ -88,13 +125,15 @@ const routes: FastifyPluginAsync = async (app) => {
     return { ...result, token: app.jwt.sign({ sub: request.user.sub, email: request.user.email }) };
   });
 
-  app.get('/me', { preHandler: [app.authenticate] }, async (request) => {
+  app.get('/me', { preHandler: [app.authenticate], ...beforeConfirming() }, async (request) => {
     const user = await prisma.user.findUnique({ where: { id: request.userId } });
     const estimate = user ? estimateEnergy(user) : null;
     return {
       user: {
         id: request.user.sub,
-        email: request.user.email,
+        email: user?.email ?? request.user.email,
+        /** false from signing up until the emailed code is typed in, which gates the app */
+        emailConfirmed: !(user?.emailUnconfirmed && emailCodesOn()),
         onboarded: Boolean(user?.onboardedAt),
         /** Pantry2Plate Pro: no ads, and as many meal photos as they like */
         plus: user?.plusSince != null,
@@ -105,6 +144,64 @@ const routes: FastifyPluginAsync = async (app) => {
       currentPrivacyVersion: PRIVACY_VERSION,
       energy: estimate,
     };
+  });
+
+  /** The code from the email, typed in: the address is theirs, and the app opens. */
+  app.post('/email/confirm', { preHandler: [app.authenticate], ...beforeConfirming(limit(30, '15 minutes')) }, async (request) => {
+    const body = z.object({ code }).parse(request.body);
+    const check = await checkCode(request.userId, 'confirm', body.code);
+    if (check !== 'ok') throw codeRefused(check);
+    await prisma.user.update({ where: { id: request.userId }, data: { emailUnconfirmed: false } });
+    return { confirmed: true };
+  });
+
+  /** "Send a new code" on the code screen. */
+  app.post('/email/send-code', { preHandler: [app.authenticate], ...beforeConfirming(limit(15, '1 hour')) }, async (request, reply) => {
+    const account = await prisma.user.findUniqueOrThrow({ where: { id: request.userId } });
+    if (!account.emailUnconfirmed || !emailCodesOn()) return { sent: false, confirmed: true };
+    const sending = await sendCode(account, 'confirm').catch((error: unknown) => {
+      request.log.error(error, 'confirmation code not sent');
+      throw emailFailed();
+    });
+    return sending.sent ? { sent: true } : notSent(reply, sending);
+  });
+
+  /** "Wrong email? Change it": a typo at sign-up, fixed before the code is typed in. */
+  app.post('/email/change', { preHandler: [app.authenticate], ...beforeConfirming(limit(10, '1 hour')) }, async (request, reply) => {
+    const { email } = z.object({ email: credentials.shape.email }).parse(request.body);
+    const account = await changeUnconfirmedEmail(request.userId, email);
+    const sending = await sendCode(account, 'confirm').catch((error: unknown) => {
+      request.log.error(error, 'confirmation code not sent');
+      throw emailFailed();
+    });
+    if (!sending.sent) return notSent(reply, sending);
+    // the token carries the address, so this phone gets one with the new one
+    return { email: account.email, token: app.jwt.sign({ sub: account.id, email: account.email }) };
+  });
+
+  /**
+   * Forgot password: email a code to the address, if an account has it. The
+   * answer is the same either way and arrives before the email is sent, so it
+   * says nothing about who has an account.
+   */
+  app.post('/password/forgot', limit(5, '1 hour', byEmail), async (request) => {
+    if (!emailCodesOn()) throw new HttpError(503, 'Resetting a password by email is not available yet.', 'email_off');
+    const { email } = z.object({ email: credentials.shape.email }).parse(request.body);
+    const account = await accountByEmail(email);
+    if (account) void sendCode(account, 'reset').catch((error: unknown) => request.log.error(error, 'reset code not sent'));
+    return { sent: true };
+  });
+
+  /** The code from the email and a new password: set it, sign out every other device, and sign in here. */
+  app.post('/password/reset', limit(10, '15 minutes', byEmail), async (request) => {
+    const body = z.object({ email: credentials.shape.email, code, newPassword: credentials.shape.password }).parse(request.body);
+    const account = await accountByEmail(body.email);
+    // no account answers exactly as a wrong code does
+    if (!account) throw codeRefused('wrong');
+    const check = await checkCode(account.id, 'reset', body.code);
+    if (check !== 'ok') throw codeRefused(check);
+    await resetPassword(account.id, body.newPassword);
+    return { token: app.jwt.sign({ sub: account.id, email: account.email }), user: { id: account.id, email: account.email, createdAt: account.createdAt } };
   });
 
   /**
@@ -190,7 +287,7 @@ const routes: FastifyPluginAsync = async (app) => {
    * schema carry that out: inventory, diary, waste, shopping list, ratings,
    * plans and any recipes this person added all go with the row.
    */
-  app.post('/delete-account', { preHandler: [app.authenticate], ...limit(10, '15 minutes') }, async (request, reply) => {
+  app.post('/delete-account', { preHandler: [app.authenticate], ...beforeConfirming(limit(10, '15 minutes')) }, async (request, reply) => {
     const { password } = z.object({ password: z.string().min(1).max(128) }).parse(request.body);
     const user = await prisma.user.findUnique({ where: { id: request.userId } });
     if (!user) return reply.code(404).send({ error: 'not_found', message: 'No such account.' });

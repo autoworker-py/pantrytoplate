@@ -78,4 +78,13 @@ export const env = {
   anthropicModel: str('ANTHROPIC_MODEL', 'claude-sonnet-5'),
   /** meal photos an account may read before it needs Plus */
   freeSnaps: num('FREE_SNAPS', 3),
+  /**
+   * Email: the six-digit codes that confirm an address after signing up and
+   * reset a forgotten password go out through Resend once it has a key. With no
+   * key a deployed server sends nothing and asks nobody for a code, so the app
+   * works exactly as before; on a laptop the codes are printed in the log.
+   */
+  resendApiKey: process.env.RESEND_API_KEY ?? '',
+  /** the sender; Resend's own test address only delivers to the Resend account's owner */
+  emailFrom: str('EMAIL_FROM', 'Pantry2Plate <onboarding@resend.dev>'),
 };
