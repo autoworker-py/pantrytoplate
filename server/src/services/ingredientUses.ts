@@ -12,6 +12,7 @@
 import { prisma, type Tx } from '../db.js';
 import { roundQuantity } from './units.js';
 import { visibleToUser } from './recipeMatch.js';
+import { pantryOf } from './household.js';
 
 export interface IngredientUse {
   recipeId: string;
@@ -59,7 +60,7 @@ export async function ingredientUses(
 
   // what the user already owns, so "what else do I need" is answerable
   const lots = await db.inventoryItem.findMany({
-    where: { userId, quantity: { gt: 0 } },
+    where: { userId: await pantryOf(userId, db), quantity: { gt: 0 } },
     select: { foodReferenceId: true, foodReference: { select: { canonicalId: true } } },
   });
   const owned = new Set(lots.map((lot) => lot.foodReference.canonicalId ?? lot.foodReferenceId));

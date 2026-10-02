@@ -8,6 +8,7 @@ import { prisma } from '../db.js';
 import { addDays, dayStart, localDay, localMinutes } from '../zone.js';
 import { MEAL_SLOTS } from './diary.js';
 import { foodPoints, mixedGrade } from './healthScore.js';
+import { pantryOf } from './household.js';
 
 export async function insights(userId: string, days = 30) {
   const today = localDay(new Date());
@@ -16,7 +17,7 @@ export async function insights(userId: string, days = 30) {
   const [logs, earlier, pantry, wasted] = await Promise.all([
     prisma.consumptionLog.findMany({ where: { userId, consumedAt: { gte: from } }, include: { foodReference: true, recipe: true }, orderBy: { consumedAt: 'asc' } }),
     prisma.consumptionLog.findMany({ where: { userId, consumedAt: { gte: before, lt: from } }, include: { foodReference: true } }),
-    prisma.inventoryItem.findMany({ where: { userId, quantity: { gt: 0 } }, include: { foodReference: true } }),
+    prisma.inventoryItem.findMany({ where: { userId: await pantryOf(userId), quantity: { gt: 0 } }, include: { foodReference: true } }),
     prisma.inventoryRemoval.findMany({ where: { userId, reason: 'wasted', removedAt: { gte: before } }, select: { removedAt: true } }),
   ]);
 

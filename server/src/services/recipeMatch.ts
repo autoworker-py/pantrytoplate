@@ -13,6 +13,7 @@ import { goalFit, nutritionForRecipes, type RecipeNutrition } from './recipeNutr
 import { warningDaysFor } from './inventory.js';
 import { ratingsFor } from './history.js';
 import { env } from '../env.js';
+import { pantryOf } from './household.js';
 
 /**
  * Which recipes a person is allowed to see.
@@ -107,7 +108,7 @@ async function loadRecipes(where: object, take: number, db: Tx) {
  */
 async function loadInventoryByFood(userId: string, db: Tx) {
   const lots = await db.inventoryItem.findMany({
-    where: { userId, quantity: { gt: 0 } },
+    where: { userId: await pantryOf(userId, db), quantity: { gt: 0 } },
     include: { foodReference: true },
   });
   const byFood = new Map<string, typeof lots>();
@@ -433,7 +434,7 @@ async function shortlistRecipeIds(
   const candidateIds = timeFiltered.map((recipe) => recipe.id);
 
   const lots = await db.inventoryItem.findMany({
-    where: { userId, quantity: { gt: 0 } },
+    where: { userId: await pantryOf(userId, db), quantity: { gt: 0 } },
     select: { foodReferenceId: true, expirationDate: true, foodReference: { select: { canonicalId: true } } },
   });
   // count a branded product as the generic ingredient it is a version of

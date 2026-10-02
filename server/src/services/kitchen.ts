@@ -25,6 +25,7 @@ import { RETRYABLE, RetryableError, parseJson, post, snapProvider, withRetries }
 import { parseIngredientLine } from './ingredientParser.js';
 import { findOrCreateFoodByName } from './foodRef.js';
 import { normalizeUnit } from './units.js';
+import { pantryOf } from './household.js';
 
 export const FEELS = ['Warm', 'Spicy', 'Refreshing', 'Cozy', 'Light', 'Hearty', 'Cheesy', 'Crunchy', 'Zesty', 'Smoky', 'Sweet', 'Creamy'];
 
@@ -472,7 +473,7 @@ export async function saveKitchenRecipe(userId: string, body: z.infer<typeof Sav
   for (const ingredient of body.ingredients) {
     const parsed = parseIngredientLine(`${ingredient.amount} ${ingredient.name}`.trim());
     const own = ingredient.inventoryItemId
-      ? await prisma.inventoryItem.findFirst({ where: { id: ingredient.inventoryItemId, userId }, select: { foodReferenceId: true } })
+      ? await prisma.inventoryItem.findFirst({ where: { id: ingredient.inventoryItemId, userId: await pantryOf(userId) }, select: { foodReferenceId: true } })
       : null;
     const foodReferenceId =
       own?.foodReferenceId ??

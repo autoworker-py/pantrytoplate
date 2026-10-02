@@ -63,6 +63,8 @@ model User {
   /// how much of the exercise Apple Health reports goes back into the day's
   /// budget: "all", "half" or "none" (the health data itself stays on the phone)
   exerciseCalories String    @default("all")
+  /// the house this person shares a pantry and shopping list with, if any
+  householdId      String?
 
   /// ---- body data, used only to work out a calorie target ----
   /// All optional: the app is fully usable without any of it, and the target
@@ -120,6 +122,8 @@ model User {
   planSkips         PlanShoppingSkip[]
   waterLogs         WaterLog[]
   weightLogs        WeightLog[]
+  household         Household?         @relation("HouseMembers", fields: [householdId], references: [id], onDelete: SetNull)
+  ownsHouse         Household?         @relation("HouseOwner")
 }
 
 /// The shared dictionary of foods. Both packaged barcode products and raw
@@ -372,6 +376,8 @@ model ShoppingListItem {
   isChecked       Boolean  @default(false)
   /// "recipe_gap" | "manual"
   addedFrom       String   @default("manual")
+  /// whose meal plan put it on the list, so in a shared house each plan only
+  /// adds and takes off its own
   createdAt       DateTime @default(now())
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -569,4 +575,31 @@ model WeightLog {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, day])
+}
+
+/// A house that shares one pantry and one shopping list. Both are kept under
+/// the owner's account; every member reads and writes them, and each member's
+/// diary, goals, weight and recipes stay their own.
+model Household {
+  id        String   @id @default(cuid())
+  ownerId   String   @unique
+  createdAt DateTime @default(now())
+
+  owner   User              @relation("HouseOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members User[]            @relation("HouseMembers")
+  invites HouseholdInvite[]
+}
+
+/// A code that lets one person join a house: kept hashed, good for 48 hours,
+/// and used once.
+model HouseholdInvite {
+  id          String    @id @default(cuid())
+  householdId String
+  codeHash    String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  usedById    String?
+  createdAt   DateTime  @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 }

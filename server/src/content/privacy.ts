@@ -11,8 +11,8 @@
  */
 import { env } from '../env.js';
 
-export const PRIVACY_VERSION = '2026-10-02.3';
-export const PRIVACY_EFFECTIVE = '2 October 2026';
+export const PRIVACY_VERSION = '2026-10-03.1';
+export const PRIVACY_EFFECTIVE = '3 October 2026';
 
 /** who runs the app and how to reach them: OPERATOR_NAME and SUPPORT_EMAIL on the server */
 const WHO = env.operatorName || 'its developer';
@@ -163,6 +163,22 @@ section 5, and no ads are requested for Pro accounts. Other users of the same in
 your pantry, your diary, or the recipes you import — that separation is enforced
 in the code and covered by automated tests.
 
+### 4.1.1 Housemates, if you share a pantry
+
+Only if you choose to: when you join someone's house with a code they give you,
+or they join yours, the people in that house share **one pantry and one shopping
+list**. Each of them can see, add to, change and remove what is in it, and the
+food you already had moves into it when you join. They also see the **email
+address** of everyone in the house, so you know who you're sharing with.
+
+Nothing else is shared. Your diary, what you ate, your weight, goals, fasting,
+water, body details, Apple Health data, Insights, recipes and meal plans stay
+yours alone, though meals you plan put the food they need on the shared list.
+You can leave a house at any time from Settings, and the person who set it up
+can take someone out; whoever leaves starts with an empty pantry and list, and
+what was shared stays with the house. If the person who set it up leaves or
+deletes their account, the house and its food pass to the next person in it.
+
 ### 4.2 Two outside services, for food data only
 
 When you scan a barcode or search for a food, a request goes to:
@@ -262,7 +278,8 @@ use its services (policies.google.com/technologies/partner-sites).
   immediately and permanently: pantry, diary, waste log, shopping list, recipes
   you added, ratings and meal plans, and all body data. This is a real deletion
   from the database, not a flag. It cannot be undone and there is no grace
-  period.
+  period. A pantry and shopping list shared with housemates (section 4.1.1)
+  belong to the house, so they stay with the people still in it.
 
 - **Email codes** are kept only as a one-way hash and deleted as soon as they are
   used; an unused one stops working after fifteen minutes.

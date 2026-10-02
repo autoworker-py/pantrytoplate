@@ -379,6 +379,8 @@ export interface BodyData {
 
 export interface Settings {
   email: string;
+  /** how many people share the pantry, the person included */
+  householdSize: number;
   weightGoal: WeightGoal;
   /** kept on file so a target can follow a weight that moved */
   body: BodyData;

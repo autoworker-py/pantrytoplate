@@ -43,6 +43,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!tokenStore.get()) {
       setUser(null);
       sessionStore.clear();
+      // signed out: the share sheet and the widget forget the session and the list too
+      shareSession(null);
       return;
     }
     const data = await api.getFresh<{ user: User }>('/api/auth/me');

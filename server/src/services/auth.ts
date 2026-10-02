@@ -3,6 +3,7 @@ import { prisma } from '../db.js';
 import { badRequest, conflict, forbidden, unauthorized } from '../errors.js';
 import { env } from '../env.js';
 import { refuseLeaked } from './leakedPasswords.js';
+import { leaveHouse } from './household.js';
 
 const ROUNDS = 10;
 
@@ -127,6 +128,8 @@ export async function changeUnconfirmedEmail(userId: string, email: string) {
  */
 export async function deleteAccount(userId: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
+    // a house they set up passes, food and all, to the next member before anything goes
+    await leaveHouse(userId, tx);
     await tx.foodReference.updateMany({ where: { ownerId: userId, barcode: { not: null } }, data: { ownerId: null } });
     await tx.recipe.deleteMany({ where: { ownerId: userId } });
     await tx.consumptionLog.deleteMany({ where: { userId } });

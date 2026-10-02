@@ -46,6 +46,7 @@ export default function SettingsHome() {
 
           <div className="group settings-group">
             <NavRow to="/settings/pantry" title="Pantry & reminders" />
+            <NavRow to="/settings/household" title="Household" value={s.householdSize > 1 ? `${s.householdSize} people` : 'Just you'} />
             <Row title="Units">
               <div className="mini-seg">
                 {(['metric', 'imperial'] as const).map((u) => (

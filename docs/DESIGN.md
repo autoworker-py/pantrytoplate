@@ -261,6 +261,25 @@ ticket icon in Recipes' header.
   Recipes does the same. A recipe page is read for anyone; a post's caption is
   read by the AI for Pro, and without Pro the app says so before fetching it.
 
+### Housemates and the list at the shop
+
+- **Household** in Settings: one pantry and shopping list for the people you
+  live with; diaries, goals, weight and recipes stay each person's own. Not in
+  a house, the page explains it and offers **Invite someone**, which shows a
+  six-letter code large in a mono face ("QNW-D5Q", works once, for two days)
+  with **Send the code**, and a **Have a code?** field below. In a house, the
+  page lists who's in it (the person who set it up can remove others) and
+  offers **Leave this house**; both ask first and say who keeps the food.
+  Planned meals from everyone in the house count against the one pantry, so two
+  people's dinners don't both count the same eggs.
+- **The shopping widget** (Home Screen small, medium and large, and the Lock
+  Screen) is the list on the night ground: a warm SHOPPING label and the count,
+  open circles and names, amounts down the right in the large size, "+ 3 more"
+  when it runs over. The app leaves it the list whenever the list loads or
+  changes and when it goes to the background; the widget also asks the server
+  every half hour, so a housemate's additions turn up. A tap opens the list.
+  Signed out, it holds no list.
+
 ### Plan my week
 
 - **The week on one strip of receipt paper**, a dotted line a day: tap a day for

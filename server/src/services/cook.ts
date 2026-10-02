@@ -19,6 +19,7 @@ import { checkLowStock } from './lowStock.js';
 import { storeLeftovers, type StoredLeftovers } from './leftovers.js';
 import { applySwaps } from './substitutions.js';
 import { createId } from '../ids.js';
+import { pantryOf } from './household.js';
 
 export interface CookPreview extends RecipeMatch {
   instructions: string;
@@ -197,7 +198,7 @@ export async function cookRecipe(
     const ingredientIds = recipe.ingredients.map((i) => i.foodReferenceId);
     const lots = await tx.inventoryItem.findMany({
       where: {
-        userId,
+        userId: await pantryOf(userId, tx),
         quantity: { gt: 0 },
         OR: [
           { foodReferenceId: { in: ingredientIds } },

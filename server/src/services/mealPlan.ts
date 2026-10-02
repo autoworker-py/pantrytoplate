@@ -12,6 +12,7 @@ import { addDays, localDay } from '../zone.js';
 import { getRecipeForUser } from './recipeMatch.js';
 import { normalizeUnit, roundQuantity } from './units.js';
 import { shoppingQuantity } from './shoppingQuantity.js';
+import { housemates, pantryOf } from './household.js';
 
 /**
  * A planned meal belongs to a calendar day, not an instant: it is kept at noon
@@ -80,8 +81,16 @@ export async function removeFromPlan(userId: string, id: string) {
  * cover Monday's omelette, so Tuesday's scramble still needs its own.
  */
 export async function planShortfall(userId: string, days = 7, db: Tx = prisma, from?: string) {
-  const plan = await listPlan(userId, days, db, from);
-  const pending = plan.filter((entry) => !entry.cooked);
+  return shortfallOf([userId], days, db, from);
+}
+
+/** The shortfall for several people's plans on one pantry, their meals taken together in date order. */
+async function shortfallOf(planners: string[], days: number, db: Tx, from?: string) {
+  const plans = await Promise.all(planners.map(async (who) => (await listPlan(who, days, db, from)).map((entry) => ({ ...entry, who }))));
+  const pending = plans
+    .flat()
+    .filter((entry) => !entry.cooked)
+    .sort((a, b) => a.plannedFor.localeCompare(b.plannedFor));
 
   const needed = new Map<
     string,
@@ -91,7 +100,7 @@ export async function planShortfall(userId: string, days = 7, db: Tx = prisma, f
   const promised = new Map<string, number>();
 
   for (const entry of pending) {
-    const recipe = await getRecipeForUser(userId, entry.recipeId, entry.servings, db);
+    const recipe = await getRecipeForUser(entry.who, entry.recipeId, entry.servings, db);
     if (!recipe) continue;
 
     for (const ingredient of recipe.ingredients) {
@@ -130,10 +139,12 @@ export async function planShortfall(userId: string, days = 7, db: Tx = prisma, f
  * Keeps the shopping list in step with the plan. What planned meals still need
  * is on the list, marked as the plan's; a meal taken off takes its food back
  * off. Anything ticked off, added another way, or taken off the list by the
- * person after the plan put it there is left alone.
+ * person after the plan put it there is left alone. Housemates plan for one
+ * list: everyone's meals are counted together against the one pantry.
  */
 export async function syncPlanShopping(userId: string, db: Tx = prisma) {
-  const { missing } = await planShortfall(userId, SHOP_AHEAD_DAYS, db);
+  const [pantry, planners] = await Promise.all([pantryOf(userId, db), housemates(userId, db)]);
+  const { missing } = await shortfallOf(planners, SHOP_AHEAD_DAYS, db);
   const want = new Map(
     missing.map((m) => {
       const unit = normalizeUnit(m.unit);
@@ -142,16 +153,17 @@ export async function syncPlanShopping(userId: string, db: Tx = prisma) {
   );
 
   const [list, skips] = await Promise.all([
-    db.shoppingListItem.findMany({ where: { userId } }),
-    db.planShoppingSkip.findMany({ where: { userId } }),
+    db.shoppingListItem.findMany({ where: { userId: pantry } }),
+    db.planShoppingSkip.findMany({ where: { userId: { in: planners } } }),
   ]);
-  // food the list already covers some other way, or the person said no to
+  const planned = (item: (typeof list)[number]) => item.addedFrom === 'meal_plan';
+  // food the list already covers some other way, or someone said no to
   const covered = new Set<string>(skips.map((s) => s.foodReferenceId));
   for (const item of list) {
-    if (item.foodReferenceId && (item.isChecked || item.addedFrom !== 'meal_plan')) covered.add(item.foodReferenceId);
+    if (item.foodReferenceId && (item.isChecked || !planned(item))) covered.add(item.foodReferenceId);
   }
 
-  for (const item of list.filter((i) => !i.isChecked && i.addedFrom === 'meal_plan')) {
+  for (const item of list.filter((i) => !i.isChecked && planned(i))) {
     const key = `${item.foodReferenceId}|${item.unit}`;
     const wanted = want.get(key);
     if (!wanted || (item.foodReferenceId && covered.has(item.foodReferenceId))) {
@@ -168,7 +180,7 @@ export async function syncPlanShopping(userId: string, db: Tx = prisma) {
     if (covered.has(wanted.foodReferenceId)) continue;
     await db.shoppingListItem.create({
       data: {
-        userId,
+        userId: pantry,
         foodReferenceId: wanted.foodReferenceId,
         name: wanted.name,
         quantityNeeded: wanted.quantity,
@@ -183,7 +195,8 @@ export async function syncPlanShopping(userId: string, db: Tx = prisma) {
   const stale = skips.filter((s) => !stillWanted.has(s.foodReferenceId)).map((s) => s.id);
   if (stale.length) await db.planShoppingSkip.deleteMany({ where: { id: { in: stale } } });
 
-  return { toBuy: await db.shoppingListItem.count({ where: { userId, isChecked: false, addedFrom: 'meal_plan' } }) };
+  const toBuy = await db.shoppingListItem.count({ where: { userId: pantry, isChecked: false, addedFrom: 'meal_plan' } });
+  return { toBuy };
 }
 
 /**

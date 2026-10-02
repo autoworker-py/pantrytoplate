@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import type { IngredientUse, RunOutPrediction, ShoppingItem } from '../lib/types';
 import { dateInputToISO, formatAmount, formatDateInput } from '../lib/format';
 import { FoodThumb } from '../fridge/Fridge';
+import { shareShopping } from '../lib/shareBridge';
 import { UnitSelect } from '../components/UnitSelect';
 import { Icon } from '../ui/Icon';
 import { Empty, Page, Sheet, errorText, useToast } from '../ui/kit';
@@ -47,6 +48,8 @@ export default function Shopping() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+  // the Home Screen widget shows the list as it stands
+  useEffect(() => { if (items) shareShopping(items); }, [items]);
 
   async function add(event?: FormEvent, preset?: { name: string; quantity: number; unit: string }) {
     event?.preventDefault();

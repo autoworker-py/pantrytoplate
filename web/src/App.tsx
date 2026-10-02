@@ -1,9 +1,10 @@
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './lib/auth';
 import { ToastProvider, Logo } from './ui/kit';
 import { TabBar } from './ui/TabBar';
 import { AdBanner } from './components/AdBanner';
 import { allowSwipeBack } from './lib/native';
+import { onNativeRoute } from './lib/shareBridge';
 import { useEffect } from 'react';
 import Login from './screens/Login';
 import Onboarding from './screens/Onboarding';
@@ -30,6 +31,9 @@ export default function App() {
   const location = useLocation();
   // swipe in from the edge to go back, on screens opened from somewhere; not on the tabs
   useEffect(() => allowSwipeBack(location.pathname), [location.pathname]);
+  // a tap on the shopping widget opens the list
+  const navigate = useNavigate();
+  useEffect(() => onNativeRoute((path) => navigate(path)), [navigate]);
 
   // readable by anyone, signed in or not: the App Store listing links to these
   if (location.pathname === '/privacy') return <PrivacyPage />;

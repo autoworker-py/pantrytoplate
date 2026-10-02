@@ -15,6 +15,7 @@ import { shoppingAds } from '../services/ads.js';
 import { ingredientUses } from '../services/ingredientUses.js';
 import { resolveBarcode } from '../services/foodRef.js';
 import { notFound } from '../errors.js';
+import { pantryOf } from '../services/household.js';
 
 const dateish = z
   .union([z.string(), z.null()])
@@ -86,7 +87,7 @@ const routes: FastifyPluginAsync = async (app) => {
    */
   app.get('/:id/uses', async (request) => {
     const { id } = request.params as { id: string };
-    const item = await prisma.shoppingListItem.findFirst({ where: { id, userId: request.userId } });
+    const item = await prisma.shoppingListItem.findFirst({ where: { id, userId: await pantryOf(request.userId) } });
     if (!item) throw notFound('Shopping list item not found.');
     if (!item.foodReferenceId) {
       return { uses: [], totalRecipes: 0, foodName: item.name, foodReferenceId: null };

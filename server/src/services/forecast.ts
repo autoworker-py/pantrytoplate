@@ -14,6 +14,7 @@ import { prisma, type Tx } from '../db.js';
 import { convert } from './units.js';
 import { loadConvertContexts } from './conversions.js';
 import { roundQuantity } from './units.js';
+import { pantryOf } from './household.js';
 
 /** Below this many separate uses we do not claim to know your habits. */
 const MIN_EVENTS = 3;
@@ -44,6 +45,7 @@ export async function predictRunOut(
 ): Promise<RunOutPrediction[]> {
   const since = new Date();
   since.setDate(since.getDate() - WINDOW_DAYS);
+  const pantry = await pantryOf(userId, db);
 
   const [logs, removals, lots, listed] = await Promise.all([
     db.consumptionLog.findMany({
@@ -55,10 +57,10 @@ export async function predictRunOut(
       select: { foodReferenceId: true, quantity: true, unit: true, removedAt: true },
     }),
     db.inventoryItem.findMany({
-      where: { userId, quantity: { gt: 0 } },
+      where: { userId: pantry, quantity: { gt: 0 } },
       include: { foodReference: true },
     }),
-    db.shoppingListItem.findMany({ where: { userId, isChecked: false }, select: { foodReferenceId: true } }),
+    db.shoppingListItem.findMany({ where: { userId: pantry, isChecked: false }, select: { foodReferenceId: true } }),
   ]);
 
   const onList = new Set(listed.map((item) => item.foodReferenceId).filter(Boolean) as string[]);

@@ -13,6 +13,7 @@ import { nutritionColumns, nutritionFor } from './nutrition.js';
 import { clampZero, convert, gte, normalizeUnit, roundQuantity, isNegligible } from './units.js';
 import { estimateShelfLife, freezeExtension, type StorageLocation } from './shelfLife.js';
 import { checkLowStock, type LowStockResult } from './lowStock.js';
+import { pantryOf } from './household.js';
 
 export type InventorySort = 'expiration' | 'category' | 'name' | 'recent';
 
@@ -127,9 +128,10 @@ export async function listInventory(
   options: { sort?: InventorySort; includeDepleted?: boolean; search?: string } = {},
   db: Tx = prisma,
 ): Promise<InventoryView[]> {
+  const pantry = await pantryOf(userId, db);
   const items = await db.inventoryItem.findMany({
     where: {
-      userId,
+      userId: pantry,
       ...(options.includeDepleted ? {} : { quantity: { gt: 0 } }),
       ...(options.search
         ? { foodReference: { nameNorm: { contains: options.search.toLowerCase() } } }
@@ -219,7 +221,7 @@ export async function addInventoryItem(
 
   const item = await db.inventoryItem.create({
     data: {
-      userId,
+      userId: await pantryOf(userId, db),
       foodReferenceId: food.id,
       quantity: input.quantity,
       unit: normalizeUnit(input.unit),
@@ -250,7 +252,7 @@ export async function updateInventoryItem(
   },
   db: Tx = prisma,
 ): Promise<InventoryView> {
-  const existing = await db.inventoryItem.findFirst({ where: { id: itemId, userId } });
+  const existing = await db.inventoryItem.findFirst({ where: { id: itemId, userId: await pantryOf(userId, db) } });
   if (!existing) throw notFound('Inventory item not found.');
   if (data.quantity !== undefined && data.quantity < 0) throw badRequest('Quantity cannot be negative.');
 
@@ -269,7 +271,7 @@ export async function updateInventoryItem(
 }
 
 export async function deleteInventoryItem(userId: string, itemId: string, db: Tx = prisma): Promise<void> {
-  const existing = await db.inventoryItem.findFirst({ where: { id: itemId, userId } });
+  const existing = await db.inventoryItem.findFirst({ where: { id: itemId, userId: await pantryOf(userId, db) } });
   if (!existing) throw notFound('Inventory item not found.');
   // keep the audit trail intact: detach logs rather than cascading them away
   await db.consumptionLog.updateMany({ where: { inventoryItemId: itemId }, data: { inventoryItemId: null } });
@@ -307,7 +309,7 @@ export async function consumeInventoryItem(
 
   return prisma.$transaction(async (tx) => {
     const item = await tx.inventoryItem.findFirst({
-      where: { id: itemId, userId },
+      where: { id: itemId, userId: await pantryOf(userId, tx) },
       include: { foodReference: true },
     });
     if (!item) throw notFound('Inventory item not found.');
@@ -402,7 +404,7 @@ export async function removeInventoryQuantity(
 ): Promise<RemoveResult> {
   return prisma.$transaction(async (tx) => {
     const item = await tx.inventoryItem.findFirst({
-      where: { id: itemId, userId },
+      where: { id: itemId, userId: await pantryOf(userId, tx) },
       include: { foodReference: true },
     });
     if (!item) throw notFound('Inventory item not found.');
@@ -460,7 +462,7 @@ export async function removeInventoryQuantity(
 /** Freezing moves the item and pushes its expiry date out. */
 export async function freezeInventoryItem(userId: string, itemId: string): Promise<InventoryView> {
   const item = await prisma.inventoryItem.findFirst({
-    where: { id: itemId, userId },
+    where: { id: itemId, userId: await pantryOf(userId) },
     include: { foodReference: true },
   });
   if (!item) throw notFound('Inventory item not found.');
@@ -484,7 +486,7 @@ export async function staleInventory(userId: string, olderThanDays = 45, db: Tx 
   cutoff.setDate(cutoff.getDate() - olderThanDays);
 
   const items = await db.inventoryItem.findMany({
-    where: { userId, quantity: { gt: 0 }, updatedAt: { lt: cutoff } },
+    where: { userId: await pantryOf(userId, db), quantity: { gt: 0 }, updatedAt: { lt: cutoff } },
     include: { foodReference: true },
     orderBy: { updatedAt: 'asc' },
     take: 10,

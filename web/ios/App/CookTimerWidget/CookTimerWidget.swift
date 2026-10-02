@@ -81,5 +81,6 @@ struct CookTimerWidgetBundle: WidgetBundle {
     var body: some Widget {
         CookTimerLiveActivity()
         FastingLiveActivity()
+        ShoppingListWidget()
     }
 }

@@ -11,6 +11,7 @@
  * name demonstrates the placement just as well and claims nothing.
  */
 import { prisma, type Tx } from '../db.js';
+import { pantryOf } from './household.js';
 
 export type AdSlot = 'home' | 'recipes' | 'shopping';
 
@@ -42,7 +43,7 @@ export async function shoppingAds(userId: string, db: Tx = prisma): Promise<Ad[]
   if (!(await adsEnabledFor(userId, db))) return [];
 
   const items = await db.shoppingListItem.findMany({
-    where: { userId, isChecked: false, foodReferenceId: { not: null } },
+    where: { userId: await pantryOf(userId, db), isChecked: false, foodReferenceId: { not: null } },
     include: { foodReference: true },
     take: 20,
   });

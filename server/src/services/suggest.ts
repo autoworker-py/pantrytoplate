@@ -7,6 +7,7 @@ import { prisma } from '../db.js';
 import { dailySummary } from './diary.js';
 import { searchRecipesForUser } from './recipeMatch.js';
 import { foodGrade } from './healthScore.js';
+import { pantryOf } from './household.js';
 
 /** not things anyone eats on their own */
 const NOT_A_SNACK = new Set(['Condiments', 'Spices', 'Baking', 'Oils & Vinegars', 'Sauces', 'Herbs', 'Leftovers', 'Eating out']);
@@ -33,7 +34,7 @@ export async function suggestions(userId: string, day: string, extraKcal = 0) {
 
   const now = new Date();
   const items = await prisma.inventoryItem.findMany({
-    where: { userId, quantity: { gt: 0 }, OR: [{ expirationDate: null }, { expirationDate: { gte: now } }] },
+    where: { userId: await pantryOf(userId), quantity: { gt: 0 }, OR: [{ expirationDate: null }, { expirationDate: { gte: now } }] },
     include: { foodReference: true },
   });
 

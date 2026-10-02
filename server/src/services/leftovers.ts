@@ -15,6 +15,7 @@ import type { Tx } from '../db.js';
 import { prisma } from '../db.js';
 import { normalizeName } from './matching.js';
 import { roundQuantity } from './units.js';
+import { pantryOf } from './household.js';
 
 /**
  * How long a cooked dish keeps in the fridge. Deliberately short: leftovers are
@@ -99,7 +100,7 @@ export async function storeLeftovers(
 
   const item = await db.inventoryItem.create({
     data: {
-      userId,
+      userId: await pantryOf(userId, db),
       foodReferenceId: food.id,
       quantity: input.servings,
       unit: 'serving',
@@ -121,7 +122,7 @@ export async function storeLeftovers(
 /** Everything currently sitting in the fridge as portions of something cooked. */
 export async function listLeftovers(userId: string, db: Tx = prisma) {
   const items = await db.inventoryItem.findMany({
-    where: { userId, isLeftover: true, quantity: { gt: 0 } },
+    where: { userId: await pantryOf(userId, db), isLeftover: true, quantity: { gt: 0 } },
     include: { foodReference: true },
     orderBy: { expirationDate: 'asc' },
   });

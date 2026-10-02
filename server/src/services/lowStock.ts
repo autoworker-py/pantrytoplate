@@ -11,6 +11,7 @@
 import type { Tx } from '../db.js';
 import { normalizeUnit } from './units.js';
 import { shoppingQuantity } from './shoppingQuantity.js';
+import { pantryOf } from './household.js';
 
 export interface LowStockResult {
   added: boolean;
@@ -46,6 +47,7 @@ export async function checkLowStock(
 
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user?.autoShoppingEnabled) return { added: false };
+  const pantry = await pantryOf(userId, db);
 
   // out entirely, or under a threshold the user set for this item
   const ranOut = item.quantity <= 0;
@@ -57,7 +59,7 @@ export async function checkLowStock(
   const sameIngredient = item.foodReference.canonicalId ?? item.foodReferenceId;
   const lots = await db.inventoryItem.findMany({
     where: {
-      userId,
+      userId: pantry,
       quantity: { gt: 0 },
       unit: item.unit,
       OR: [
@@ -72,7 +74,7 @@ export async function checkLowStock(
   const unit = normalizeUnit(item.unit);
   const existing = await db.shoppingListItem.findFirst({
     where: {
-      userId,
+      userId: pantry,
       isChecked: false,
       OR: [{ foodReferenceId: sameIngredient }, { foodReferenceId: item.foodReferenceId }],
     },
@@ -88,7 +90,7 @@ export async function checkLowStock(
 
   await db.shoppingListItem.create({
     data: {
-      userId,
+      userId: pantry,
       foodReferenceId: ingredient?.id ?? item.foodReferenceId,
       name: ingredient?.name ?? item.foodReference.name,
       quantityNeeded: quantity,

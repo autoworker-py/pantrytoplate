@@ -13,6 +13,7 @@ import { prisma, type Tx } from '../db.js';
 import { convert } from './units.js';
 import { loadConvertContexts } from './conversions.js';
 import { roundQuantity } from './units.js';
+import { pantryOf } from './household.js';
 
 export interface SubstitutionOption {
   substituteId: string;
@@ -46,7 +47,7 @@ export async function substitutionsFor(
   if (rules.length === 0) return [];
 
   const lots = await db.inventoryItem.findMany({
-    where: { userId, quantity: { gt: 0 } },
+    where: { userId: await pantryOf(userId, db), quantity: { gt: 0 } },
     include: { foodReference: true },
   });
 
@@ -121,7 +122,7 @@ export async function stockedSubstitutes(
   if (rules.length === 0) return found;
 
   const lots = await db.inventoryItem.findMany({
-    where: { userId, quantity: { gt: 0 } },
+    where: { userId: await pantryOf(userId, db), quantity: { gt: 0 } },
     include: { foodReference: true },
   });
   const byIngredient = new Map<string, typeof lots>();

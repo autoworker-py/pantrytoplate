@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { wasteLog, wastePatterns, wasteReport, wasteTrend } from '../services/reports.js';
 import { prisma } from '../db.js';
+import { pantryOf } from '../services/household.js';
 
 const routes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', app.authenticate);
@@ -28,10 +29,10 @@ const routes: FastifyPluginAsync = async (app) => {
         where: { id: userId },
         select: { email: true, createdAt: true, weightGoal: true, dailyCalorieTarget: true },
       }),
-      prisma.inventoryItem.findMany({ where: { userId }, include: { foodReference: true } }),
+      prisma.inventoryItem.findMany({ where: { userId: await pantryOf(userId) }, include: { foodReference: true } }),
       prisma.consumptionLog.findMany({ where: { userId }, include: { foodReference: true, recipe: true } }),
       prisma.inventoryRemoval.findMany({ where: { userId }, include: { foodReference: true } }),
-      prisma.shoppingListItem.findMany({ where: { userId } }),
+      prisma.shoppingListItem.findMany({ where: { userId: await pantryOf(userId) } }),
       prisma.recipeRating.findMany({ where: { userId }, include: { recipe: true } }),
       prisma.mealPlanEntry.findMany({ where: { userId }, include: { recipe: true } }),
       prisma.waterLog.findMany({ where: { userId }, orderBy: { loggedAt: 'asc' } }),

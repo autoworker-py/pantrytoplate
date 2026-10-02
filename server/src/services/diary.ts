@@ -15,6 +15,7 @@ import { scaleColumns, type NutritionColumns } from './nutrition.js';
 import { getSettings } from './settings.js';
 import { foodPoints, gradeOf, mixedGrade, type Grade } from './healthScore.js';
 import { addDays, dayStart, localDay } from '../zone.js';
+import { pantryOf } from './household.js';
 
 export const MEAL_SLOTS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 export type MealSlot = (typeof MEAL_SLOTS)[number];
@@ -388,7 +389,7 @@ async function takeBackRest(tx: Tx, userId: string, log: { restTo: string | null
   if (!log.restRef) return;
   if (log.restTo === 'pantry') {
     const eatenFrom = await tx.consumptionLog.count({ where: { inventoryItemId: log.restRef } });
-    if (eatenFrom === 0) await tx.inventoryItem.deleteMany({ where: { id: log.restRef, userId, isLeftover: true } });
+    if (eatenFrom === 0) await tx.inventoryItem.deleteMany({ where: { id: log.restRef, userId: await pantryOf(userId, tx), isLeftover: true } });
   } else if (log.restTo === 'bin') {
     await tx.inventoryRemoval.deleteMany({ where: { id: log.restRef, userId } });
   }
@@ -427,7 +428,7 @@ export async function eatLess(userId: string, id: string, ate: number, rest: 'pa
     if (rest === 'pantry') {
       const item = await tx.inventoryItem.create({
         data: {
-          userId,
+          userId: await pantryOf(userId, tx),
           foodReferenceId: log.foodReferenceId,
           quantity: restAmount,
           unit: log.unit,
@@ -652,7 +653,7 @@ export async function undoSaveRest(userId: string, id: string, ate: number, left
     if (binnedId) await tx.inventoryRemoval.deleteMany({ where: { id: binnedId, userId } });
     const meal = await mealOf(tx, userId, id);
     if (meal) {
-      if (leftoverItemId) await tx.inventoryItem.deleteMany({ where: { id: leftoverItemId, userId, isLeftover: true } });
+      if (leftoverItemId) await tx.inventoryItem.deleteMany({ where: { id: leftoverItemId, userId: await pantryOf(userId, tx), isLeftover: true } });
       for (const log of meal.logs) await scaleLog(tx, log, 1 / ate, true);
       return { undone: true };
     }

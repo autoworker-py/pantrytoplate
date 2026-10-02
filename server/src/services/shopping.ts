@@ -9,10 +9,11 @@ import { badRequest, notFound } from '../errors.js';
 import { normalizeUnit, roundQuantity } from './units.js';
 import { shoppingQuantity } from './shoppingQuantity.js';
 import { getRecipeForUser } from './recipeMatch.js';
+import { pantryOf } from './household.js';
 
 export async function listShoppingList(userId: string, db: Tx = prisma) {
   const items = await db.shoppingListItem.findMany({
-    where: { userId },
+    where: { userId: await pantryOf(userId, db) },
     include: { foodReference: true },
     orderBy: [{ isChecked: 'asc' }, { createdAt: 'desc' }],
   });
@@ -43,7 +44,7 @@ export async function addShoppingItem(userId: string, input: AddShoppingItemInpu
   if (!input.name.trim()) throw badRequest('Item name is required.');
   return db.shoppingListItem.create({
     data: {
-      userId,
+      userId: await pantryOf(userId, db),
       name: input.name.trim(),
       quantityNeeded: input.quantityNeeded > 0 ? input.quantityNeeded : 1,
       unit: normalizeUnit(input.unit),
@@ -65,6 +66,7 @@ export async function addRecipeGaps(
 ) {
   const recipe = await getRecipeForUser(userId, recipeId, servings, db);
   if (!recipe) throw notFound('Recipe not found.');
+  const pantry = await pantryOf(userId, db);
 
   const gaps = recipe.ingredients.filter((i) => i.status !== 'ok');
   const results: Array<{ name: string; quantity: number; unit: string; action: 'added' | 'raised' }> = [];
@@ -78,7 +80,7 @@ export async function addRecipeGaps(
     const needed = shoppingQuantity(raw, unit);
 
     const existing = await db.shoppingListItem.findFirst({
-      where: { userId, isChecked: false, foodReferenceId: gap.foodReferenceId, unit },
+      where: { userId: pantry, isChecked: false, foodReferenceId: gap.foodReferenceId, unit },
     });
 
     if (existing) {
@@ -91,7 +93,7 @@ export async function addRecipeGaps(
 
     await db.shoppingListItem.create({
       data: {
-        userId,
+        userId: pantry,
         foodReferenceId: gap.foodReferenceId,
         name: gap.name,
         quantityNeeded: needed,
@@ -106,13 +108,13 @@ export async function addRecipeGaps(
 }
 
 export async function setChecked(userId: string, itemId: string, isChecked: boolean, db: Tx = prisma) {
-  const existing = await db.shoppingListItem.findFirst({ where: { id: itemId, userId } });
+  const existing = await db.shoppingListItem.findFirst({ where: { id: itemId, userId: await pantryOf(userId, db) } });
   if (!existing) throw notFound('Shopping list item not found.');
   return db.shoppingListItem.update({ where: { id: itemId }, data: { isChecked } });
 }
 
 export async function removeShoppingItem(userId: string, itemId: string, db: Tx = prisma) {
-  const existing = await db.shoppingListItem.findFirst({ where: { id: itemId, userId } });
+  const existing = await db.shoppingListItem.findFirst({ where: { id: itemId, userId: await pantryOf(userId, db) } });
   if (!existing) throw notFound('Shopping list item not found.');
   await db.shoppingListItem.delete({ where: { id: itemId } });
   // the meal plan put it there and the person took it off: the plan keeps it off
@@ -126,7 +128,7 @@ export async function removeShoppingItem(userId: string, itemId: string, db: Tx 
 }
 
 export async function clearChecked(userId: string, db: Tx = prisma) {
-  const { count } = await db.shoppingListItem.deleteMany({ where: { userId, isChecked: true } });
+  const { count } = await db.shoppingListItem.deleteMany({ where: { userId: await pantryOf(userId, db), isChecked: true } });
   return { removed: count };
 }
 
@@ -140,8 +142,9 @@ export async function checkOffAndStock(
   input: { quantity?: number; unit?: string; expirationDate?: Date | null },
 ) {
   return prisma.$transaction(async (tx) => {
+    const pantry = await pantryOf(userId, tx);
     const item = await tx.shoppingListItem.findFirst({
-      where: { id: itemId, userId },
+      where: { id: itemId, userId: pantry },
       include: { foodReference: true },
     });
     if (!item) throw notFound('Shopping list item not found.');
@@ -150,9 +153,11 @@ export async function checkOffAndStock(
     if (!foodReferenceId) {
       // free-text item: create a manual catalog entry so it can be tracked
       const { findOrCreateFoodByName } = await import('./foodRef.js');
+      // the person's own food, like anything typed in, not a shared catalog entry
       const created = await findOrCreateFoodByName(
         { name: item.name, defaultUnit: input.unit ?? item.unit },
         tx,
+        userId,
       );
       foodReferenceId = created.food.id;
       await tx.shoppingListItem.update({ where: { id: item.id }, data: { foodReferenceId } });
@@ -172,7 +177,7 @@ export async function checkOffAndStock(
 
     const inventoryItem = await tx.inventoryItem.create({
       data: {
-        userId,
+        userId: pantry,
         foodReferenceId,
         quantity: input.quantity && input.quantity > 0 ? input.quantity : item.quantityNeeded,
         unit: normalizeUnit(input.unit ?? item.unit),

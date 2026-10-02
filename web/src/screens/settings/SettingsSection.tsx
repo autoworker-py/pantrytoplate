@@ -10,7 +10,7 @@ import { PLANS, clockTime, scheduleFasting, showFastOnLockScreen } from '../../l
 import { PrivacyNotice } from '../../components/PrivacyNotice';
 import { describeBody } from '../../components/BodyInputs';
 import { Icon } from '../../ui/Icon';
-import { BackButton, Page, Switch, errorText, useToast } from '../../ui/kit';
+import { BackButton, Page, Sheet, Switch, errorText, useToast } from '../../ui/kit';
 import { formatWater } from '../eaten/DiaryParts';
 import { ACTIVITY, BodySheet, DIETS, DeleteSheet, NavRow, PasswordSheet, Row, TargetsSheet } from './sheets';
 import { useSettings } from './useSettings';
@@ -28,6 +28,7 @@ const TITLES = {
   account: 'Account',
   health: 'Apple Health',
   insights: 'Insights',
+  household: 'Household',
 } as const;
 type Section = keyof typeof TITLES;
 
@@ -69,6 +70,8 @@ export default function SettingsSection() {
         <HealthSection {...props} />
       ) : which === 'insights' ? (
         <InsightsSection />
+      ) : which === 'household' ? (
+        <HouseholdSection />
       ) : (
         <AccountSection s={props.s} />
       )}
@@ -532,6 +535,150 @@ function AccountSection({ s }: { s: Settings }) {
       <button type="button" className="btn ghost danger-ink" style={{ marginTop: 14 }} onClick={() => setSheet('delete')}>Delete my account</button>
       {sheet === 'password' ? <PasswordSheet onClose={() => setSheet(null)} /> : null}
       {sheet === 'delete' ? <DeleteSheet onClose={() => setSheet(null)} /> : null}
+    </>
+  );
+}
+
+/* ---------- housemates: one pantry and list for the house ---------- */
+
+interface Housemate { id: string; email: string; you: boolean; owner: boolean }
+interface House { id: string; youOwn: boolean; members: Housemate[] }
+
+function HouseholdSection() {
+  const toast = useToast();
+  const [house, setHouse] = useState<House | null | undefined>(undefined);
+  const [invite, setInvite] = useState<{ code: string; expiresAt: string } | null>(null);
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<null | 'leave' | Housemate>(null);
+
+  const load = async () => setHouse((await api.getFresh<{ house: House | null }>('/api/household')).house);
+  useEffect(() => {
+    load().catch((e) => {
+      setError(errorText(e, 'Couldn’t load your house.'));
+      setHouse(null);
+    });
+  }, []);
+
+  async function act(run: () => Promise<unknown>, done: string, failed: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await run();
+      await load();
+      toast(done);
+      return true;
+    } catch (e) {
+      setError(errorText(e, failed));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function share() {
+    if (!invite) return;
+    const text = `Join my kitchen on Pantry2Plate: Settings › Household, then enter ${invite.code}. It works once, for two days.`;
+    try {
+      if (navigator.share) await navigator.share({ text });
+      else {
+        await navigator.clipboard.writeText(text);
+        toast('Copied. Paste it in a message.');
+      }
+    } catch {
+      // closing the share sheet isn't a failure
+    }
+  }
+
+  if (house === undefined) return <div className="skeleton" style={{ height: 200 }} />;
+  const others = house?.members.filter((m) => !m.you) ?? [];
+  const next = house?.members.find((m) => !m.you);
+
+  return (
+    <>
+      {error ? <div className="banner error">{error}</div> : null}
+      {!house || others.length === 0 ? (
+        <div className="fasting-intro">
+          <p>Share one pantry and shopping list with the people you live with. When someone eats the last egg, it’s gone for everyone, and anyone can tick the list off at the shop.</p>
+          <p className="fine">What you eat, your goals and your weight stay yours. Housemates see each other’s email address.</p>
+        </div>
+      ) : (
+        <div className="group settings-group">
+          {house.members.map((m) => (
+            <Row key={m.id} title={m.you ? 'You' : m.email} sub={[m.you ? m.email : null, m.owner ? 'Set up the house' : null].filter(Boolean).join(' · ') || undefined}>
+              {house.youOwn && !m.you ? (
+                <button type="button" className="btn ghost small" disabled={busy} onClick={() => setConfirm(m)}>Remove</button>
+              ) : null}
+            </Row>
+          ))}
+        </div>
+      )}
+
+      {invite ? (
+        <div className="house-code">
+          <span className="code" aria-label={`Invite code ${invite.code.split('').join(' ')}`}>{invite.code}</span>
+          <span className="s">Works once, for two days</span>
+          <button type="button" className="btn small" onClick={() => void share()}>Send the code</button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="btn block"
+          style={{ marginTop: 16 }}
+          disabled={busy}
+          onClick={() =>
+            void act(async () => setInvite(await api.post<{ code: string; expiresAt: string }>('/api/household/invite')), 'Here’s a code to send.', 'Couldn’t make a code.')
+          }
+        >
+          <Icon name="people" size={18} /> Invite someone
+        </button>
+      )}
+
+      {others.length === 0 ? (
+        <form
+          className="house-join"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void act(() => api.post('/api/household/join', { code }), 'You’re in. The pantry is shared now.', 'Couldn’t join.').then((ok) => ok && setCode(''));
+          }}
+        >
+          <label htmlFor="house-code">Have a code?</label>
+          <div className="join-row">
+            <input id="house-code" className="input" value={code} placeholder="ABC-123" autoCapitalize="characters" autoComplete="off" autoCorrect="off" spellCheck={false} maxLength={8} onChange={(e) => setCode(e.target.value.toUpperCase())} />
+            <button type="submit" className="btn" disabled={busy || code.replace(/[^A-Z0-9]/gi, '').length < 6}>Join</button>
+          </div>
+          <p className="fine">Your food comes with you into the shared pantry.</p>
+        </form>
+      ) : (
+        <button type="button" className="btn ghost danger-ink" style={{ marginTop: 14 }} disabled={busy} onClick={() => setConfirm('leave')}>Leave this house</button>
+      )}
+
+      {confirm === 'leave' ? (
+        <Sheet
+          title="Leave this house?"
+          sub={house?.youOwn && next ? `The pantry and list stay with the house, and ${next.email} looks after it. You’ll start with an empty pantry and list.` : 'The pantry and list stay with the house. You’ll start with an empty pantry and list.'}
+          onClose={() => setConfirm(null)}
+        >
+          <button type="button" className="btn danger block" style={{ marginTop: 20 }} disabled={busy} onClick={() => void act(() => api.post('/api/household/leave'), 'You’ve left the house.', 'Couldn’t leave.').then(() => setConfirm(null))}>
+            Leave
+          </button>
+          <button type="button" className="btn ghost block" onClick={() => setConfirm(null)} disabled={busy}>Stay</button>
+        </Sheet>
+      ) : confirm ? (
+        <Sheet title={`Remove ${confirm.email}?`} sub="They’ll start with an empty pantry and list. Everything in the house stays here." onClose={() => setConfirm(null)}>
+          <button
+            type="button"
+            className="btn danger block"
+            style={{ marginTop: 20 }}
+            disabled={busy}
+            onClick={() => void act(() => api.post('/api/household/remove', { userId: confirm.id }), 'Removed.', 'Couldn’t remove them.').then(() => setConfirm(null))}
+          >
+            Remove
+          </button>
+          <button type="button" className="btn ghost block" onClick={() => setConfirm(null)} disabled={busy}>Keep them</button>
+        </Sheet>
+      ) : null}
     </>
   );
 }

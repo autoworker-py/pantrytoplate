@@ -71,7 +71,7 @@ function derivedTargets(user: {
 }
 
 export async function getSettings(userId: string) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: { household: { select: { _count: { select: { members: true } } } } } });
   if (!user) throw notFound('User not found.');
 
   const goal = user.weightGoal as WeightGoal;
@@ -112,6 +112,8 @@ export async function getSettings(userId: string) {
     fasting: { plan: user.fastingPlan, start: user.fastingStart, notify: user.fastingNotify },
     /** how much exercise from Apple Health goes back into the day's budget */
     exerciseCalories: user.exerciseCalories as 'all' | 'half' | 'none',
+    /** how many people share the pantry, the person included */
+    householdSize: user.household?._count.members ?? 1,
   };
 }
 

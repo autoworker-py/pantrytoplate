@@ -17,6 +17,7 @@ import {
   type RemovalReason,
 } from '../services/inventory.js';
 import { findOrCreateFoodByName, resolveBarcode } from '../services/foodRef.js';
+import { pantryOf } from '../services/household.js';
 
 const dateish = z
   .union([z.string(), z.null()])
@@ -211,7 +212,7 @@ const routes: FastifyPluginAsync = async (app) => {
   app.get('/:id', async (request) => {
     const { id } = request.params as { id: string };
     const item = await prisma.inventoryItem.findFirst({
-      where: { id, userId: request.userId },
+      where: { id, userId: await pantryOf(request.userId) },
       include: { foodReference: true },
     });
     if (!item) throw notFound('Inventory item not found.');
