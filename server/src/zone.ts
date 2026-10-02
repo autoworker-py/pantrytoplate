@@ -68,6 +68,12 @@ export function localDay(instant: Date, zone = currentZone()): string {
   return `${at.year}-${pad(at.month)}-${pad(at.day)}`;
 }
 
+/** Minutes past midnight on the person's clock: 19:30 is 1170. */
+export function localMinutes(instant: Date, zone = currentZone()): number {
+  const at = reading(instant, zone);
+  return at.hour * 60 + at.minute;
+}
+
 /** A calendar day moved by whole days: addDays("2026-09-30", 1) is "2026-10-01". */
 export function addDays(day: string, n: number): string {
   return new Date(utcMidnight(day) + n * 86_400_000).toISOString().slice(0, 10);

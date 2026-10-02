@@ -31,6 +31,7 @@ import snapRoutes from './routes/snap.js';
 import kitchenRoutes from './routes/kitchen.js';
 import waterRoutes from './routes/water.js';
 import bodyRoutes from './routes/body.js';
+import insightRoutes from './routes/insights.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -153,6 +154,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(kitchenRoutes, { prefix: '/api/kitchen' });
   await app.register(waterRoutes, { prefix: '/api/water' });
   await app.register(bodyRoutes, { prefix: '/api/body' });
+  await app.register(insightRoutes, { prefix: '/api/insights' });
 
   await registerWebApp(app);
 

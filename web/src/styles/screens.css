@@ -316,3 +316,15 @@ form .row button[type='submit'] { flex: none; padding: 0 16px; border-radius: va
 .public-faq { margin-top: 26px; display: flex; flex-direction: column; gap: 22px; }
 .public-faq h2 { font-size: 18px; }
 .public-faq p { margin-top: 6px; color: var(--ink-2); line-height: 1.5; }
+
+/* health grades, A to E, in Nutri-Score's colours */
+.grade { flex: none; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; font-family: var(--display); font-size: 14px; font-weight: 800; color: #fff; }
+.grade.small { width: 20px; height: 20px; border-radius: 5px; font-size: 11.5px; }
+.grade-a { background: #038141; }
+.grade-b { background: #85bb2f; color: #10220a; }
+.grade-c { background: #fecb02; color: #2b2300; }
+.grade-d { background: #ee8100; color: #241200; }
+.grade-e { background: #e63e11; }
+.budget-top .grade { margin-left: auto; align-self: center; }
+.budget .moved { margin-top: 6px; }
+.list-row .grade.small { margin-right: 2px; }

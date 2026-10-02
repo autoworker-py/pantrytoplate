@@ -222,6 +222,8 @@ export interface DiaryEntry {
   recipeId: string | null;
   recipeName: string | null;
   consumedAt: string;
+  /** A to E; null when the food's figures can't say */
+  grade?: Grade | null;
 }
 
 export interface DayDiary {
@@ -235,6 +237,8 @@ export interface DayDiary {
   nutrients: Nutrients;
   /** fiber to reach; saturated fat and sodium to stay under */
   nutrientGuides: { fiber: number; satFat: number; sodium: number };
+  /** the day's food as a whole, A to E; null with nothing graded */
+  grade?: Grade | null;
   entryCount: number;
   unknownCalorieEntries: number;
   meals: Array<{ slot: MealSlot; entries: DiaryEntry[]; calories: number }>;
@@ -399,9 +403,25 @@ export interface Settings {
   /** expenditure seen in the diary and weigh-ins, once there has been enough of both */
   adaptedTdee?: number | null;
   fasting?: { plan: FastingPlan | null; start: string | null; notify: boolean };
+  /** how much exercise from Apple Health goes back into the day's budget */
+  exerciseCalories?: 'all' | 'half' | 'none';
 }
 
 export type FastingPlan = '12:12' | '14:10' | '16:8' | '18:6' | '20:4';
+
+/** A health grade, the Nutri-Score way: A best, E worst. */
+export type Grade = 'A' | 'B' | 'C' | 'D' | 'E';
+
+/** What the diary says about when and what a person eats. */
+export interface Insights {
+  days: number;
+  mealTimes: Array<{ slot: MealSlot; minutes: number | null; days: number }>;
+  lastMeals: Array<{ day: string; minutes: number }>;
+  topFoods: Array<{ name: string; times: number }>;
+  proteinByMeal: Array<{ slot: MealSlot; grams: number | null }>;
+  grade: { now: Grade | null; before: Grade | null; pantry: Grade | null };
+  waste: { now: number; before: number };
+}
 
 /** Weigh-ins and the smoothed trend through them, in kilograms. */
 export interface WeightHistory {

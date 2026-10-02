@@ -38,28 +38,31 @@ model User {
   expiryWarningDays   Int     @default(3)
 
   /// "metric" | "imperial" — how amounts are shown back to you
-  unitSystem      String    @default("metric")
+  unitSystem       String    @default("metric")
   /// Pantry2Plate Plus: when it was unlocked (by a code, while payments are off)
-  plusSince       DateTime?
+  plusSince        DateTime?
   /// meal photos read on the free allowance, before Plus
-  snapsUsed       Int       @default(0)
+  snapsUsed        Int       @default(0)
   /// meal photos earned by watching an ad, on top of the free allowance
-  snapsEarned     Int       @default(0)
+  snapsEarned      Int       @default(0)
   /// the person's own calendar day of their last ad-earned photo, and how many they earned that day
-  adPhotosDay     String?
-  adPhotosThatDay Int       @default(0)
+  adPhotosDay      String?
+  adPhotosThatDay  Int       @default(0)
   /// comma separated diet tags that filter every suggestion, e.g. "vegetarian"
-  dietTags        String?
+  dietTags         String?
   /// daily reminder about food about to expire
-  notifyExpiry    Boolean   @default(true)
+  notifyExpiry     Boolean   @default(true)
   /// a day's water, in millilitres
-  waterGoalMl     Int       @default(2500)
+  waterGoalMl      Int       @default(2500)
   /// intermittent fasting: the plan ("16:8": hours fasting:eating) or null for
   /// none, when the eating window opens ("12:00", the person's clock), and
   /// whether to be told when it opens and closes
-  fastingPlan     String?
-  fastingStart    String?
-  fastingNotify   Boolean   @default(true)
+  fastingPlan      String?
+  fastingStart     String?
+  fastingNotify    Boolean   @default(true)
+  /// how much of the exercise Apple Health reports goes back into the day's
+  /// budget: "all", "half" or "none" (the health data itself stays on the phone)
+  exerciseCalories String    @default("all")
 
   /// ---- body data, used only to work out a calorie target ----
   /// All optional: the app is fully usable without any of it, and the target

@@ -26,6 +26,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Pantry2Plate reads your steps and the calories you burn exercising to add them to your day, and your sleep times only if you switch on the sleep insight. It stays on your phone.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Pantry2Plate uses the camera to scan barcodes, photograph receipts and snap meals, so you do not have to type food in. Barcodes and receipts are read on your device. A meal photo is sent to be read by AI, then discarded. No photos are stored.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

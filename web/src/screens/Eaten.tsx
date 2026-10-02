@@ -12,6 +12,8 @@ import { mealNow } from './ItemSheet';
 import { useUnitSystem } from '../lib/unitSystem';
 import { MealReceipt, NutrientLine, NutrientsSheet, WaterLine } from './eaten/DiaryParts';
 import { FastingBar, WeightCard } from './eaten/BodyParts';
+import { GradeBadge } from '../ui/Grade';
+import { dayActivity } from '../lib/health';
 
 const BarcodeScanner = lazy(() => import('../components/BarcodeScanner').then((m) => ({ default: m.BarcodeScanner })));
 
@@ -80,6 +82,17 @@ export default function Eaten() {
   }, [day]);
 
   useEffect(() => { void load(); }, [load]);
+  // exercise from Apple Health, read on this phone, and how much of it the person eats back
+  const [exercise, setExercise] = useState<'all' | 'half' | 'none'>('all');
+  const [moved, setMoved] = useState<{ activeKcal: number; steps: number } | null>(null);
+  useEffect(() => {
+    api.get<{ settings: { exerciseCalories?: 'all' | 'half' | 'none' } }>('/api/settings').then((d) => setExercise(d.settings.exerciseCalories ?? 'all')).catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    let live = true;
+    void dayActivity(isoDate(day)).then((a) => { if (live) setMoved(a); });
+    return () => { live = false; };
+  }, [day]);
   useEffect(() => {
     api.get<Waste>('/api/reports/waste?days=30').then(setWaste).catch(() => setWaste(null));
   }, []);
@@ -87,8 +100,11 @@ export default function Eaten() {
   const isToday = isoDate(day) === isoDate(new Date());
   const shift = (n: number) => setDay((d) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; });
   const target = diary?.targets.calories ?? 0;
+  const added = moved && exercise !== 'none' ? Math.round(moved.activeKcal * (exercise === 'half' ? 0.5 : 1)) : 0;
+  const budget = target + added;
   const eaten = Math.round(diary?.totalCalories ?? 0);
-  const over = diary ? diary.caloriesRemaining < 0 : false;
+  const remaining = diary ? diary.caloriesRemaining + added : 0;
+  const over = diary ? remaining < 0 : false;
   // headroom above the target, so the line never sits on the heading
   const maxWeek = Math.max(target * 1.25, ...week.map((w) => w.totalCalories), 1);
 
@@ -108,12 +124,18 @@ export default function Eaten() {
         <section className="budget">
           <div className="budget-top">
             <span className="big num">{eaten.toLocaleString()}</span>
-            <span className="of">of {target.toLocaleString()} kcal</span>
+            <span className="of">of {budget.toLocaleString()} kcal</span>
+            {diary.grade ? <GradeBadge grade={diary.grade} label="The day's food" /> : null}
           </div>
-          <div className={`meter${over ? ' over' : ''}`} role="img" aria-label={`${eaten} of ${target} calories`}>
-            <span style={{ width: `${Math.min(100, target ? (eaten / target) * 100 : 0)}%` }} />
+          {moved && (moved.activeKcal > 0 || moved.steps > 0) ? (
+            <p className="fine moved">
+              {added ? `+${added.toLocaleString()} kcal from exercise` : `${moved.activeKcal.toLocaleString()} kcal burned`} · {moved.steps.toLocaleString()} steps
+            </p>
+          ) : null}
+          <div className={`meter${over ? ' over' : ''}`} role="img" aria-label={`${eaten} of ${budget} calories`}>
+            <span style={{ width: `${Math.min(100, budget ? (eaten / budget) * 100 : 0)}%` }} />
           </div>
-          <p className={`left${over ? ' danger-ink' : ''}`}>{over ? `${Math.abs(Math.round(diary.caloriesRemaining)).toLocaleString()} over` : `${Math.round(diary.caloriesRemaining).toLocaleString()} left`}</p>
+          <p className={`left${over ? ' danger-ink' : ''}`}>{over ? `${Math.abs(Math.round(remaining)).toLocaleString()} over` : `${Math.round(remaining).toLocaleString()} left`}</p>
           <div className="macros">
             {([['Protein', diary.macros.protein, diary.targets.protein], ['Carbs', diary.macros.carbs, diary.targets.carbs], ['Fat', diary.macros.fat, diary.targets.fat]] as const).map(([label, v, t]) => (
               <div key={label} className="macro">
@@ -198,6 +220,7 @@ function EntryRow({ e, onOpen }: { e: DiaryEntry; onOpen: () => void }) {
           {e.source === 'eating_out' ? ' · not from pantry' : ''}
         </span>
       </span>
+      {e.grade ? <GradeBadge grade={e.grade} small /> : null}
       <span className="end num">{e.calories === null ? <span className="faint">–</span> : Math.round(e.calories)}</span>
     </button>
   );

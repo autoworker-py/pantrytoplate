@@ -13,6 +13,7 @@ import { badRequest, notFound } from '../errors.js';
 import { roundQuantity } from './units.js';
 import { scaleColumns, type NutritionColumns } from './nutrition.js';
 import { getSettings } from './settings.js';
+import { foodPoints, gradeOf, mixedGrade, type Grade } from './healthScore.js';
 import { addDays, dayStart, localDay } from '../zone.js';
 
 export const MEAL_SLOTS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
@@ -119,14 +120,22 @@ export async function dailySummary(userId: string, day = localDay(new Date()), d
     recipeName: string | null;
     ingredientCount: number;
     consumedAt: string;
+    /** A to E, the Nutri-Score way; null when the food's figures can't say */
+    grade: Grade | null;
   }
 
   const entries: Entry[] = [];
   const mealsByEvent = new Map<string, Entry>();
+  // each meal's parts, so it can be graded as a whole
+  const mealParts = new Map<string, Array<{ points: number | null; weight: number | null }>>();
+  const dayParts: Array<{ points: number | null; weight: number | null }> = [];
 
   for (const log of logs) {
+    const points = foodPoints(log.foodReference);
+    dayParts.push({ points, weight: log.calories });
     const mealName = log.recipe?.name ?? log.mealName;
     if (log.cookEventId && mealName) {
+      mealParts.set(log.cookEventId, [...(mealParts.get(log.cookEventId) ?? []), { points, weight: log.calories }]);
       const existing = mealsByEvent.get(log.cookEventId);
       if (existing) {
         existing.calories =
@@ -154,6 +163,7 @@ export async function dailySummary(userId: string, day = localDay(new Date()), d
         recipeName: log.recipe?.name ?? null,
         ingredientCount: 1,
         consumedAt: log.consumedAt.toISOString(),
+        grade: null,
       };
       mealsByEvent.set(log.cookEventId, meal);
       entries.push(meal);
@@ -177,10 +187,12 @@ export async function dailySummary(userId: string, day = localDay(new Date()), d
       recipeName: log.recipe?.name ?? null,
       ingredientCount: 1,
       consumedAt: log.consumedAt.toISOString(),
+      grade: gradeOf(points),
     });
   }
 
   for (const meal of mealsByEvent.values()) {
+    meal.grade = mixedGrade(mealParts.get(meal.id) ?? []);
     meal.calories = meal.calories === null ? null : roundQuantity(meal.calories);
     meal.protein = meal.protein === null ? null : roundQuantity(meal.protein);
     meal.carbs = meal.carbs === null ? null : roundQuantity(meal.carbs);
@@ -208,6 +220,8 @@ export async function dailySummary(userId: string, day = localDay(new Date()), d
     macroSplit: macroSplit(totals),
     nutrients,
     nutrientGuides: nutrientGuides(settings.dailyCalorieTarget),
+    /** the day's food as a whole, A to E */
+    grade: mixedGrade(dayParts),
     targets: {
       calories: settings.dailyCalorieTarget,
       protein: settings.proteinTargetGrams,

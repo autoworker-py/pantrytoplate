@@ -11,7 +11,7 @@
  */
 import { env } from '../env.js';
 
-export const PRIVACY_VERSION = '2026-10-02.2';
+export const PRIVACY_VERSION = '2026-10-02.3';
 export const PRIVACY_EFFECTIVE = '2 October 2026';
 
 /** who runs the app and how to reach them: OPERATOR_NAME and SUPPORT_EMAIL on the server */
@@ -83,6 +83,19 @@ reasons:
 
 Your diary is also health-related information by nature: what a person eats over
 months says a great deal about them. It is treated with the same care.
+
+### 2.2.1 Apple Health
+
+If you connect Apple Health in the iPhone app, the app reads your **steps and
+active calories** for the day, to add the calories you burn exercising to your
+day's budget (all, half or none, as you choose) and to show your steps. Only if
+you also switch on the sleep insight does it read **when you fell asleep and
+woke**, to compare late meals with your sleep.
+
+What it reads from Apple Health **stays on your phone**. It is never sent to
+Pantry2Plate's server, never shared with anyone, never used for advertising,
+and nothing is written to Apple Health. To stop, turn Pantry2Plate off in the
+Health app, under Sharing.
 
 ### 2.3 Things collected automatically
 

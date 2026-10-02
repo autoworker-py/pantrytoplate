@@ -2,6 +2,7 @@ import { useAuth } from '../../lib/auth';
 import { describeBody } from '../../components/BodyInputs';
 import { BackButton, Page } from '../../ui/kit';
 import { formatWater } from '../eaten/DiaryParts';
+import { activityConnected, healthOnThisDevice } from '../../lib/health';
 import { NavRow, Row } from './sheets';
 import { useSettings } from './useSettings';
 import './settings.css';
@@ -31,11 +32,16 @@ export default function SettingsHome() {
           </div>
 
           <div className="group settings-group">
+            <NavRow to="/settings/insights" title="Insights" />
+          </div>
+
+          <div className="group settings-group">
             <NavRow to="/settings/goals" title="Goals" value={`${s.dailyCalorieTarget.toLocaleString()} kcal`} />
             <NavRow to="/settings/body" title="Body & weight" value={s.body.weightKg ? describeBody(s.unitSystem, null, s.body.weightKg) : 'Not set'} />
             <NavRow to="/settings/fasting" title="Fasting" value={s.fasting?.plan ?? 'Off'} />
             <NavRow to="/settings/diet" title="Diet" value={diet} />
             <NavRow to="/settings/water" title="Water" value={formatWater(s.waterGoalMl ?? 2500, s.unitSystem)} />
+            {healthOnThisDevice() ? <NavRow to="/settings/health" title="Apple Health" value={activityConnected() ? 'On' : 'Off'} /> : null}
           </div>
 
           <div className="group settings-group">

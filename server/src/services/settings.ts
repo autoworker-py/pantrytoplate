@@ -110,6 +110,8 @@ export async function getSettings(userId: string) {
     /** expenditure seen in the diary and weigh-ins, when there has been enough of both */
     adaptedTdee: user.adaptedTdee,
     fasting: { plan: user.fastingPlan, start: user.fastingStart, notify: user.fastingNotify },
+    /** how much exercise from Apple Health goes back into the day's budget */
+    exerciseCalories: user.exerciseCalories as 'all' | 'half' | 'none',
   };
 }
 
@@ -138,6 +140,7 @@ export interface SettingsUpdate {
   fastingPlan?: string | null;
   fastingStart?: string | null;
   fastingNotify?: boolean;
+  exerciseCalories?: 'all' | 'half' | 'none';
 }
 
 export async function updateSettings(userId: string, update: SettingsUpdate) {
@@ -230,6 +233,7 @@ export async function updateSettings(userId: string, update: SettingsUpdate) {
       ...(update.fastingPlan !== undefined ? { fastingPlan: update.fastingPlan } : {}),
       ...(update.fastingStart !== undefined ? { fastingStart: update.fastingStart } : {}),
       ...(update.fastingNotify !== undefined ? { fastingNotify: update.fastingNotify } : {}),
+      ...(update.exerciseCalories ? { exerciseCalories: update.exerciseCalories } : {}),
     },
   });
 

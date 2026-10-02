@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { api } from '../../lib/api';
-import type { FastingPlan, GoalPlan, Settings, WeightGoal } from '../../lib/types';
+import type { FastingPlan, GoalPlan, Insights, MealSlot, Settings, WeightGoal } from '../../lib/types';
+import { activityConnected, connectActivity, connectSleep, dayActivity, healthOnThisDevice, sleepConnected, sleepNights, type SleepNight } from '../../lib/health';
+import { GradeBadge } from '../../ui/Grade';
 import { useAuth } from '../../lib/auth';
 import { PLANS, clockTime, scheduleFasting, showFastOnLockScreen } from '../../lib/fasting';
 import { PrivacyNotice } from '../../components/PrivacyNotice';
@@ -24,6 +26,8 @@ const TITLES = {
   data: 'Your data',
   about: 'About',
   account: 'Account',
+  health: 'Apple Health',
+  insights: 'Insights',
 } as const;
 type Section = keyof typeof TITLES;
 
@@ -61,6 +65,10 @@ export default function SettingsSection() {
         <DataSection />
       ) : which === 'about' ? (
         <AboutSection />
+      ) : which === 'health' ? (
+        <HealthSection {...props} />
+      ) : which === 'insights' ? (
+        <InsightsSection />
       ) : (
         <AccountSection s={props.s} />
       )}
@@ -524,6 +532,239 @@ function AccountSection({ s }: { s: Settings }) {
       <button type="button" className="btn ghost danger-ink" style={{ marginTop: 14 }} onClick={() => setSheet('delete')}>Delete my account</button>
       {sheet === 'password' ? <PasswordSheet onClose={() => setSheet(null)} /> : null}
       {sheet === 'delete' ? <DeleteSheet onClose={() => setSheet(null)} /> : null}
+    </>
+  );
+}
+
+/* ---------- Apple Health ---------- */
+
+const EXERCISE: Array<{ value: 'all' | 'half' | 'none'; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'half', label: 'Half' },
+  { value: 'none', label: 'None' },
+];
+
+function HealthSection({ s, save }: SectionProps) {
+  const toast = useToast();
+  const [connected, setConnected] = useState(activityConnected());
+  if (!healthOnThisDevice()) return <p className="fine">Apple Health works in the iPhone app.</p>;
+  return (
+    <>
+      <div className="fasting-intro">
+        <p>Connect Apple Health to add the calories you burn exercising to your day, and to see your steps.</p>
+        <p className="fine">Pantry2Plate reads them on your phone and keeps them there: they are never sent to its server or anyone else. Sleep is asked for separately, from Insights.</p>
+      </div>
+      {connected ? (
+        <div className="group settings-group">
+          <Row title="Steps and calories burned" sub="Connected. To stop, turn Pantry2Plate off in the Health app, under Sharing.">
+            <Icon name="check" size={18} className="faint" />
+          </Row>
+          <Row title="Add exercise to my budget" sub={s.exerciseCalories === 'half' ? 'Half of what you burn: watches often guess high.' : s.exerciseCalories === 'none' ? 'Shown, but your budget stays the same.' : 'Burn 300, eat 300 more.'}>
+            <div className="mini-seg">
+              {EXERCISE.map((option) => (
+                <button key={option.value} type="button" className={(s.exerciseCalories ?? 'all') === option.value ? 'on' : ''} onClick={() => void save({ exerciseCalories: option.value })}>
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </Row>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="btn block"
+          style={{ marginTop: 16 }}
+          onClick={async () => {
+            const asked = await connectActivity();
+            setConnected(asked);
+            toast(asked ? 'Connected. Your exercise now adds to your day.' : 'Apple Health could not be reached.');
+          }}
+        >
+          Connect Apple Health
+        </button>
+      )}
+    </>
+  );
+}
+
+/* ---------- Insights ---------- */
+
+const SLOT_NAMES: Record<MealSlot, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks' };
+const LATE = 21 * 60;
+const clockOf = (minutes: number) => clockTime(new Date(2026, 0, 1, Math.floor(minutes / 60), minutes % 60));
+/** minutes after 6 pm on the evening a night began, so 1 am is later than 11 pm */
+const afterSix = (iso: string) => {
+  const d = new Date(iso);
+  return (d.getHours() * 60 + d.getMinutes() - 18 * 60 + 1440) % 1440;
+};
+
+/** Late last meals against when sleep came, from the phone's Health and the diary's meal times. */
+function sleepFinding(nights: SleepNight[], lastMeals: Insights['lastMeals']) {
+  const lastBy = new Map(lastMeals.map((m) => [m.day, m.minutes]));
+  const paired = nights.filter((n) => lastBy.has(n.day)).map((n) => ({ late: lastBy.get(n.day)! >= LATE, onset: afterSix(n.asleepAt), minutes: n.minutes }));
+  const late = paired.filter((p) => p.late);
+  const early = paired.filter((p) => !p.late);
+  if (late.length < 3 || early.length < 3) return { enough: false as const, late: late.length, early: early.length };
+  const mean = (values: number[]) => values.reduce((a, b) => a + b, 0) / values.length;
+  return {
+    enough: true as const,
+    late: late.length,
+    early: early.length,
+    laterBy: Math.round(mean(late.map((p) => p.onset)) - mean(early.map((p) => p.onset))),
+    shorterBy: Math.round(mean(early.map((p) => p.minutes)) - mean(late.map((p) => p.minutes))),
+  };
+}
+
+function InsightsSection() {
+  const toast = useToast();
+  const [data, setData] = useState<Insights | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [sleepOn, setSleepOn] = useState(sleepConnected());
+  const [nights, setNights] = useState<SleepNight[] | null>(null);
+  const [moving, setMoving] = useState<{ steps: number; kcal: number; days: number } | null>(null);
+
+  useEffect(() => {
+    api.getFresh<Insights>('/api/insights?days=30').then(setData).catch((e) => setError(errorText(e, 'Insights could not be loaded.')));
+  }, []);
+  useEffect(() => {
+    if (sleepOn) void sleepNights(30).then(setNights);
+  }, [sleepOn]);
+  useEffect(() => {
+    if (!activityConnected()) return;
+    let live = true;
+    void (async () => {
+      const days = Array.from({ length: 7 }, (_, i) => plusDays(today(), -(i + 1)));
+      const readings = (await Promise.all(days.map((day) => dayActivity(day)))).filter((r): r is { activeKcal: number; steps: number } => Boolean(r && (r.steps || r.activeKcal)));
+      if (live && readings.length) {
+        setMoving({
+          steps: Math.round(readings.reduce((sum, r) => sum + r.steps, 0) / readings.length),
+          kcal: Math.round(readings.reduce((sum, r) => sum + r.activeKcal, 0) / readings.length),
+          days: readings.length,
+        });
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  if (error) return <div className="banner error">{error}</div>;
+  if (!data) return <div className="skeleton" style={{ height: 300 }} />;
+
+  const times = data.mealTimes.filter((m) => m.minutes !== null && m.days >= 3 && m.slot !== 'snack');
+  const protein = data.proteinByMeal.filter((m) => m.grams !== null);
+  const most = Math.max(1, ...protein.map((m) => m.grams ?? 0));
+  const finding = nights ? sleepFinding(nights, data.lastMeals) : null;
+
+  return (
+    <>
+      <p className="fine">From the last {data.days} days of your diary. Free, and only for you.</p>
+
+      <section className="insight-card">
+        <h3>How healthy you eat</h3>
+        {data.grade.now ? (
+          <>
+            <div className="insight-row"><span>This month</span><GradeBadge grade={data.grade.now} label="This month" /></div>
+            {data.grade.before ? <div className="insight-row"><span>The month before</span><GradeBadge grade={data.grade.before} label="The month before" /></div> : null}
+            {data.grade.pantry ? <div className="insight-row"><span>Your pantry now</span><GradeBadge grade={data.grade.pantry} label="Your pantry" /></div> : null}
+            <p className="fine">Graded A to E the Nutri-Score way, by sugar, saturated fat, salt and calories against fiber, protein, fruit and vegetables. A guide to compare, not medical advice.</p>
+          </>
+        ) : (
+          <p className="fine">Log a few days of meals to see your grade.</p>
+        )}
+      </section>
+
+      <section className="insight-card">
+        <h3>When you eat</h3>
+        {times.length ? (
+          times.map((m) => (
+            <div key={m.slot} className="insight-row">
+              <span>{SLOT_NAMES[m.slot]}</span>
+              <span className="num">{clockOf(m.minutes!)}</span>
+            </div>
+          ))
+        ) : (
+          <p className="fine">A few more days of logging and your usual meal times show here.</p>
+        )}
+      </section>
+
+      {healthOnThisDevice() ? (
+        <section className="insight-card">
+          <h3>Late meals and sleep</h3>
+          {!sleepOn ? (
+            <>
+              <p className="fine">If your iPhone or Apple Watch records sleep, see whether eating late changes when you fall asleep. Sleep stays on your phone.</p>
+              <button
+                type="button"
+                className="btn secondary small"
+                style={{ marginTop: 10 }}
+                onClick={async () => {
+                  const asked = await connectSleep();
+                  setSleepOn(asked);
+                  if (!asked) toast('Apple Health could not be reached.');
+                }}
+              >
+                Use sleep from Apple Health
+              </button>
+            </>
+          ) : !finding ? (
+            <p className="fine">Reading your sleep…</p>
+          ) : finding.enough ? (
+            <>
+              <p className="insight-lead">
+                After a late last meal (after 9 pm) you fell asleep <b>{Math.abs(finding.laterBy)} minutes {finding.laterBy >= 0 ? 'later' : 'earlier'}</b>
+                {Math.abs(finding.shorterBy) >= 5 ? <>, and slept {Math.abs(finding.shorterBy)} minutes {finding.shorterBy >= 0 ? 'less' : 'more'}</> : null}.
+              </p>
+              <p className="fine">{finding.late} late nights and {finding.early} earlier ones. A pattern in your own nights, not proof of cause.</p>
+            </>
+          ) : (
+            <p className="fine">Not enough nights yet: this needs at least three late and three earlier evenings with sleep recorded ({finding.late} and {finding.early} so far).</p>
+          )}
+        </section>
+      ) : null}
+
+      {data.topFoods.length ? (
+        <section className="insight-card">
+          <h3>What you eat most</h3>
+          {data.topFoods.map((food) => (
+            <div key={food.name} className="insight-row">
+              <span>{food.name}</span>
+              <span className="num faint">{food.times}×</span>
+            </div>
+          ))}
+        </section>
+      ) : null}
+
+      {protein.length ? (
+        <section className="insight-card">
+          <h3>Protein at each meal</h3>
+          {protein.map((m) => (
+            <div key={m.slot} className="insight-bar">
+              <span className="k">{SLOT_NAMES[m.slot]}</span>
+              <span className="meter thin"><span style={{ width: `${((m.grams ?? 0) / most) * 100}%` }} /></span>
+              <span className="num">{m.grams} g</span>
+            </div>
+          ))}
+          <p className="fine">Spread through the day it does more than in one big meal.</p>
+        </section>
+      ) : null}
+
+      <section className="insight-card">
+        <h3>Thrown away</h3>
+        <p className="insight-lead">
+          <b className="num">{data.waste.now}</b> {data.waste.now === 1 ? 'thing' : 'things'} in the last {data.days} days
+          {data.waste.before !== data.waste.now ? <>, {data.waste.now < data.waste.before ? 'down' : 'up'} from {data.waste.before}</> : null}.
+        </p>
+      </section>
+
+      {moving ? (
+        <section className="insight-card">
+          <h3>Moving</h3>
+          <p className="insight-lead">
+            <b className="num">{moving.steps.toLocaleString()}</b> steps and <b className="num">{moving.kcal.toLocaleString()}</b> kcal burned a day, on average over the last {moving.days} days.
+          </p>
+        </section>
+      ) : null}
     </>
   );
 }

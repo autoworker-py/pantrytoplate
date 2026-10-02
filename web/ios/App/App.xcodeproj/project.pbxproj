@@ -17,6 +17,7 @@
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		58B00CF93C358BBB3F3E7C2E /* HealthPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23DE3A4955A2BB6303A0613B /* HealthPlugin.swift */; };
 		5A368A56AEA68E5E05C75C81 /* CookTimerWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3C4908653B58C2075BAA20B0 /* CookTimerWidget.appex */; };
 		7A0DC6EFD5ADA0D6AB40D49A /* LiveActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = D967DD576E68CC92B4BD25C0 /* LiveActivityPlugin.swift */; };
 		813566B37C5DFAA8C8B1DE4E /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F26FCCB9BA5FCF03966E9349 /* Foundation.framework */; };
@@ -57,6 +58,7 @@
 /* Begin PBXFileReference section */
 		0B518913DACBEDBE406CAF56 /* FastingAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FastingAttributes.swift; sourceTree = "<group>"; };
 		0B685E29280F69AFD4E73B72 /* MainViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
+		23DE3A4955A2BB6303A0613B /* HealthPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthPlugin.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		3C4908653B58C2075BAA20B0 /* CookTimerWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CookTimerWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
@@ -68,6 +70,7 @@
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		69299D3B81CCD0B3C787F7F4 /* FastingLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FastingLiveActivity.swift; sourceTree = "<group>"; };
+		8E27B9E06E1D4A75B49BE7DD /* App.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		A3DF8333A6B338642F65040B /* CookTimerAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CookTimerAttributes.swift; sourceTree = "<group>"; };
@@ -157,6 +160,8 @@
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				C0FFEE0000000000000A0002 /* PrivacyInfo.xcprivacy */,
 				50B271D01FEDC1A000F3C39B /* public */,
+				23DE3A4955A2BB6303A0613B /* HealthPlugin.swift */,
+				8E27B9E06E1D4A75B49BE7DD /* App.entitlements */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -232,6 +237,11 @@
 						CreatedOnToolsVersion = 9.2;
 						LastSwiftMigration = 1100;
 						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.HealthKit = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};
@@ -293,6 +303,7 @@
 				7A0DC6EFD5ADA0D6AB40D49A /* LiveActivityPlugin.swift in Sources */,
 				FCE2E5D6D464C2E996DCE12A /* MainViewController.swift in Sources */,
 				27A963F26011982042A50897 /* FastingAttributes.swift in Sources */,
+				58B00CF93C358BBB3F3E7C2E /* HealthPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -505,6 +516,7 @@
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 945GA493Y5;
@@ -528,6 +540,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 945GA493Y5;

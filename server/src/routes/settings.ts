@@ -42,6 +42,7 @@ const routes: FastifyPluginAsync = async (app) => {
         fastingPlan: z.enum(['12:12', '14:10', '16:8', '18:6', '20:4']).nullable().optional(),
         fastingStart: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable().optional(),
         fastingNotify: z.boolean().optional(),
+        exerciseCalories: z.enum(['all', 'half', 'none']).optional(),
       })
       .parse(request.body);
 

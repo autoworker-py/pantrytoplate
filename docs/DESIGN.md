@@ -228,6 +228,22 @@ ticket icon in Recipes' header.
   two daily notifications. The same countdown runs on the Lock Screen and in
   the Dynamic Island as a Live Activity, in the cook timer's colours.
 
+### Apple Health, Insights and health grades
+
+- **Apple Health** is read on the phone and stays there: steps and active
+  calories (connected from Settings, Apple Health), and sleep only once the
+  person switches on the sleep insight. Burned calories go back into the day's
+  budget, all of them by default, or half, or none (a setting); the budget card
+  says "+320 kcal from exercise · 8,412 steps".
+- **Insights** (Settings, top) is a column of cards, one fact each: the grade
+  this month and before and the pantry's, when each meal is eaten, late meals
+  against sleep, what is eaten most, protein at each meal, what was thrown
+  away, and steps. Each says when there isn't enough yet rather than guessing.
+- **Health grades** are Nutri-Score letters in Nutri-Score's own colours: on the
+  day (budget card), on each diary row, and in Insights. A food without its
+  sugar, saturated fat and salt has no grade rather than a guessed one, and
+  alcohol has none at all.
+
 ### Plan my week
 
 - **The week on one strip of receipt paper**, a dotted line a day: tap a day for
