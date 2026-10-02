@@ -20,6 +20,7 @@ import SnapFlow from './screens/snap/SnapFlow';
 import Settings from './screens/Settings';
 import ConfirmEmail from './screens/ConfirmEmail';
 import { PrivacyPage, SupportPage } from './screens/PublicPages';
+import MakeMeSomething from './screens/order/MakeMeSomething';
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -88,6 +89,7 @@ export default function App() {
           <Routes location={location}>
             <Route path="/" element={<Cook />} />
             <Route path="/pantry" element={<Pantry />} />
+            <Route path="/make" element={<MakeMeSomething />} />
             <Route path="/recipes" element={<Recipes />} />
             <Route path="/recipes/new" element={<RecipeNew />} />
             <Route path="/recipes/:id" element={<RecipeDetail />} />

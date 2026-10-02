@@ -124,6 +124,10 @@ form .row button[type='submit'] { flex: none; padding: 0 16px; border-radius: va
 .tonight .why i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--red); transform: translateY(-1px); }
 .tonight .facts { margin-top: 3px; font-size: 14.5px; color: var(--ink-2); }
 .tonight .facts .count { color: var(--ink-3); }
+/* when tonight's ideas don't appeal: write an order instead */
+.tonight-alt { display: block; width: 100%; min-height: 44px; margin-top: 0; font-size: 14.5px; color: var(--ink-3); }
+.tonight-card:has(.tonight-alt) { padding-bottom: 4px; }
+.tonight-alt b { font-weight: 600; color: var(--warm); }
 
 /* ---------- cook: what gets used ---------- */
 .deductions { margin-top: 12px; border-top: 1px solid var(--line); }

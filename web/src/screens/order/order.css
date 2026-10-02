@@ -1,0 +1,199 @@
+/* ---------- Make me something: an order ticket, and the pass it comes back to ---------- */
+
+/* the printer's lit slot, and the light the ticket feeds out under */
+.ticket-stage {
+  position: relative; margin: 2px calc(-1 * var(--gutter)) 0; padding: 22px var(--gutter) 4px;
+  background: radial-gradient(72% 260px at 50% 0%, rgba(255, 222, 170, .15), rgba(255, 222, 170, 0) 76%);
+}
+.ticket-stage::before {
+  content: ''; position: absolute; top: 0; left: 30%; right: 30%; height: 8px; z-index: 2; border-radius: 0 0 8px 8px;
+  background: linear-gradient(180deg, #fff4e0, #f1d39e); box-shadow: 0 6px 26px rgba(243, 201, 139, .4);
+}
+/* a short shadow: a longer one falls across the next ticket on the rail */
+.hang { filter: drop-shadow(0 12px 10px rgba(0, 0, 0, .55)); }
+
+/* thermal paper: the order, and the tickets that come back */
+.ticket, .slip {
+  --print: rgba(30, 28, 26, .9);
+  --print-2: rgba(30, 28, 26, .64);
+  --print-3: rgba(30, 28, 26, .44);
+  --rule: rgba(30, 28, 26, .28);
+  --hl: rgba(243, 186, 104, .62);
+  --stamp: #b33d29;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  position: relative; color: var(--print);
+  font-family: var(--mono); font-size: 13px; line-height: 1.5; letter-spacing: .02em;
+  background: linear-gradient(180deg, #f5f0e7, #ede7dc 55%, #e4dccf);
+}
+/* torn along the bottom, as it came off the roll: a strip of teeth under the paper rather than a
+   mask over all of it, which makes WebKit paint a long ticket as one huge image and stop updating it */
+.ticket::before, .slip::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -6px; height: 7px; pointer-events: none;
+  background: conic-gradient(from -45deg at bottom, rgba(228, 220, 207, 0), #e4dccf 1deg 89deg, rgba(228, 220, 207, 0) 90deg) bottom / 11px 7px repeat-x;
+}
+.ticket ::selection, .slip ::selection { background: var(--hl); color: var(--print); }
+.ticket button:focus-visible, .slip button:focus-visible, .t-line:focus-within { outline: 2px solid rgba(30, 28, 26, .85); outline-offset: 2px; }
+
+.ticket { padding: 20px 18px 34px; box-shadow: 0 34px 50px -26px rgba(0, 0, 0, .85), 0 0 0 1px rgba(255, 255, 255, .2) inset; }
+.ticket fieldset { border: 0; margin-inline: 0; padding: 0; min-width: 0; }
+.ticket legend { padding: 0; }
+
+.t-head { display: flex; flex-direction: column; align-items: center; gap: 2px; padding-bottom: 12px; border-bottom: 1.5px dashed var(--rule); font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--print-2); }
+.t-head b { font-size: 15px; font-weight: 800; letter-spacing: .34em; color: var(--print); }
+
+.t-label { display: block; margin-bottom: 8px; font-size: 11.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--print-2); }
+.t-group { margin-top: 22px; }
+.t-hint { margin-top: 7px; font-family: var(--text); font-size: 13.5px; letter-spacing: 0; color: var(--print-2); }
+
+/* what you are after, written large on the pad */
+.t-want { display: block; margin-top: 16px; }
+.t-want textarea {
+  width: 100%; resize: none; border: 0; border-radius: 0; outline: none; background: transparent;
+  padding: 2px 0 8px; border-bottom: 1.5px dashed var(--rule);
+  font-family: var(--display); font-size: 21px; font-weight: 700; line-height: 1.3; letter-spacing: -.01em; color: #1d1c1a;
+  caret-color: var(--stamp); transition: border-color var(--fast) ease;
+}
+.t-want textarea::placeholder { color: var(--print-3); font-weight: 600; }
+.t-want textarea:focus { border-bottom-color: rgba(30, 28, 26, .62); }
+
+/* a printed choice; marking it inks it with the receipt's highlighter */
+.t-tag, .t-food, .t-switch button { position: relative; isolation: isolate; }
+.t-tag::before, .t-food::before, .t-switch button::before {
+  content: ''; position: absolute; z-index: -1; left: 6px; right: 6px; top: 24%; bottom: 22%;
+  border-radius: 3px 8px 4px 9px; background: var(--hl);
+  transform: scaleX(0) skewX(-6deg); transform-origin: left center; transition: transform .3s var(--ease);
+}
+.t-tag.inked::before, .t-food.inked::before, .t-switch button.inked::before { transform: scaleX(1) skewX(-6deg); }
+
+.t-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.t-tag {
+  height: 44px; padding: 0 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--print-2);
+  box-shadow: inset 0 0 0 1px var(--rule); transition: color .2s ease, box-shadow .2s ease;
+}
+.t-tag.inked { color: var(--print); font-weight: 800; box-shadow: inset 0 0 0 1px rgba(30, 28, 26, .55); }
+.t-tag.open { box-shadow: inset 0 0 0 1.5px rgba(30, 28, 26, .8); }
+.t-tag.small { font-size: 12px; }
+.t-count { min-width: 19px; height: 19px; padding: 0 5px; border-radius: 10px; display: inline-grid; place-items: center; background: #1d1c1a; color: #f5f0e7; font-size: 11px; letter-spacing: 0; }
+/* a group's own cuisines, printed indented under it */
+.t-sub { position: relative; margin: 10px 0 0 6px; padding-left: 14px; }
+/* dashes drawn as a gradient: WebKit shrinks a dashed border on a hairline box to a single dot */
+.t-sub::before { content: ''; position: absolute; left: 0; top: -4px; bottom: 20px; width: 1.5px; background: repeating-linear-gradient(to bottom, rgba(30, 28, 26, .42) 0 5px, transparent 5px 10px); }
+
+/* food to use up: as drawn on the shelf, with its date */
+.t-foods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.t-food {
+  display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 8px; align-items: center;
+  min-height: 54px; padding: 6px 10px 6px 8px; border-radius: 8px; text-align: left; box-shadow: inset 0 0 0 1px var(--rule);
+}
+.t-food > :first-child { grid-row: 1 / span 2; justify-self: center; }
+.t-food::before { left: 4px; right: 4px; top: 14%; bottom: 14%; }
+.t-food.inked { box-shadow: inset 0 0 0 1px rgba(30, 28, 26, .55); }
+.t-food-name { font-family: var(--text); font-size: 13.5px; font-weight: 600; letter-spacing: 0; line-height: 1.2; color: var(--print); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-due { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--print-2); }
+.t-due.red { color: var(--stamp); }
+
+/* foods written in: printed tokens on a dashed line */
+.t-foodfield { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 46px; padding-bottom: 4px; border-bottom: 1.5px dashed var(--rule); }
+.t-foodfield input { flex: 1; min-width: 120px; height: 44px; border: 0; outline: none; background: transparent; font-family: var(--text); font-size: 16px; color: var(--print); caret-color: var(--stamp); }
+.t-foodfield input::placeholder { color: var(--print-2); }
+.t-token { display: inline-flex; align-items: center; height: 44px; padding-left: 11px; border-radius: 6px; background: rgba(30, 28, 26, .08); font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.t-token button { width: 40px; height: 44px; display: grid; place-items: center; color: var(--print-2); }
+.t-token.struck > span { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--stamp); }
+
+/* three boxes, one inked */
+.t-switch { display: grid; grid-template-columns: repeat(3, 1fr); border-radius: 8px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(30, 28, 26, .42); }
+.t-switch button { height: 44px; font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--print-2); }
+.t-switch button + button { box-shadow: inset 1px 0 0 var(--rule); }
+.t-switch button.inked { color: var(--print); font-weight: 800; }
+
+/* the small print: receipt lines, each one a picker */
+.t-rule { display: flex; align-items: center; gap: 10px; margin-top: 28px; font-size: 11.5px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--print-2); }
+.t-rule::before, .t-rule::after { content: ''; flex: 1; border-top: 1.5px dashed var(--rule); }
+.t-lines { margin-top: 4px; }
+.t-line { position: relative; display: flex; align-items: baseline; gap: 8px; min-height: 46px; padding-top: 15px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; border-radius: 4px; }
+.t-line .k { flex: none; font-weight: 700; color: var(--print-2); }
+.t-line .dots { flex: 1; min-width: 14px; border-bottom: 2px dotted rgba(30, 28, 26, .28); transform: translateY(-4px); }
+.t-line .v { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 64%; font-weight: 800; color: var(--print); }
+.t-line .vt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-line .v svg { flex: none; color: var(--print-2); }
+.t-line select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; cursor: pointer; }
+
+/* sending, held just above the tabs (or the keyboard) on a solid band: the column's own
+   28px of foot room is taken back so nothing shows between the button and the tabs */
+.order-send {
+  position: sticky; bottom: -28px; z-index: 5;
+  margin: 18px calc(-1 * var(--gutter)) 0; padding: 18px var(--gutter) 10px;
+  background: linear-gradient(rgba(12, 13, 15, 0), var(--bg) 34%);
+}
+
+/* ---------- the pass: tickets hanging on a steel rail ---------- */
+
+.pass { padding-top: 6px; }
+.rail {
+  position: relative; height: 12px; margin: 0 calc(-1 * var(--gutter));
+  background: linear-gradient(180deg, #6b6f75, #3b3e43 45%, #1c1e21);
+  box-shadow: 0 8px 14px -8px rgba(0, 0, 0, .9), inset 0 1px 0 rgba(255, 255, 255, .24), inset 0 -1px 0 rgba(0, 0, 0, .6);
+}
+.rail::after { content: ''; position: absolute; left: 22%; right: 22%; top: 1px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, rgba(255, 244, 224, 0), rgba(255, 244, 224, .55), rgba(255, 244, 224, 0)); }
+
+.pass-row { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: -2px calc(-1 * var(--gutter)) 0; padding: 0 var(--gutter) 30px; }
+.pass-row::-webkit-scrollbar { display: none; }
+
+.hang {
+  position: relative; flex: 0 0 84%; scroll-snap-align: center; padding-top: 2px;
+  transform: rotate(var(--tilt, 0deg)); transform-origin: 50% 0;
+  animation: print-out .9s var(--ease) both; animation-delay: calc(var(--i, 0) * 150ms);
+}
+.pass-row.printing .hang { animation-duration: 2.2s; animation-timing-function: var(--ease-in-out); }
+@keyframes print-out { from { clip-path: inset(0 -40px 100% -40px); } to { clip-path: inset(-20px -40px -60px -40px); } }
+.hang.lone, .hang.stub { flex-basis: 100%; }
+.ordered .hang.stub { margin-top: -2px; }
+
+/* the clip that holds a ticket to the rail */
+.slip-clip {
+  position: absolute; top: -9px; left: 50%; z-index: 2; width: 36px; height: 18px; transform: translateX(-50%); border-radius: 4px;
+  background: linear-gradient(180deg, #55585e, #26282b); box-shadow: 0 3px 5px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .22);
+}
+
+.slip { display: flex; flex-direction: column; padding: 22px 18px 30px; }
+.slip-head { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1.5px dashed var(--rule); font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--print-2); }
+.slip h1, .slip h2 { margin-top: 12px; font-family: var(--display); font-size: 24px; font-weight: 800; line-height: 1.12; letter-spacing: -.015em; color: #1d1c1a; text-wrap: balance; }
+.slip h1 { font-size: 28px; }
+.slip-note { margin-top: 7px; font-family: var(--text); font-size: 15px; letter-spacing: 0; line-height: 1.4; color: var(--print-2); }
+.slip-note.urgent { color: #8f2f1f; font-weight: 600; }
+.slip-note.urgent::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--stamp); transform: translateY(-1px); }
+.slip-stamps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 13px; }
+.stamp { padding: 2px 7px; border: 1.5px solid currentColor; border-radius: 4px; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--stamp); opacity: .86; transform: rotate(-2deg); mix-blend-mode: multiply; }
+.stamp:nth-child(even) { transform: rotate(1.6deg); }
+.stamp.sample { color: #2e5378; border-style: dashed; }
+.slip-meta { margin-top: 11px; font-size: 12px; letter-spacing: .03em; text-transform: uppercase; color: var(--print-2); }
+.slip-have { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 14px; padding-top: 12px; border-top: 1.5px dashed var(--rule); }
+.slip-have-count { font-size: 11.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--print-2); }
+.slip-have .thumbs { display: flex; flex-wrap: wrap; gap: 4px; }
+.slip-buy { margin-top: 6px; font-size: 12.5px; color: var(--print-2); }
+.slip-pick { display: flex; align-items: center; justify-content: center; gap: 6px; height: 50px; margin-top: 18px; border-radius: 10px; background: #1d1c1a; color: #f5f0e7; font-family: var(--display); font-size: 16px; font-weight: 700; letter-spacing: 0; transition: transform var(--fast) ease; }
+.slip-pick:active { transform: scale(.98); }
+
+/* waiting: blank paper feeding out, and the light going over it */
+.slip.blank { min-height: 272px; gap: 0; }
+.slip.blank .bar { display: block; height: 9px; margin-top: 13px; border-radius: 3px; background: rgba(30, 28, 26, .12); }
+.slip.blank .bar.tall { height: 17px; }
+.slip.blank::after { content: ''; position: absolute; left: 0; right: 0; top: 20px; height: 2px; background: #f7d7a4; box-shadow: 0 0 14px 5px rgba(243, 201, 139, .55); animation: slip-sweep 1.5s var(--ease-in-out) infinite alternate; }
+@keyframes slip-sweep { to { top: calc(100% - 30px); } }
+.pass-status { margin-top: 2px; text-align: center; font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--ink-2); }
+.pass-note { max-width: 36ch; margin: 2px auto 0; text-align: center; font-size: 13.5px; color: var(--ink-2); }
+.pass-actions { margin-top: 16px; }
+
+/* the chosen ticket, read in full */
+.ordered-part { margin-top: 26px; }
+.ordered-part h2 { margin-bottom: 10px; font-size: 19px; }
+.ordered .room { flex: none; font-family: var(--display); font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
+.method { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; counter-reset: step; }
+.method li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; font-size: 16.5px; line-height: 1.5; color: var(--ink); counter-increment: step; }
+.method li::before { content: counter(step); font-family: var(--display); font-size: 20px; font-weight: 800; line-height: 1.25; color: var(--warm); font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hang { animation: none; }
+  .slip.blank::after { animation: none; }
+}

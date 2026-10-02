@@ -126,6 +126,46 @@ highlighter stroke as a light sweeps down the receipt. Nothing goes in until
 "Add N to pantry", which puts every ticked line away at once, with Undo. The
 memory lives on the phone, per account, and is erased with the account.
 
+## Make me something (`web/src/screens/order`)
+
+An order for the kitchen, written on a ticket. It opens from a line under
+tonight's recipe on Cook ("Not feeling it? Make me something") and from the
+ticket icon in Recipes' header.
+
+- **The ticket** is one long strip of the receipt's thermal paper under the
+  light, fed from a lit slot: ORDER and the time at its head, then "What are
+  you after?" written large in the display face, then printed tags for how it
+  should feel (twelve), the cuisine (nine groups; marking one prints its own
+  cuisines indented beneath it on a dashed line), food to use up (soonest
+  dated first, drawn as on the shelf, never anything past its date), foods to
+  include and to leave out (leave-out is struck through in red ink), and a
+  three-box switch for cooking only from the kitchen, mostly, or anything.
+- **Marking** a tag inks it with the receipt's warm highlighter, swiped left
+  to right, and a light haptic tick. Status is never the highlight alone: a
+  marked tag is also bolder, and a cuisine that is open is outlined.
+- **The small print** sits under a dashed SMALL PRINT rule: receipt lines with
+  dot leaders ("TIME ........ UNDER 30 MIN") that each open the phone's own
+  picker: meal (guessed from the clock), time, serves, skill, kit, calories
+  ("Fit the 840 left today"), diet (Settings by default), and heat, which only
+  appears once Spicy is marked.
+- **Send to the kitchen** is held just above the tabs (or the keyboard) on a
+  solid band; on a blank ticket it reads "Surprise me".
+- **The pass**: three tickets print onto a steel rail, each held by a clip,
+  tilted slightly, swiped between. Each has the dish, why it suits (the soonest
+  dated food it uses, in red when that is today or tomorrow), the feels as red
+  ink stamps, what it takes from the kitchen as drawings, and what to buy.
+- **The chosen ticket** hangs at the top of a normal Night page: from your
+  kitchen (with the room each thing is in), to buy, the method in large
+  numbered steps for reading across a kitchen, and one-tap changes (spicier,
+  quicker, no oven...) that send a new order.
+- **Paper on iOS**: the torn edge is a strip of teeth under the paper, not a
+  mask, and the long order ticket has a plain shadow, not a filter. Both of
+  those make WebKit paint a tall element as one oversized image, and it then
+  stops updating it.
+- **Until the kitchen (the AI) is connected**, tickets come from a small set of
+  real recipes chosen by the order and the pantry, every one stamped SAMPLE in
+  blue ink, with a note under the rail saying so.
+
 ## Components (`web/src/ui`)
 
 - `Page`: a three-slot header (left, centre, right) over a scrolling column or

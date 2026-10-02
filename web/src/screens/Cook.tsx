@@ -187,6 +187,9 @@ export default function Cook() {
               )}
               <button type="button" className="btn secondary" style={{ flex: '0 0 116px' }} onClick={() => setIndex((i) => i + 1)} disabled={recipes.length < 2}>Another</button>
             </div>
+            <button type="button" className="tonight-alt" onClick={() => navigate('/make')}>
+              Not feeling it? <b>Make me something</b>
+            </button>
           </div>
         )}
       </section>

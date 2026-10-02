@@ -83,6 +83,7 @@ export default function Recipes() {
       title="Recipes"
       right={
         <span className="head-actions">
+          <Link to="/make" className="icon-btn" aria-label="Make me something"><Icon name="ticket" size={20} /></Link>
           <Link to="/recipes/new" className="icon-btn" aria-label="Write your own recipe"><Icon name="plus" size={20} /></Link>
           <button type="button" className="icon-btn" aria-label="Import a recipe from a link" onClick={() => setImporting(true)}><Icon name="link" size={20} /></button>
         </span>
