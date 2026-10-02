@@ -37,6 +37,7 @@ const routes: FastifyPluginAsync = async (app) => {
         unitSystem: z.enum(['metric', 'imperial']).optional(),
         dietTags: z.array(z.string()).optional(),
         notifyExpiry: z.boolean().optional(),
+        waterGoalMl: z.number().int().min(500).max(6000).optional(),
       })
       .parse(request.body);
 

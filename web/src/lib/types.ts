@@ -231,10 +231,44 @@ export interface DayDiary {
   macroSplit: { protein: number; carbs: number; fat: number; hasData: boolean };
   targets: { calories: number; protein: number; carbs: number; fat: number };
   caloriesRemaining: number;
+  /** grams, sodium in milligrams; null when nothing logged says */
+  nutrients: Nutrients;
+  /** fiber to reach; saturated fat and sodium to stay under */
+  nutrientGuides: { fiber: number; satFat: number; sodium: number };
   entryCount: number;
   unknownCalorieEntries: number;
   meals: Array<{ slot: MealSlot; entries: DiaryEntry[]; calories: number }>;
   entries: DiaryEntry[];
+}
+
+export interface Nutrients {
+  fiber: number | null;
+  sugar: number | null;
+  satFat: number | null;
+  sodium: number | null;
+}
+
+/** One line of a meal eaten out: what it was, how much of it was eaten, where the rest went. */
+export interface ReceiptLine {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  /** what was eaten */
+  calories: number | null;
+  /** the line as logged */
+  fullCalories: number | null;
+  /** 1 is all of it */
+  share: number;
+  restTo: 'pantry' | 'bin' | null;
+}
+
+/** A day's water against its goal, glass by glass. */
+export interface WaterDay {
+  date: string;
+  ml: number;
+  goalMl: number;
+  entries: Array<{ id: string; ml: number; at: string }>;
 }
 
 export interface EntryDetail {
@@ -249,8 +283,11 @@ export interface EntryDetail {
   consumedAt: string;
   calories: number | null;
   macros: Macros;
+  nutrients?: Nutrients;
   nutritionBasis: string | null;
   canUndo: boolean;
+  /** a meal eaten out, as its receipt's lines */
+  lines?: ReceiptLine[] | null;
   recipe: {
     id: string;
     name: string;
@@ -353,6 +390,8 @@ export interface Settings {
   unitSystem: 'metric' | 'imperial';
   dietTags: string[];
   notifyExpiry: boolean;
+  /** a day's water, in millilitres */
+  waterGoalMl?: number;
 }
 
 export interface Ad {

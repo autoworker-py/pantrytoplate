@@ -102,6 +102,7 @@ export async function getSettings(userId: string) {
     unitSystem: user.unitSystem as 'metric' | 'imperial',
     dietTags: user.dietTags ? user.dietTags.split(',').filter(Boolean) : [],
     notifyExpiry: user.notifyExpiry,
+    waterGoalMl: user.waterGoalMl,
   };
 }
 
@@ -124,6 +125,7 @@ export interface SettingsUpdate {
   unitSystem?: 'metric' | 'imperial';
   dietTags?: string[];
   notifyExpiry?: boolean;
+  waterGoalMl?: number;
 }
 
 export async function updateSettings(userId: string, update: SettingsUpdate) {
@@ -210,6 +212,7 @@ export async function updateSettings(userId: string, update: SettingsUpdate) {
       ...(update.unitSystem ? { unitSystem: update.unitSystem } : {}),
       ...(update.dietTags !== undefined ? { dietTags: update.dietTags.join(',') || null } : {}),
       ...(update.notifyExpiry !== undefined ? { notifyExpiry: update.notifyExpiry } : {}),
+      ...(update.waterGoalMl !== undefined ? { waterGoalMl: Math.round(update.waterGoalMl) } : {}),
     },
   });
 

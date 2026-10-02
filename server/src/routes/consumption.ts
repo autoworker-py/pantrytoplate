@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { calorieHistory, dailySummary, entryDetail, saveRest, undoEntry, undoSaveRest } from '../services/diary.js';
-import { logEatingOut, recentEatingOut, searchEatOutFoods } from '../services/eatingOut.js';
+import { calorieHistory, dailySummary, eatLess, entryDetail, saveRest, undoEntry, undoSaveRest } from '../services/diary.js';
+import { logEatOutMeal, logEatingOut, recentEatingOut, searchEatOutFoods } from '../services/eatingOut.js';
 import { localDay } from '../zone.js';
 
 /**
@@ -61,6 +61,35 @@ const routes: FastifyPluginAsync = async (app) => {
     return reply.code(201).send({ entry: await logEatingOut(request.userId, body) });
   });
 
+  /** A plate eaten out, item by item under one name: what Snap a meal logs. */
+  app.post('/eat-out/meal', async (request, reply) => {
+    const amount = z.number().min(0).max(100000).nullish();
+    const body = z
+      .object({
+        name: z.string().trim().min(1).max(120),
+        mealSlot: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).default('snack'),
+        items: z
+          .array(
+            z.object({
+              name: z.string().trim().min(1).max(80),
+              grams: z.number().min(0).max(5000).default(0),
+              calories: z.number().min(0).max(10000),
+              protein: z.number().min(0).max(1000).default(0),
+              carbs: z.number().min(0).max(1000).default(0),
+              fat: z.number().min(0).max(1000).default(0),
+              fiber: amount,
+              sugar: amount,
+              satFat: amount,
+              sodium: amount,
+            }),
+          )
+          .min(1)
+          .max(20),
+      })
+      .parse(request.body);
+    return reply.code(201).send({ meal: await logEatOutMeal(request.userId, body) });
+  });
+
   /** One entry, broken down — including every ingredient of a cooked meal. */
   app.get('/:id', async (request) => {
     const { id } = request.params as { id: string };
@@ -71,14 +100,23 @@ const routes: FastifyPluginAsync = async (app) => {
   /** "I only ate half": the rest becomes leftovers, or goes back to the pantry */
   app.post('/:id/save-rest', async (request) => {
     const { id } = request.params as { id: string };
-    const { ate } = z.object({ ate: z.number().gt(0).lt(1) }).parse(request.body);
-    return { result: await saveRest(request.userId, id, ate) };
+    const body = z.object({ ate: z.number().gt(0).lt(1), rest: z.enum(['keep', 'bin']).default('keep') }).parse(request.body);
+    return { result: await saveRest(request.userId, id, body.ate, body.rest) };
   });
 
   app.post('/:id/save-rest/undo', async (request) => {
     const { id } = request.params as { id: string };
-    const body = z.object({ ate: z.number().gt(0).lt(1), leftoverItemId: z.string().nullish() }).parse(request.body);
-    return { result: await undoSaveRest(request.userId, id, body.ate, body.leftoverItemId) };
+    const body = z
+      .object({ ate: z.number().gt(0).lt(1), leftoverItemId: z.string().nullish(), binnedId: z.string().nullish() })
+      .parse(request.body);
+    return { result: await undoSaveRest(request.userId, id, body.ate, body.leftoverItemId, body.binnedId) };
+  });
+
+  /** One line of a meal eaten out: how much of it was eaten, and whether the rest went home or in the bin. */
+  app.post('/:id/eat-less', async (request) => {
+    const { id } = request.params as { id: string };
+    const body = z.object({ ate: z.number().min(0).max(1), rest: z.enum(['pantry', 'bin']).default('pantry') }).parse(request.body);
+    return { result: await eatLess(request.userId, id, body.ate, body.rest) };
   });
 
   app.delete('/:id', async (request) => {

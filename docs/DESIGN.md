@@ -187,6 +187,25 @@ ticket icon in Recipes' header.
 - **The server decides** (`requirePlus`): every Pro route answers 403
   `plus_required` without Pro, whatever the app shows.
 
+### Eaten: what was left, fiber and sugar, water
+
+- **A meal eaten out is its receipt.** Snap logs a plate item by item under one
+  name; the diary shows one row ("3 items"), and opening it shows the order
+  ticket's paper with a dotted line per item. Tap a line, say how much was eaten
+  (All, three quarters, half, a quarter, None), and send the rest to the
+  Pantry (a leftover in the fridge) or the Bin (counted as waste). A line left
+  whole is struck through in the stamp's red; the rest is stamped PANTRY in
+  blue ink or BIN in red. Changing your mind works from the line as first
+  logged, and takes back the leftover or the waste record.
+- **"I didn't finish it"** asks where the rest goes for every meal: the fridge
+  (a cooked meal) or the pantry (a food), or the bin.
+- **Fiber and sugar** sit in one line of small print under the macro bars;
+  tapping it shows saturated fat and sodium (salt, for metric) against the
+  Dietary Guidelines, scaled to the calorie target. Sugar has no line.
+- **Water** is one card under the day: how much of the goal, a blue bar, and a
+  round + that adds a glass, or a bottle when held. The card opens the day's
+  glasses and the goal.
+
 ### Plan my week
 
 - **The week on one strip of receipt paper**, a dotted line a day: tap a day for

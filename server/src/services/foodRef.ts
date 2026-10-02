@@ -32,6 +32,10 @@ export async function cacheExternalFood(data: ExternalFood, db: Tx = prisma): Pr
     proteinPerUnit: data.proteinPerUnit,
     fatPerUnit: data.fatPerUnit,
     carbsPerUnit: data.carbsPerUnit,
+    fiberPerUnit: data.fiberPerUnit ?? null,
+    sugarPerUnit: data.sugarPerUnit ?? null,
+    satFatPerUnit: data.satFatPerUnit ?? null,
+    sodiumPerUnit: data.sodiumPerUnit ?? null,
     servingSizeGrams: data.servingSizeGrams,
     // a scanned product's own pack size, kept apart from any correction
     ...(data.source === 'openfoodfacts' ? { packageGramsScanned: data.packageGrams && data.packageGrams > 0 ? data.packageGrams : 0 } : {}),

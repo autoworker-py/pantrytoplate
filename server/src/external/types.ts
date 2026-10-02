@@ -12,6 +12,11 @@ export interface ExternalFood {
   proteinPerUnit: number | null;
   fatPerUnit: number | null;
   carbsPerUnit: number | null;
+  /** grams per defaultUnit, sodium in milligrams; missing where a source doesn't say */
+  fiberPerUnit?: number | null;
+  sugarPerUnit?: number | null;
+  satFatPerUnit?: number | null;
+  sodiumPerUnit?: number | null;
   /** grams in one defaultUnit */
   servingSizeGrams: number | null;
   /**

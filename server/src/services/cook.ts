@@ -12,7 +12,7 @@ import { prisma, type Tx } from '../db.js';
 import { conflict, notFound } from '../errors.js';
 import { loadConvertContexts } from './conversions.js';
 import { planDeduction } from './deduction.js';
-import { nutritionFor } from './nutrition.js';
+import { nutritionColumns, nutritionFor, scaleColumns } from './nutrition.js';
 import { clampZero, isNegligible, roundQuantity } from './units.js';
 import { attachSubstitutes, evaluateRecipes, type RecipeMatch } from './recipeMatch.js';
 import { checkLowStock } from './lowStock.js';
@@ -337,10 +337,7 @@ export async function cookRecipe(
             cookEventId,
             mealSlot,
             servings: servings ?? recipe.servings,
-            calories: totals.calories,
-            proteinGrams: totals.protein,
-            carbsGrams: totals.carbs,
-            fatGrams: totals.fat,
+            ...nutritionColumns(totals),
           },
         });
 
@@ -367,15 +364,24 @@ export async function cookRecipe(
     const keep = Math.min(Math.max(0, keepServings), servingsCooked);
 
     if (keep > 0 && result.caloriesLogged !== null) {
-      // a half serving is still a serving's worth divided by a half
-      const perServing = result.caloriesLogged / servingsCooked;
+      // a portion in the fridge carries everything the cook did, a serving's share of it
+      const logged = await tx.consumptionLog.findMany({ where: { id: { in: result.consumptionLogIds } } });
+      const perServing = (pick: (log: (typeof logged)[number]) => number | null) =>
+        logged.every((log) => pick(log) === null) ? null : roundQuantity(logged.reduce((sum, log) => sum + (pick(log) ?? 0), 0) / servingsCooked);
       result.leftovers = await storeLeftovers(
         userId,
         {
           recipeId: recipe.id,
           recipeName: recipe.name,
           servings: keep,
-          caloriesPerServing: roundQuantity(perServing),
+          caloriesPerServing: roundQuantity(result.caloriesLogged / servingsCooked),
+          proteinPerServing: perServing((log) => log.proteinGrams),
+          carbsPerServing: perServing((log) => log.carbsGrams),
+          fatPerServing: perServing((log) => log.fatGrams),
+          fiberPerServing: perServing((log) => log.fiberGrams),
+          sugarPerServing: perServing((log) => log.sugarGrams),
+          satFatPerServing: perServing((log) => log.satFatGrams),
+          sodiumPerServing: perServing((log) => log.sodiumMg),
         },
         tx,
       );
@@ -387,13 +393,7 @@ export async function cookRecipe(
         if (!log) continue;
         await tx.consumptionLog.update({
           where: { id: logId },
-          data: {
-            servings: servingsCooked - keep,
-            calories: log.calories === null ? null : log.calories * eatenShare,
-            proteinGrams: log.proteinGrams === null ? null : log.proteinGrams * eatenShare,
-            carbsGrams: log.carbsGrams === null ? null : log.carbsGrams * eatenShare,
-            fatGrams: log.fatGrams === null ? null : log.fatGrams * eatenShare,
-          },
+          data: { servings: servingsCooked - keep, ...scaleColumns(log, eatenShare) },
         });
       }
       result.caloriesLogged = roundQuantity(result.caloriesLogged * eatenShare);

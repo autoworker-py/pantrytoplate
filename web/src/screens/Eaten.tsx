@@ -9,6 +9,8 @@ import { FoodThumb } from '../fridge/Fridge';
 import { Icon } from '../ui/Icon';
 import { Page, Sheet, errorText, useToast } from '../ui/kit';
 import { mealNow } from './ItemSheet';
+import { useUnitSystem } from '../lib/unitSystem';
+import { MealReceipt, NutrientLine, NutrientsSheet, WaterLine } from './eaten/DiaryParts';
 
 const BarcodeScanner = lazy(() => import('../components/BarcodeScanner').then((m) => ({ default: m.BarcodeScanner })));
 
@@ -57,6 +59,8 @@ export default function Eaten() {
   const [week, setWeek] = useState<Array<{ date: string; totalCalories: number }>>([]);
   const [waste, setWaste] = useState<Waste | null>(null);
   const [open, setOpen] = useState<string | null>(null);
+  const [nutrientsOpen, setNutrientsOpen] = useState(false);
+  const system = useUnitSystem();
   const [eatingOut, setEatingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -118,9 +122,11 @@ export default function Eaten() {
             ))}
           </div>
           {diary.unknownCalorieEntries > 0 ? <p className="fine" style={{ marginTop: 10 }}>{diary.unknownCalorieEntries} {diary.unknownCalorieEntries === 1 ? 'entry has' : 'entries have'} no nutrition data, so {diary.unknownCalorieEntries === 1 ? 'it is' : 'they are'} not counted.</p> : null}
+          <NutrientLine diary={diary} onOpen={() => setNutrientsOpen(true)} />
         </section>
       )}
 
+      <WaterLine day={isoDate(day)} today={isToday} system={system} />
       {isToday ? <LogActions status={snap} onSnap={() => void startSnap()} onOther={() => setEatingOut(true)} /> : null}
 
       {diary && diary.entryCount === 0 ? (
@@ -171,7 +177,8 @@ export default function Eaten() {
         </>
       ) : null}
 
-      {open ? <EntrySheet id={open} onClose={() => setOpen(null)} onUndone={(m) => { setOpen(null); toast(m); void load(); }} onChanged={() => { setOpen(null); void load(); }} /> : null}
+      {open ? <EntrySheet id={open} onClose={() => setOpen(null)} onUndone={(m) => { setOpen(null); toast(m); void load(); }} onChanged={() => { setOpen(null); void load(); }} onUpdated={() => void load()} /> : null}
+      {nutrientsOpen && diary ? <NutrientsSheet diary={diary} system={system} title={isToday ? 'Today so far' : day.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} onClose={() => setNutrientsOpen(false)} /> : null}
       {eatingOut ? <EatOutSheet onClose={() => setEatingOut(false)} onLogged={(m) => { setEatingOut(false); toast(m); void load(); }} /> : null}
     </Page>
   );
@@ -180,10 +187,13 @@ export default function Eaten() {
 function EntryRow({ e, onOpen }: { e: DiaryEntry; onOpen: () => void }) {
   return (
     <button type="button" className="list-row" onClick={onOpen}>
-      <span className="thumb">{e.kind === 'meal' ? <Icon name="cook" size={22} className="warm" /> : <FoodThumb name={e.name} category={null} quantity={e.quantity} unit={e.unit} size={32} />}</span>
+      <span className="thumb">{e.kind === 'meal' ? <Icon name={e.source === 'eating_out' ? 'fork' : 'cook'} size={22} className="warm" /> : <FoodThumb name={e.name} category={null} quantity={e.quantity} unit={e.unit} size={32} />}</span>
       <span className="grow">
         <span className="t">{e.recipeName ?? e.name}</span>
-        <span className="s">{e.kind === 'meal' ? `Cooked · ${e.ingredientCount} ingredients` : formatAmount(e.quantity, e.unit)}{e.source === 'eating_out' ? ' · not from pantry' : ''}</span>
+        <span className="s">
+          {e.kind === 'meal' ? (e.source === 'eating_out' ? `${e.ingredientCount} ${e.ingredientCount === 1 ? 'item' : 'items'}` : `Cooked · ${e.ingredientCount} ingredients`) : formatAmount(e.quantity, e.unit)}
+          {e.source === 'eating_out' ? ' · not from pantry' : ''}
+        </span>
       </span>
       <span className="end num">{e.calories === null ? <span className="faint">–</span> : Math.round(e.calories)}</span>
     </button>
@@ -192,27 +202,35 @@ function EntryRow({ e, onOpen }: { e: DiaryEntry; onOpen: () => void }) {
 
 const SHARES: Array<[number, string]> = [[0.25, 'A quarter'], [0.5, 'Half'], [0.75, 'Three quarters']];
 
-function EntrySheet({ id, onClose, onUndone, onChanged }: { id: string; onClose: () => void; onUndone: (message: string) => void; onChanged: () => void }) {
+function EntrySheet({ id, onClose, onUndone, onChanged, onUpdated }: { id: string; onClose: () => void; onUndone: (message: string) => void; onChanged: () => void; onUpdated: () => void }) {
   const toast = useToast();
   const [entry, setEntry] = useState<EntryDetail | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [partial, setPartial] = useState(false);
+  const [share, setShare] = useState<[number, string] | null>(null);
 
-  /** The rest of a cooked meal goes in the fridge; the rest of a pantry food goes back where it came from. */
-  async function ateSome(ate: number, label: string) {
+  const reload = useCallback(() => {
+    api.getFresh<{ entry: EntryDetail }>(`/api/consumption/${id}`).then((d) => setEntry(d.entry)).catch(() => setError('Could not load that entry.'));
+  }, [id]);
+  useEffect(reload, [reload]);
+
+  /** The rest of a cooked meal goes in the fridge, of a pantry food back where it came from, or either in the bin. */
+  async function ateSome(ate: number, label: string, rest: 'keep' | 'bin') {
     setBusy(true);
     setError(null);
     try {
-      const { result } = await api.post<{ result: { kind: 'meal' | 'food'; name: string; leftover: { inventoryItemId: string; servings: number } | null } }>(`/api/consumption/${id}/save-rest`, { ate });
-      const rest = result.leftover
-        ? `${formatServings(result.leftover.servings)} of ${result.name} went in the fridge.`
-        : `The rest of the ${result.name.toLowerCase()} is back in your pantry.`;
-      toast(`Logged ${label.toLowerCase()} of it. ${rest}`, {
+      const { result } = await api.post<{ result: { kind: 'meal' | 'food'; name: string; leftover: { inventoryItemId: string; servings: number } | null; binnedId: string | null } }>(`/api/consumption/${id}/save-rest`, { ate, rest });
+      const after = rest === 'bin'
+        ? `The rest of the ${result.name.toLowerCase()} went in the bin.`
+        : result.leftover
+          ? `${formatServings(result.leftover.servings)} of ${result.name} went in the fridge.`
+          : `The rest of the ${result.name.toLowerCase()} is back in your pantry.`;
+      toast(`Logged ${label.toLowerCase()} of it. ${after}`, {
         label: 'Undo',
         run: () => {
           void api
-            .post(`/api/consumption/${id}/save-rest/undo`, { ate, leftoverItemId: result.leftover?.inventoryItemId ?? null })
+            .post(`/api/consumption/${id}/save-rest/undo`, { ate, leftoverItemId: result.leftover?.inventoryItemId ?? null, binnedId: result.binnedId })
             .then(() => { toast('Undone. All of it is back in your diary.'); onChanged(); })
             .catch((e) => toast(errorText(e, 'Could not undo that.')));
         },
@@ -223,10 +241,6 @@ function EntrySheet({ id, onClose, onUndone, onChanged }: { id: string; onClose:
       setBusy(false);
     }
   }
-
-  useEffect(() => {
-    api.get<{ entry: EntryDetail }>(`/api/consumption/${id}`).then((d) => setEntry(d.entry)).catch(() => setError('Could not load that entry.'));
-  }, [id]);
 
   async function undo() {
     setBusy(true);
@@ -239,8 +253,10 @@ function EntrySheet({ id, onClose, onUndone, onChanged }: { id: string; onClose:
     }
   }
 
+  const lines = entry?.lines ?? null;
+  const more = entry?.nutrients;
   return (
-    <Sheet title={entry?.name ?? ' '} sub={entry ? `${entry.kind === 'meal' ? 'Cooked' : formatAmount(entry.quantity, entry.unit)} · ${MEAL[entry.mealSlot].toLowerCase()}${entry.source === 'eating_out' ? ' · not from your pantry' : ''}` : undefined} onClose={onClose}>
+    <Sheet title={entry?.name ?? ' '} sub={entry ? `${entry.kind === 'meal' ? (entry.source === 'eating_out' ? 'Eaten out' : 'Cooked') : formatAmount(entry.quantity, entry.unit)} · ${MEAL[entry.mealSlot].toLowerCase()}${entry.source === 'eating_out' && entry.kind !== 'meal' ? ' · not from your pantry' : ''}` : undefined} onClose={onClose}>
       {error ? <div className="banner error" style={{ marginTop: 10 }}>{error}</div> : null}
       {!entry ? <div className="skeleton" style={{ height: 120, marginTop: 12 }} /> : (
         <>
@@ -250,7 +266,17 @@ function EntrySheet({ id, onClose, onUndone, onChanged }: { id: string; onClose:
             <div><span className="num">{entry.macros.carbs === null ? '–' : `${Math.round(entry.macros.carbs)} g`}</span><span className="fine">carbs</span></div>
             <div><span className="num">{entry.macros.fat === null ? '–' : `${Math.round(entry.macros.fat)} g`}</span><span className="fine">fat</span></div>
           </div>
+          {more && (more.fiber !== null || more.sugar !== null) ? (
+            <p className="fine" style={{ marginTop: 8 }}>
+              {[more.fiber !== null ? `${Math.round(more.fiber)} g fiber` : null, more.sugar !== null ? `${Math.round(more.sugar)} g sugar` : null].filter(Boolean).join(' · ')}
+            </p>
+          ) : null}
           {entry.nutritionBasis ? <p className="fine" style={{ marginTop: 8 }}>Worked out from {entry.nutritionBasis.replace(/^worked out from /i, '')}.</p> : null}
+
+          {lines ? (
+            <MealReceipt entry={{ ...entry, lines }} onChanged={() => { reload(); onUpdated(); }} />
+          ) : null}
+
           {entry.recipe ? (
             <>
               <div className="section"><h2>What went into it</h2><span className="aside">{entry.recipe.servings} {entry.recipe.servings === 1 ? 'serving' : 'servings'}</span></div>
@@ -265,14 +291,29 @@ function EntrySheet({ id, onClose, onUndone, onChanged }: { id: string; onClose:
               </div>
             </>
           ) : null}
-          {entry.kind === 'meal' || entry.canUndo ? (
+
+          {!lines && (entry.kind === 'meal' || entry.canUndo) ? (
             partial ? (
               <div className="partial">
                 <div className="label" style={{ marginTop: 20 }}>How much did you eat?</div>
-                <div className="chips" style={{ marginTop: 8 }}>
-                  {SHARES.map(([share, label]) => <button key={share} type="button" className="chip" disabled={busy} onClick={() => void ateSome(share, label)}>{label}</button>)}
+                <div className="chips" role="radiogroup" aria-label="How much you ate" style={{ marginTop: 8 }}>
+                  {SHARES.map(([value, label]) => (
+                    <button key={value} type="button" role="radio" aria-checked={share?.[0] === value} className={`chip${share?.[0] === value ? ' on' : ''}`} disabled={busy} onClick={() => setShare([value, label])}>{label}</button>
+                  ))}
                 </div>
-                <p className="fine" style={{ marginTop: 8 }}>{entry.kind === 'meal' ? 'The rest goes in the fridge as leftovers. Only what you ate counts today.' : 'The rest goes back in your pantry. Only what you ate counts today.'}</p>
+                {share ? (
+                  <div className="receipt-rest">
+                    <span className="label">The rest</span>
+                    <button type="button" className="btn secondary" disabled={busy} onClick={() => void ateSome(share[0], share[1], 'keep')}>
+                      <Icon name={entry.kind === 'meal' ? 'snow' : 'pantry'} size={18} /> {entry.kind === 'meal' ? 'Fridge' : 'Pantry'}
+                    </button>
+                    <button type="button" className="btn secondary" disabled={busy} onClick={() => void ateSome(share[0], share[1], 'bin')}>
+                      <Icon name="bin" size={18} /> Bin
+                    </button>
+                  </div>
+                ) : (
+                  <p className="fine" style={{ marginTop: 8 }}>Only what you ate counts today. Then say where the rest goes.</p>
+                )}
               </div>
             ) : (
               <button type="button" className="btn secondary block" style={{ marginTop: 20 }} onClick={() => setPartial(true)} disabled={busy}>

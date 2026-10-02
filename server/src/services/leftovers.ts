@@ -32,6 +32,11 @@ export interface LeftoverInput {
   proteinPerServing?: number | null;
   carbsPerServing?: number | null;
   fatPerServing?: number | null;
+  fiberPerServing?: number | null;
+  sugarPerServing?: number | null;
+  satFatPerServing?: number | null;
+  /** milligrams */
+  sodiumPerServing?: number | null;
 }
 
 /**
@@ -53,11 +58,23 @@ export async function cookedDishFood(input: LeftoverInput, db: Tx = prisma) {
     proteinPerUnit: input.proteinPerServing ?? null,
     carbsPerUnit: input.carbsPerServing ?? null,
     fatPerUnit: input.fatPerServing ?? null,
+    fiberPerUnit: input.fiberPerServing ?? null,
+    sugarPerUnit: input.sugarPerServing ?? null,
+    satFatPerUnit: input.satFatPerServing ?? null,
+    sodiumPerUnit: input.sodiumPerServing ?? null,
     cookedFromRecipeId: input.recipeId,
   };
 
   if (existing) return db.foodReference.update({ where: { id: existing.id }, data });
   return db.foodReference.create({ data });
+}
+
+/** When leftovers put in the fridge today should be eaten by. */
+export function leftoverExpiry(): Date {
+  const expiration = new Date();
+  expiration.setHours(12, 0, 0, 0);
+  expiration.setDate(expiration.getDate() + LEFTOVER_FRIDGE_DAYS);
+  return expiration;
 }
 
 export interface StoredLeftovers {
@@ -78,9 +95,7 @@ export async function storeLeftovers(
 
   const food = await cookedDishFood(input, db);
 
-  const expiration = new Date();
-  expiration.setHours(12, 0, 0, 0);
-  expiration.setDate(expiration.getDate() + LEFTOVER_FRIDGE_DAYS);
+  const expiration = leftoverExpiry();
 
   const item = await db.inventoryItem.create({
     data: {

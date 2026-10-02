@@ -5,17 +5,19 @@
  * not create a pantry item you then have to delete. So these write a
  * consumption log with no inventory_item_id, which the schema already allows.
  *
- * Quick manual entries ("Diner burger, 850 kcal") are saved to the catalog as
- * manual foods, so the second time it is one tap from Recents rather than
- * another round of typing.
+ * Quick manual entries ("Diner burger, 850 kcal") are saved as the person's own
+ * foods, so the second time it is one tap from Recents rather than another
+ * round of typing. They are nobody else's: what you ate out and what you
+ * guessed it weighed in at is yours alone.
  */
 import { prisma, type Tx } from '../db.js';
 import { badRequest, notFound } from '../errors.js';
 import { loadConvertContext } from './conversions.js';
-import { nutritionFor } from './nutrition.js';
+import { nutritionColumns, nutritionFor } from './nutrition.js';
 import { normalizeName } from './matching.js';
 import { normalizeUnit, roundQuantity } from './units.js';
 import { searchLocalFoods } from './foodRef.js';
+import { createId } from '../ids.js';
 
 export interface EatOutInput {
   foodReferenceId?: string;
@@ -41,7 +43,11 @@ export async function logEatingOut(userId: string, input: EatOutInput, db: Tx = 
     if (!input.name?.trim()) throw badRequest('Provide a food to log, or a name and calories.');
 
     const nameNorm = normalizeName(input.name);
-    const existing = await db.foodReference.findFirst({ where: { nameNorm } });
+    // the person's own entry first, then the shared catalog; never someone else's,
+    // and not the meals-out others typed in before these became private
+    const existing =
+      (await db.foodReference.findFirst({ where: { nameNorm, ownerId: userId } })) ??
+      (await db.foodReference.findFirst({ where: { nameNorm, ownerId: null, NOT: { category: 'Eating out' } } }));
 
     if (existing) {
       foodReferenceId = existing.id;
@@ -64,6 +70,7 @@ export async function logEatingOut(userId: string, input: EatOutInput, db: Tx = 
           proteinPerUnit: input.protein ?? null,
           carbsPerUnit: input.carbs ?? null,
           fatPerUnit: input.fat ?? null,
+          ownerId: userId,
         },
       });
       foodReferenceId = created.id;
@@ -86,10 +93,7 @@ export async function logEatingOut(userId: string, input: EatOutInput, db: Tx = 
       unit,
       source: 'eating_out',
       mealSlot: input.mealSlot ?? 'snack',
-      calories: totals.calories,
-      proteinGrams: totals.protein,
-      carbsGrams: totals.carbs,
-      fatGrams: totals.fat,
+      ...nutritionColumns(totals),
     },
   });
 
@@ -106,6 +110,89 @@ export async function logEatingOut(userId: string, input: EatOutInput, db: Tx = 
       fat: totals.fat === null ? null : roundQuantity(totals.fat),
     },
     mealSlot: log.mealSlot,
+  };
+}
+
+export interface PlateLine {
+  name: string;
+  /** what the photo reader judged it weighed; 0 when it couldn't say */
+  grams: number;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber?: number | null;
+  sugar?: number | null;
+  satFat?: number | null;
+  /** milligrams */
+  sodium?: number | null;
+}
+
+/**
+ * A plate eaten out, logged item by item under one meal name, so the diary can
+ * show it as one meal and the person can say they left the fries. Each item
+ * becomes the person's own food, measured by the gram where the reader gave a
+ * weight, so anything they take home goes in the fridge with its nutrition.
+ */
+export async function logEatOutMeal(userId: string, input: { name: string; mealSlot?: string; items: PlateLine[] }, db: Tx = prisma) {
+  if (!input.items.length) throw badRequest('There is nothing on that plate to log.');
+  const mealId = createId();
+  const mealSlot = input.mealSlot ?? 'snack';
+  const ids: string[] = [];
+
+  for (const item of input.items) {
+    const byWeight = item.grams > 0;
+    const per = (value: number | null | undefined) => (value === null || value === undefined ? null : byWeight ? value / item.grams : value);
+    const nutrition = {
+      defaultUnit: byWeight ? 'g' : 'serving',
+      caloriesPerUnit: per(item.calories),
+      proteinPerUnit: per(item.protein),
+      carbsPerUnit: per(item.carbs),
+      fatPerUnit: per(item.fat),
+      fiberPerUnit: per(item.fiber),
+      sugarPerUnit: per(item.sugar),
+      satFatPerUnit: per(item.satFat),
+      sodiumPerUnit: per(item.sodium),
+    };
+    const nameNorm = normalizeName(item.name);
+    // the person's own food of that name, kept to the latest reading of it
+    const own = await db.foodReference.findFirst({ where: { nameNorm, ownerId: userId } });
+    const food = own
+      ? await db.foodReference.update({ where: { id: own.id }, data: nutrition })
+      : await db.foodReference.create({
+          data: { name: item.name.trim(), nameNorm, source: 'manual', category: 'Eating out', ownerId: userId, ...nutrition },
+        });
+
+    const log = await db.consumptionLog.create({
+      data: {
+        userId,
+        inventoryItemId: null,
+        foodReferenceId: food.id,
+        quantityConsumed: byWeight ? item.grams : 1,
+        unit: byWeight ? 'g' : 'serving',
+        source: 'eating_out',
+        mealSlot,
+        cookEventId: mealId,
+        mealName: input.name.trim(),
+        calories: item.calories,
+        proteinGrams: item.protein,
+        carbsGrams: item.carbs,
+        fatGrams: item.fat,
+        fiberGrams: item.fiber ?? null,
+        sugarGrams: item.sugar ?? null,
+        satFatGrams: item.satFat ?? null,
+        sodiumMg: item.sodium ?? null,
+      },
+    });
+    ids.push(log.id);
+  }
+
+  return {
+    id: mealId,
+    name: input.name.trim(),
+    calories: roundQuantity(input.items.reduce((sum, item) => sum + item.calories, 0)),
+    items: ids.length,
+    mealSlot,
   };
 }
 
@@ -141,6 +228,8 @@ export async function recentEatingOut(userId: string, limit = 8, db: Tx = prisma
 export async function searchEatOutFoods(query: string, limit = 12, db: Tx = prisma, userId?: string) {
   const foods = await searchLocalFoods(query, limit * 2, db, userId);
   const scored = foods
+    // meals out others typed in before those became private stay out of sight
+    .filter((food) => !(food.ownerId === null && food.category === 'Eating out'))
     .map((food) => ({
       food,
       rank: food.brand ? 0 : food.category === 'Eating out' ? 0 : food.barcode ? 1 : 2,

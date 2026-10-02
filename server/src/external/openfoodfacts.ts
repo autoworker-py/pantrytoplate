@@ -67,6 +67,13 @@ export async function lookupBarcode(barcode: string): Promise<ExternalOutcome<Ex
   const perServing = servingGrams !== null && servingGrams > 0;
   const scale100ToServing = (per100: number | null) =>
     per100 === null || !perServing ? null : (per100 * servingGrams!) / 100;
+  /** a nutrient per unit, the way the macros are worked out; `times` turns grams into milligrams */
+  const nutrient = (key: string, times = 1) => {
+    const value = perServing
+      ? num(n[`${key}_serving`]) ?? scale100ToServing(num(n[`${key}_100g`]))
+      : num(n[`${key}_100g`]) === null ? null : num(n[`${key}_100g`])! / 100;
+    return value === null ? null : value * times;
+  };
 
   return {
     ok: true,
@@ -88,6 +95,11 @@ export async function lookupBarcode(barcode: string): Promise<ExternalOutcome<Ex
       carbsPerUnit: perServing
         ? num(n.carbohydrates_serving) ?? scale100ToServing(num(n.carbohydrates_100g))
         : num(n.carbohydrates_100g) === null ? null : num(n.carbohydrates_100g)! / 100,
+      fiberPerUnit: nutrient('fiber'),
+      sugarPerUnit: nutrient('sugars'),
+      satFatPerUnit: nutrient('saturated-fat'),
+      // Open Food Facts gives sodium in grams
+      sodiumPerUnit: nutrient('sodium', 1000),
       servingSizeGrams: perServing ? servingGrams : 1,
       // falls back to the text off the label, so "16 oz" still gives a pack size
       packageGrams: parsePackageGrams(product.product_quantity, product.quantity),

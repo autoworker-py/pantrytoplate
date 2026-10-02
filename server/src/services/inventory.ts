@@ -9,7 +9,7 @@ import { badRequest, conflict, notFound } from '../errors.js';
 import { env } from '../env.js';
 import { daysBetween } from '../zone.js';
 import { loadConvertContext } from './conversions.js';
-import { nutritionFor } from './nutrition.js';
+import { nutritionColumns, nutritionFor } from './nutrition.js';
 import { clampZero, convert, gte, normalizeUnit, roundQuantity, isNegligible } from './units.js';
 import { estimateShelfLife, freezeExtension, type StorageLocation } from './shelfLife.js';
 import { checkLowStock, type LowStockResult } from './lowStock.js';
@@ -347,10 +347,7 @@ export async function consumeInventoryItem(
         unit: consumedUnit,
         source: 'manual',
         mealSlot,
-        calories: totals.calories,
-        proteinGrams: totals.protein,
-        carbsGrams: totals.carbs,
-        fatGrams: totals.fat,
+        ...nutritionColumns(totals),
       },
     });
 

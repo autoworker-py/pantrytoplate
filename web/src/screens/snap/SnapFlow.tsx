@@ -66,7 +66,20 @@ export default function SnapFlow() {
   const items = base.map((item) => {
     const f = factor[item.id] ?? 1;
     if (f === 1) return item;
-    return { ...item, grams: Math.round(item.grams * f), calories: item.calories * f, protein: tenth(item.protein * f), carbs: tenth(item.carbs * f), fat: tenth(item.fat * f), portion: `About ${Math.round(item.grams * f)} g` };
+    const times = (value: number | null | undefined) => (value === null || value === undefined ? value : tenth(value * f));
+    return {
+      ...item,
+      grams: Math.round(item.grams * f),
+      calories: item.calories * f,
+      protein: tenth(item.protein * f),
+      carbs: tenth(item.carbs * f),
+      fat: tenth(item.fat * f),
+      fiber: times(item.fiber),
+      sugar: times(item.sugar),
+      satFat: times(item.satFat),
+      sodium: times(item.sodium),
+      portion: `About ${Math.round(item.grams * f)} g`,
+    };
   });
 
   // a read that takes a while is the reader being busy and the server trying again
@@ -135,12 +148,26 @@ export default function SnapFlow() {
     const name = mealName(on);
     setBusy(true);
     try {
-      const { entry } = await api.post<{ entry: { id: string } }>('/api/consumption/eat-out', {
-        name, calories: Math.round(total('calories')), protein: total('protein'), carbs: total('carbs'), fat: total('fat'), mealSlot: meal,
+      // item by item under one name, so the diary can show what was left on the plate
+      const { meal: logged } = await api.post<{ meal: { id: string } }>('/api/consumption/eat-out/meal', {
+        name,
+        mealSlot: meal,
+        items: on.map((item) => ({
+          name: item.name,
+          grams: item.grams,
+          calories: item.calories,
+          protein: item.protein,
+          carbs: item.carbs,
+          fat: item.fat,
+          fiber: item.fiber ?? null,
+          sugar: item.sugar ?? null,
+          satFat: item.satFat ?? null,
+          sodium: item.sodium ?? null,
+        })),
       });
       toast(`Logged ${name.toLowerCase()}, ${Math.round(total('calories'))} kcal.`, {
         label: 'Undo',
-        run: () => { void api.delete(`/api/consumption/${entry.id}`).then(() => toast('Undone. That meal is out of your diary.')).catch((e) => toast(errorText(e, 'Could not undo that.'))); },
+        run: () => { void api.delete(`/api/consumption/${logged.id}`).then(() => toast('Undone. That meal is out of your diary.')).catch((e) => toast(errorText(e, 'Could not undo that.'))); },
       });
       navigate('/eaten');
     } catch (cause) {

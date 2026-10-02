@@ -23,7 +23,7 @@ const routes: FastifyPluginAsync = async (app) => {
    */
   app.get('/export', async (request, reply) => {
     const userId = request.userId;
-    const [user, inventory, logs, removals, shopping, ratings, plan] = await Promise.all([
+    const [user, inventory, logs, removals, shopping, ratings, plan, water] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
         select: { email: true, createdAt: true, weightGoal: true, dailyCalorieTarget: true },
@@ -34,6 +34,7 @@ const routes: FastifyPluginAsync = async (app) => {
       prisma.shoppingListItem.findMany({ where: { userId } }),
       prisma.recipeRating.findMany({ where: { userId }, include: { recipe: true } }),
       prisma.mealPlanEntry.findMany({ where: { userId }, include: { recipe: true } }),
+      prisma.waterLog.findMany({ where: { userId }, orderBy: { loggedAt: 'asc' } }),
     ]);
 
     reply.header('Content-Disposition', `attachment; filename="pantry-export-${new Date().toISOString().slice(0, 10)}.json"`);
@@ -53,10 +54,19 @@ const routes: FastifyPluginAsync = async (app) => {
         quantity: log.quantityConsumed,
         unit: log.unit,
         calories: log.calories,
+        proteinGrams: log.proteinGrams,
+        carbsGrams: log.carbsGrams,
+        fatGrams: log.fatGrams,
+        fiberGrams: log.fiberGrams,
+        sugarGrams: log.sugarGrams,
+        satFatGrams: log.satFatGrams,
+        sodiumMg: log.sodiumMg,
         mealSlot: log.mealSlot,
+        meal: log.mealName,
         recipe: log.recipe?.name ?? null,
         consumedAt: log.consumedAt,
       })),
+      water: water.map((glass) => ({ ml: glass.ml, at: glass.loggedAt })),
       removals: removals.map((removal) => ({
         name: removal.foodReference.name,
         quantity: removal.quantity,

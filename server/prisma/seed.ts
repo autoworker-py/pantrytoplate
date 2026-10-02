@@ -12,6 +12,7 @@ import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { normalizeName } from '../src/services/matching.js';
 import { FOODS, CATEGORY_CUP_GRAMS } from './data/foods.js';
+import { MORE_NUTRIENTS } from './data/nutrients.js';
 import { RECIPES } from './data/recipes/index.js';
 import { SUBSTITUTIONS } from './data/substitutions.js';
 
@@ -167,6 +168,9 @@ async function main() {
 
   for (const food of FOODS) {
     const sponsor = SPONSORS[food.key];
+    // fiber, sugar, saturated fat and sodium are per 100 g: per unit by the food's gram weight
+    const [fiber, sugar, satFat, sodium] = MORE_NUTRIENTS[food.key] ?? [null, null, null, null];
+    const perUnit = (per100: number | null) => (per100 === null || !food.gramsPerUnit ? null : (per100 * food.gramsPerUnit) / 100);
     const data = {
       name: food.name,
       nameNorm: normalizeName(food.name),
@@ -180,13 +184,18 @@ async function main() {
       proteinPerUnit: food.protein,
       fatPerUnit: food.fat,
       carbsPerUnit: food.carbs,
+      fiberPerUnit: perUnit(fiber),
+      sugarPerUnit: perUnit(sugar),
+      satFatPerUnit: perUnit(satFat),
+      sodiumPerUnit: perUnit(sodium),
       servingSizeGrams: food.gramsPerUnit,
       shelfLifeDays: food.shelfLifeDays ?? null,
       sponsorName: sponsor?.name ?? null,
       sponsorTagline: sponsor?.tagline ?? null,
     };
 
-    const existing = await prisma.foodReference.findFirst({ where: { nameNorm: data.nameNorm } });
+    // the shared row only: someone's own food of the same name stays theirs
+    const existing = await prisma.foodReference.findFirst({ where: { nameNorm: data.nameNorm, ownerId: null } });
     const row = existing
       ? await prisma.foodReference.update({ where: { id: existing.id }, data })
       : await prisma.foodReference.create({ data });

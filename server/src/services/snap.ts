@@ -26,6 +26,12 @@ export interface PlateItem {
   protein: number;
   carbs: number;
   fat: number;
+  /** grams; null when the reader didn't say */
+  fiber: number | null;
+  sugar: number | null;
+  satFat: number | null;
+  /** milligrams */
+  sodium: number | null;
   note?: string;
 }
 
@@ -40,11 +46,13 @@ export interface Plate {
  * it inferred rather than saw is a flag, and the server writes the sentence.
  * Where each food sits in the photo is not asked for: it was never placed
  * well enough to be worth its tokens.
- *   n name, g grams, k kcal, p c f protein, carbs and fat in grams, e inferred
+ *   n name, g grams, k kcal, p c f protein, carbs and fat in grams,
+ *   b s t fiber, sugar and saturated fat in grams, d sodium in mg, e inferred
  */
 const PROMPT =
   'Estimate the nutrition of the meal in this photo for a calorie tracker. One entry per distinct food or drink; group identical pieces. ' +
   'n: short everyday name, lower case. g: grams as served. k: kcal. p, c, f: protein, carbs and fat in grams. ' +
+  'b, s, t: fiber, sugar and saturated fat in grams. d: sodium in mg. ' +
   'Add cooking fat or sauce you can infer but not see (an oil sheen, butter on toast) as its own entry with e true. ' +
   'Judge size from the plate, cutlery and hands, and do not round to neat numbers. No food: an empty list.';
 
@@ -69,6 +77,11 @@ const ItemSchema = z.object({
   p: z.coerce.number().nonnegative().max(1000).default(0),
   c: z.coerce.number().nonnegative().max(1000).default(0),
   f: z.coerce.number().nonnegative().max(1000).default(0),
+  // fiber, sugar, saturated fat in grams and sodium in mg: welcome, but a reply without them still counts
+  b: z.coerce.number().nonnegative().max(1000).optional().catch(undefined),
+  s: z.coerce.number().nonnegative().max(1000).optional().catch(undefined),
+  t: z.coerce.number().nonnegative().max(1000).optional().catch(undefined),
+  d: z.coerce.number().nonnegative().max(50000).optional().catch(undefined),
   e: z.unknown().transform((flag) => flag === true || flag === 'true'),
 });
 const ReplySchema = z.object({ i: z.array(z.unknown()).default([]) });
@@ -88,6 +101,10 @@ const GEMINI_SCHEMA = {
           p: { type: 'INTEGER' },
           c: { type: 'INTEGER' },
           f: { type: 'INTEGER' },
+          b: { type: 'INTEGER' },
+          s: { type: 'INTEGER' },
+          t: { type: 'INTEGER' },
+          d: { type: 'INTEGER' },
           e: { type: 'BOOLEAN' },
         },
         required: ['n', 'g', 'k', 'p', 'c', 'f'],
@@ -98,10 +115,10 @@ const GEMINI_SCHEMA = {
 };
 
 const SAMPLE: Array<z.input<typeof ItemSchema>> = [
-  { n: 'grilled chicken', g: 150, k: 248, p: 46, c: 0, f: 5 },
-  { n: 'white rice', g: 158, k: 205, p: 4, c: 45, f: 0 },
-  { n: 'broccoli', g: 91, k: 31, p: 3, c: 6, f: 0 },
-  { n: 'butter or oil', g: 14, k: 102, p: 0, c: 0, f: 12, e: true },
+  { n: 'grilled chicken', g: 150, k: 248, p: 46, c: 0, f: 5, b: 0, s: 0, t: 1, d: 110 },
+  { n: 'white rice', g: 158, k: 205, p: 4, c: 45, f: 0, b: 1, s: 0, t: 0, d: 2 },
+  { n: 'broccoli', g: 91, k: 31, p: 3, c: 6, f: 0, b: 2, s: 2, t: 0, d: 30 },
+  { n: 'butter or oil', g: 14, k: 102, p: 0, c: 0, f: 12, b: 0, s: 0, t: 7, d: 90, e: true },
 ];
 
 /** The one size every photo is sent at. */
@@ -185,6 +202,10 @@ export function tidy(raw: unknown[]): PlateItem[] {
       protein: Math.round(it.p),
       carbs: Math.round(it.c),
       fat: Math.round(it.f),
+      fiber: it.b === undefined ? null : Math.round(it.b),
+      sugar: it.s === undefined ? null : Math.round(it.s),
+      satFat: it.t === undefined ? null : Math.round(it.t),
+      sodium: it.d === undefined ? null : Math.round(it.d),
       ...(it.e ? { note: INFERRED } : {}),
     });
   }

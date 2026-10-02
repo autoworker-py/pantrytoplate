@@ -1,0 +1,56 @@
+/* ---------- Eaten: fiber and sugar, water, and a meal eaten out as its receipt ---------- */
+
+/* small print under the macros: fiber against its guide, sugar as it is */
+.nutrient-line {
+  width: 100%; min-height: 44px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
+  display: flex; align-items: center; gap: 8px; text-align: left; font-size: 13.5px; color: var(--ink-3);
+}
+.nutrient-line b { font-weight: 700; color: var(--ink-2); }
+.nutrient-line .dot { color: var(--ink-4); }
+.nutrient-line svg { margin-left: auto; }
+
+.nutrients { display: flex; flex-direction: column; gap: 18px; margin-top: 6px; }
+.nutrient-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.nutrient-top .t { font-weight: 600; }
+.nutrient-top .v { font-weight: 700; }
+.nutrient .fine { display: block; margin-top: 6px; }
+
+/* water: one line, a blue bar, and + */
+.water-line { margin-top: 12px; padding: 12px 12px 12px 18px; border-radius: var(--r-lg); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line); }
+.water-top { width: 100%; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; text-align: left; }
+.water-top .t { font-weight: 600; }
+.water-top .v { font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.water-row { display: flex; align-items: center; gap: 14px; }
+.water-row .meter { flex: 1; margin-top: 0; }
+.water-meter span { background: linear-gradient(90deg, #5d93c4, var(--blue)); }
+.water-add {
+  flex: none; width: 44px; height: 44px; border-radius: 22px; display: grid; place-items: center;
+  color: var(--blue); background: rgba(156, 195, 230, .1); box-shadow: inset 0 0 0 1px rgba(156, 195, 230, .32);
+  touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  transition: transform var(--fast) ease, background var(--fast) ease;
+}
+.water-add:active { transform: scale(.92); background: rgba(156, 195, 230, .2); }
+.water-goal { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
+.water-goal .t { font-weight: 600; }
+.stepper { display: flex; align-items: center; gap: 6px; }
+.stepper .num { min-width: 64px; text-align: center; font-weight: 700; }
+
+/* a meal eaten out: the paper of the order ticket, a line per item */
+.ticket.meal-receipt { margin-top: 18px; padding: 16px 16px 26px; box-shadow: 0 18px 30px -18px rgba(0, 0, 0, .8), 0 0 0 1px rgba(255, 255, 255, .2) inset; }
+.meal-receipt .t-head { padding-bottom: 8px; }
+.receipt-line { width: 100%; text-align: left; }
+.receipt-line .k { min-width: 0; max-width: 64%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--print); }
+.receipt-line.picked { outline: 2px solid rgba(30, 28, 26, .8); outline-offset: 2px; }
+.receipt-line.left .k { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--stamp); }
+.receipt-line.left .v { color: var(--print-3); }
+.receipt-note { display: flex; align-items: center; gap: 10px; margin: 2px 0 2px 2px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--print-2); }
+.receipt-note .stamp { font-size: 10px; }
+.receipt-note .stamp.kept { color: #2e5378; }
+.receipt-total { margin-top: 10px; border-top: 1.5px dashed var(--rule); }
+.receipt-total .k, .receipt-total .v { color: var(--print); }
+
+.receipt-pick { margin-top: 16px; }
+.receipt-rest { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.receipt-rest .label { margin-right: auto; }
+.receipt-rest .btn { flex: 0 0 auto; min-width: 104px; gap: 6px; }
+.receipt-hint { margin-top: 12px; text-align: center; }

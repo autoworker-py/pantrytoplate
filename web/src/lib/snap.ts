@@ -40,6 +40,11 @@ export interface ReadItem {
   protein: number;
   carbs: number;
   fat: number;
+  /** grams, sodium in milligrams; null when the reader didn't say */
+  fiber?: number | null;
+  sugar?: number | null;
+  satFat?: number | null;
+  sodium?: number | null;
   note?: string;
 }
 

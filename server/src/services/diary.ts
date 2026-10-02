@@ -11,6 +11,7 @@ import { prisma, type Tx } from '../db.js';
 import type { FoodReference } from '@prisma/client';
 import { badRequest, notFound } from '../errors.js';
 import { roundQuantity } from './units.js';
+import { scaleColumns, type NutritionColumns } from './nutrition.js';
 import { getSettings } from './settings.js';
 import { addDays, dayStart, localDay } from '../zone.js';
 
@@ -27,6 +28,35 @@ export interface DiaryTotals {
   protein: number;
   carbs: number;
   fat: number;
+}
+
+type Nutrients = Pick<NutritionColumns, 'fiberGrams' | 'sugarGrams' | 'satFatGrams' | 'sodiumMg'>;
+
+/** Fiber, sugar, saturated fat (grams) and sodium (milligrams) added up; null when nothing logged says. */
+export function nutrientsOf(logs: Nutrients[]) {
+  const sum = (pick: (log: Nutrients) => number | null) =>
+    logs.every((log) => pick(log) === null) ? null : roundQuantity(logs.reduce((total, log) => total + (pick(log) ?? 0), 0));
+  return {
+    fiber: sum((log) => log.fiberGrams),
+    sugar: sum((log) => log.sugarGrams),
+    satFat: sum((log) => log.satFatGrams),
+    sodium: sum((log) => log.sodiumMg),
+  };
+}
+
+/**
+ * What the day's fiber, saturated fat and sodium are measured against, from the
+ * Dietary Guidelines for Americans: 14 g of fiber per 1,000 kcal eaten, under
+ * 10% of calories from saturated fat, under 2,300 mg of sodium. Sugar has no
+ * line: the guideline is for added sugar, which a food's label total can't
+ * separate out.
+ */
+export function nutrientGuides(calorieTarget: number) {
+  return {
+    fiber: Math.round((calorieTarget / 1000) * 14),
+    satFat: Math.round((calorieTarget * 0.1) / 9),
+    sodium: 2300,
+  };
 }
 
 /** Share of calories from each macro — what the donut chart draws. */
@@ -64,11 +94,13 @@ export async function dailySummary(userId: string, day = localDay(new Date()), d
     totals.carbs += log.carbsGrams ?? 0;
     totals.fat += log.fatGrams ?? 0;
   }
+  const nutrients = nutrientsOf(logs);
 
   /**
-   * A cook writes one row per ingredient. Nobody thinks of dinner as six
-   * separate foods, so rows sharing a cookEventId collapse into one meal entry;
-   * the ingredients are still there when you open it.
+   * A cook writes one row per ingredient, and a snapped plate one row per item.
+   * Nobody thinks of dinner as six separate foods, so rows sharing a
+   * cookEventId collapse into one meal entry; the parts are still there when
+   * you open it.
    */
   interface Entry {
     id: string;
@@ -93,7 +125,8 @@ export async function dailySummary(userId: string, day = localDay(new Date()), d
   const mealsByEvent = new Map<string, Entry>();
 
   for (const log of logs) {
-    if (log.cookEventId && log.recipe) {
+    const mealName = log.recipe?.name ?? log.mealName;
+    if (log.cookEventId && mealName) {
       const existing = mealsByEvent.get(log.cookEventId);
       if (existing) {
         existing.calories =
@@ -107,18 +140,18 @@ export async function dailySummary(userId: string, day = localDay(new Date()), d
       const meal: Entry = {
         id: log.cookEventId,
         kind: 'meal',
-        name: log.recipe.name,
+        name: mealName,
         brand: null,
         quantity: 1,
-        unit: 'serving',
+        unit: log.recipe ? 'serving' : 'meal',
         calories: log.calories,
         protein: log.proteinGrams ?? 0,
         carbs: log.carbsGrams ?? 0,
         fat: log.fatGrams ?? 0,
-        source: 'recipe',
+        source: log.recipe ? 'recipe' : log.source,
         mealSlot: log.mealSlot,
-        recipeId: log.recipeId,
-        recipeName: log.recipe.name,
+        recipeId: log.recipe ? log.recipeId : null,
+        recipeName: log.recipe?.name ?? null,
         ingredientCount: 1,
         consumedAt: log.consumedAt.toISOString(),
       };
@@ -173,6 +206,8 @@ export async function dailySummary(userId: string, day = localDay(new Date()), d
       fat: roundQuantity(totals.fat),
     },
     macroSplit: macroSplit(totals),
+    nutrients,
+    nutrientGuides: nutrientGuides(settings.dailyCalorieTarget),
     targets: {
       calories: settings.dailyCalorieTarget,
       protein: settings.proteinTargetGrams,
@@ -205,16 +240,7 @@ export async function entryDetail(userId: string, id: string, db: Tx = prisma) {
     const first = mealLogs[0]!;
     const sum = (pick: (log: (typeof mealLogs)[number]) => number | null) =>
       mealLogs.reduce((total, log) => total + (pick(log) ?? 0), 0);
-
-    return {
-      id,
-      kind: 'meal' as const,
-      name: first.recipe?.name ?? 'Cooked meal',
-      brand: null,
-      quantity: roundQuantity(first.servings ?? 1),
-      unit: 'serving',
-      source: 'recipe',
-      mealSlot: first.mealSlot,
+    const totals = {
       consumedAt: first.consumedAt.toISOString(),
       calories: roundQuantity(sum((log) => log.calories)),
       macros: {
@@ -222,12 +248,45 @@ export async function entryDetail(userId: string, id: string, db: Tx = prisma) {
         carbs: roundQuantity(sum((log) => log.carbsGrams)),
         fat: roundQuantity(sum((log) => log.fatGrams)),
       },
+      nutrients: nutrientsOf(mealLogs),
+    };
+
+    // a meal eaten out, logged item by item: the items are the receipt's lines
+    if (!first.recipe) {
+      const lines = mealLogs.map(lineOf).sort((a, b) => (b.fullCalories ?? 0) - (a.fullCalories ?? 0));
+      return {
+        id,
+        kind: 'meal' as const,
+        name: first.mealName ?? 'Meal out',
+        brand: null,
+        quantity: 1,
+        unit: 'meal',
+        source: first.source,
+        mealSlot: first.mealSlot,
+        ...totals,
+        nutritionBasis: 'an estimate for each item',
+        canUndo: false,
+        recipe: null,
+        lines,
+      };
+    }
+
+    return {
+      id,
+      kind: 'meal' as const,
+      name: first.recipe.name,
+      brand: null,
+      quantity: roundQuantity(first.servings ?? 1),
+      unit: 'serving',
+      source: 'recipe',
+      mealSlot: first.mealSlot,
+      ...totals,
       nutritionBasis: 'the ingredients this recipe used',
       canUndo: mealLogs.some((log) => log.inventoryItemId !== null),
       recipe: {
         id: first.recipeId ?? '',
-        name: first.recipe?.name ?? 'Cooked meal',
-        servings: first.recipe?.servings ?? 1,
+        name: first.recipe.name,
+        servings: first.recipe.servings,
         totalCalories: roundQuantity(sum((log) => log.calories)),
         ingredients: mealLogs.map((log) => ({
           name: log.foodReference.name,
@@ -237,6 +296,7 @@ export async function entryDetail(userId: string, id: string, db: Tx = prisma) {
           protein: log.proteinGrams === null ? null : roundQuantity(log.proteinGrams),
         })),
       },
+      lines: null,
     };
   }
 
@@ -265,13 +325,125 @@ export async function entryDetail(userId: string, id: string, db: Tx = prisma) {
       carbs: log.carbsGrams === null ? null : roundQuantity(log.carbsGrams),
       fat: log.fatGrams === null ? null : roundQuantity(log.fatGrams),
     },
+    nutrients: nutrientsOf([log]),
     nutritionBasis:
       log.foodReference.caloriesPerUnit === null
         ? null
         : `${roundQuantity(log.foodReference.caloriesPerUnit)} kcal per ${log.foodReference.defaultUnit}`,
     canUndo: log.inventoryItemId !== null,
     recipe: null,
+    // something eaten out is a receipt of one line, so less of it can be eaten too
+    lines: log.source === 'eating_out' && !log.inventoryItemId ? [lineOf(log)] : null,
   };
+}
+
+/** The line as first logged, kept once the person said they ate less of it. */
+interface AsLogged extends NutritionColumns {
+  quantityConsumed: number;
+}
+const asLoggedOf = (log: { asLogged: string | null }): AsLogged | null => (log.asLogged ? (JSON.parse(log.asLogged) as AsLogged) : null);
+const columnsOf = (log: NutritionColumns): NutritionColumns => ({
+  calories: log.calories,
+  proteinGrams: log.proteinGrams,
+  carbsGrams: log.carbsGrams,
+  fatGrams: log.fatGrams,
+  fiberGrams: log.fiberGrams,
+  sugarGrams: log.sugarGrams,
+  satFatGrams: log.satFatGrams,
+  sodiumMg: log.sodiumMg,
+});
+
+/** One line of a receipt: what it was, what of it was eaten, and where the rest went. */
+function lineOf(log: NutritionColumns & { id: string; quantityConsumed: number; unit: string; eatenShare: number | null; restTo: string | null; asLogged: string | null; foodReference: { name: string } }) {
+  const before = asLoggedOf(log);
+  const full = before ? before.calories : log.calories;
+  return {
+    id: log.id,
+    name: log.foodReference.name,
+    quantity: roundQuantity(before?.quantityConsumed ?? log.quantityConsumed),
+    unit: log.unit,
+    calories: log.calories === null ? null : roundQuantity(log.calories),
+    fullCalories: full === null ? null : roundQuantity(full),
+    share: log.eatenShare ?? 1,
+    restTo: (log.restTo as 'pantry' | 'bin' | null) ?? null,
+  };
+}
+
+/** Take back where a line's rest went: the leftover, if nobody has eaten from it, or the waste record. */
+async function takeBackRest(tx: Tx, userId: string, log: { restTo: string | null; restRef: string | null }) {
+  if (!log.restRef) return;
+  if (log.restTo === 'pantry') {
+    const eatenFrom = await tx.consumptionLog.count({ where: { inventoryItemId: log.restRef } });
+    if (eatenFrom === 0) await tx.inventoryItem.deleteMany({ where: { id: log.restRef, userId, isLeftover: true } });
+  } else if (log.restTo === 'bin') {
+    await tx.inventoryRemoval.deleteMany({ where: { id: log.restRef, userId } });
+  }
+}
+
+/**
+ * Eat less of something eaten out: a share of the line (none of the fries,
+ * half the burger) and where the rest went. The pantry gets it as a leftover
+ * in the fridge; the bin records it as waste. It always works from the line
+ * as first logged, so changing your mind just sets it again, and all of it
+ * puts the line back as it was.
+ */
+export async function eatLess(userId: string, id: string, ate: number, rest: 'pantry' | 'bin') {
+  if (!(ate >= 0 && ate <= 1)) throw badRequest('Say how much you ate, from none of it to all of it.');
+  const { leftoverExpiry } = await import('./leftovers.js');
+  return prisma.$transaction(async (tx) => {
+    const log = await tx.consumptionLog.findFirst({ where: { id, userId }, include: { foodReference: true } });
+    if (!log) throw notFound('Diary entry not found.');
+    if (log.source !== 'eating_out' || log.inventoryItemId) {
+      throw badRequest('This came from your pantry: say how much you finished from the meal instead.', 'not_eaten_out');
+    }
+    const before: AsLogged = asLoggedOf(log) ?? { quantityConsumed: log.quantityConsumed, ...columnsOf(log) };
+    await takeBackRest(tx, userId, log);
+
+    if (ate === 1) {
+      await tx.consumptionLog.update({
+        where: { id },
+        data: { quantityConsumed: before.quantityConsumed, ...columnsOf(before), eatenShare: null, restTo: null, restRef: null, asLogged: null },
+      });
+      return { name: log.foodReference.name, ate, restTo: null, leftover: null };
+    }
+
+    const restAmount = before.quantityConsumed * (1 - ate);
+    let restRef: string;
+    let leftover: { inventoryItemId: string; quantity: number; unit: string } | null = null;
+    if (rest === 'pantry') {
+      const item = await tx.inventoryItem.create({
+        data: {
+          userId,
+          foodReferenceId: log.foodReferenceId,
+          quantity: restAmount,
+          unit: log.unit,
+          expirationDate: leftoverExpiry(),
+          storageLocation: 'fridge',
+          isLeftover: true,
+        },
+      });
+      restRef = item.id;
+      leftover = { inventoryItemId: item.id, quantity: roundQuantity(restAmount), unit: log.unit };
+    } else {
+      const removal = await tx.inventoryRemoval.create({
+        data: { userId, foodReferenceId: log.foodReferenceId, quantity: restAmount, unit: log.unit, reason: 'wasted' },
+      });
+      restRef = removal.id;
+    }
+
+    await tx.consumptionLog.update({
+      where: { id },
+      data: {
+        quantityConsumed: before.quantityConsumed * ate,
+        ...scaleColumns(before, ate),
+        eatenShare: ate,
+        restTo: rest,
+        restRef,
+        asLogged: JSON.stringify(before),
+      },
+    });
+    return { name: log.foodReference.name, ate, restTo: rest, leftover };
+  });
 }
 
 /**
@@ -341,6 +513,7 @@ export async function undoEntry(userId: string, id: string): Promise<UndoResult>
       });
     }
 
+    for (const log of logs) await takeBackRest(tx, userId, log);
     await tx.consumptionLog.deleteMany({ where: { id: { in: logs.map((log) => log.id) } } });
 
     const first = logs[0]!;
@@ -348,7 +521,7 @@ export async function undoEntry(userId: string, id: string): Promise<UndoResult>
 
     return {
       undone: true,
-      name: isMeal ? first.recipe?.name ?? 'Cooked meal' : first.foodReference.name,
+      name: isMeal ? first.recipe?.name ?? first.mealName ?? 'Cooked meal' : first.foodReference.name,
       caloriesRemoved: roundQuantity(caloriesRemoved),
       restoredToPantry: isMeal ? null : (restored[0] ?? null),
       restoredItems: restored,
@@ -388,9 +561,9 @@ export async function calorieHistory(userId: string, days = 7, db: Tx = prisma) 
  * fridge; a food from the pantry goes back to the lot it came from. Meals
  * cooked before servings were recorded count as one portion.
  */
-export async function saveRest(userId: string, id: string, ate: number) {
+export async function saveRest(userId: string, id: string, ate: number, rest: 'keep' | 'bin' = 'keep') {
   if (!(ate > 0 && ate < 1)) throw badRequest('Say how much you ate: some of it, but not all.');
-  const { storeLeftovers } = await import('./leftovers.js');
+  const { cookedDishFood, storeLeftovers } = await import('./leftovers.js');
   return prisma.$transaction(async (tx) => {
     const meal = await mealOf(tx, userId, id);
     if (meal) {
@@ -400,19 +573,27 @@ export async function saveRest(userId: string, id: string, ate: number) {
         logs.every((log) => pick(log) === null) ? null : logs.reduce((sum, log) => sum + (pick(log) ?? 0), 0);
       const perServing = (value: number | null) => (value === null ? null : value / servings);
       const calories = total((log) => log.calories);
-      const leftover = await storeLeftovers(
-        userId,
-        {
-          recipeId: recipe.id,
-          recipeName: recipe.name,
-          servings: servings * (1 - ate),
-          caloriesPerServing: perServing(calories),
-          proteinPerServing: perServing(total((log) => log.proteinGrams)),
-          carbsPerServing: perServing(total((log) => log.carbsGrams)),
-          fatPerServing: perServing(total((log) => log.fatGrams)),
-        },
-        tx,
-      );
+      const dish = {
+        recipeId: recipe.id,
+        recipeName: recipe.name,
+        servings: servings * (1 - ate),
+        caloriesPerServing: perServing(calories),
+        proteinPerServing: perServing(total((log) => log.proteinGrams)),
+        carbsPerServing: perServing(total((log) => log.carbsGrams)),
+        fatPerServing: perServing(total((log) => log.fatGrams)),
+        fiberPerServing: perServing(total((log) => log.fiberGrams)),
+        sugarPerServing: perServing(total((log) => log.sugarGrams)),
+        satFatPerServing: perServing(total((log) => log.satFatGrams)),
+        sodiumPerServing: perServing(total((log) => log.sodiumMg)),
+      };
+      // the rest in the fridge as leftovers, or in the bin, counted as waste
+      const leftover = rest === 'keep' ? await storeLeftovers(userId, dish, tx) : null;
+      const binned =
+        rest === 'bin'
+          ? await tx.inventoryRemoval.create({
+              data: { userId, foodReferenceId: (await cookedDishFood(dish, tx)).id, quantity: dish.servings, unit: 'serving', reason: 'wasted' },
+            })
+          : null;
       for (const log of logs) await scaleLog(tx, log, ate, true);
       return {
         kind: 'meal' as const,
@@ -421,13 +602,21 @@ export async function saveRest(userId: string, id: string, ate: number) {
         calories: calories === null ? null : roundQuantity(calories * ate),
         leftover,
         restored: null,
+        binnedId: binned?.id ?? null,
       };
     }
 
     const log = await tx.consumptionLog.findFirst({ where: { id, userId }, include: { foodReference: true, inventoryItem: true } });
     if (!log) throw notFound('Diary entry not found.');
     if (!log.inventoryItem) throw badRequest('This did not come from your pantry, so there is nowhere to put the rest back.', 'not_from_pantry');
-    const back = await moveToLot(tx, log, log.quantityConsumed * (1 - ate), 1);
+    const restAmount = log.quantityConsumed * (1 - ate);
+    const back = rest === 'keep' ? await moveToLot(tx, log, restAmount, 1) : null;
+    const binned =
+      rest === 'bin'
+        ? await tx.inventoryRemoval.create({
+            data: { userId, inventoryItemId: log.inventoryItem.id, foodReferenceId: log.foodReferenceId, quantity: restAmount, unit: log.unit, reason: 'wasted' },
+          })
+        : null;
     await scaleLog(tx, log, ate, false);
     return {
       kind: 'food' as const,
@@ -436,14 +625,17 @@ export async function saveRest(userId: string, id: string, ate: number) {
       calories: log.calories === null ? null : roundQuantity(log.calories * ate),
       leftover: null,
       restored: back,
+      binnedId: binned?.id ?? null,
     };
   });
 }
 
 /** Undo "I only ate some": the leftovers go, or the pantry gives the rest back, and the diary shows it all again. */
-export async function undoSaveRest(userId: string, id: string, ate: number, leftoverItemId?: string | null) {
+export async function undoSaveRest(userId: string, id: string, ate: number, leftoverItemId?: string | null, binnedId?: string | null) {
   if (!(ate > 0 && ate < 1)) throw badRequest('Say how much was eaten.');
   return prisma.$transaction(async (tx) => {
+    // binned: the waste record goes, and nothing went back to the pantry to take out again
+    if (binnedId) await tx.inventoryRemoval.deleteMany({ where: { id: binnedId, userId } });
     const meal = await mealOf(tx, userId, id);
     if (meal) {
       if (leftoverItemId) await tx.inventoryItem.deleteMany({ where: { id: leftoverItemId, userId, isLeftover: true } });
@@ -453,7 +645,7 @@ export async function undoSaveRest(userId: string, id: string, ate: number, left
     const log = await tx.consumptionLog.findFirst({ where: { id, userId }, include: { foodReference: true, inventoryItem: true } });
     if (!log || !log.inventoryItem) throw notFound('Diary entry not found.');
     // the log holds what was eaten; the rest was ate-to-(1-ate) of that
-    await moveToLot(tx, log, (log.quantityConsumed / ate) * (1 - ate), -1);
+    if (!binnedId) await moveToLot(tx, log, (log.quantityConsumed / ate) * (1 - ate), -1);
     await scaleLog(tx, log, 1 / ate, false);
     return { undone: true };
   });
@@ -474,19 +666,15 @@ async function mealOf(tx: Tx, userId: string, id: string) {
 /** The diary's share of a log: its nutrition, and for a food its amount, times a factor. */
 async function scaleLog(
   tx: Tx,
-  log: { id: string; quantityConsumed: number; servings: number | null; calories: number | null; proteinGrams: number | null; carbsGrams: number | null; fatGrams: number | null },
+  log: NutritionColumns & { id: string; quantityConsumed: number; servings: number | null },
   factor: number,
   meal: boolean,
 ) {
-  const times = (value: number | null) => (value === null ? null : value * factor);
   await tx.consumptionLog.update({
     where: { id: log.id },
     data: {
       ...(meal ? { servings: (log.servings ?? 1) * factor } : { quantityConsumed: log.quantityConsumed * factor }),
-      calories: times(log.calories),
-      proteinGrams: times(log.proteinGrams),
-      carbsGrams: times(log.carbsGrams),
-      fatGrams: times(log.fatGrams),
+      ...scaleColumns(log, factor),
     },
   });
 }

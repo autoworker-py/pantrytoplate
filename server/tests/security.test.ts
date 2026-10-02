@@ -13,7 +13,7 @@ import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app.js';
 import { prisma } from '../src/db.js';
 import { PRIVACY_VERSION } from '../src/content/privacy.js';
-import { DUMMY_HASH } from '../src/services/auth.js';
+import { DUMMY_HASH, deleteAccount } from '../src/services/auth.js';
 import { enforceLimits } from '../src/limits.js';
 import { BlockedAddressError, fetchPublicPage, isPrivateAddress } from '../src/external/safeFetch.js';
 import { refuseLeaked, timesLeaked } from '../src/services/leakedPasswords.js';
@@ -56,7 +56,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await prisma.user.deleteMany({ where: { email: { contains: `-${stamp}@example.test` } } });
+  // the way the app deletes an account: these people own the meals they ate out
+  for (const user of await prisma.user.findMany({ where: { email: { contains: `-${stamp}@example.test` } }, select: { id: true } })) await deleteAccount(user.id);
   await prisma.foodReference.deleteMany({ where: { barcode: mine.barcode } });
   await app.close();
 });

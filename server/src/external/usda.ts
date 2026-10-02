@@ -13,7 +13,7 @@ import type { ExternalFood } from './types.js';
 const BASE = 'https://api.nal.usda.gov/fdc/v1';
 
 /** USDA nutrient numbers; values are per 100 g. */
-const NUTRIENT = { energyKcal: '208', protein: '203', fat: '204', carbs: '205' } as const;
+const NUTRIENT = { energyKcal: '208', protein: '203', fat: '204', carbs: '205', fiber: '291', sugars: '269', satFat: '606', sodium: '307' } as const;
 
 interface UsdaNutrient {
   nutrientNumber?: string;
@@ -66,6 +66,11 @@ function toExternalFood(food: UsdaFood): ExternalFood {
     proteinPerUnit: per100(NUTRIENT.protein),
     fatPerUnit: per100(NUTRIENT.fat),
     carbsPerUnit: per100(NUTRIENT.carbs),
+    fiberPerUnit: per100(NUTRIENT.fiber),
+    sugarPerUnit: per100(NUTRIENT.sugars),
+    satFatPerUnit: per100(NUTRIENT.satFat),
+    // USDA gives sodium in milligrams per 100 g
+    sodiumPerUnit: per100(NUTRIENT.sodium),
     servingSizeGrams: 1,
     packageGrams: null,
   };

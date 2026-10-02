@@ -120,7 +120,7 @@ describe('the photo and the reply', () => {
       'not an item',
     ]);
     expect(items).toHaveLength(2);
-    expect(items[0]).toEqual({ id: 'i0', name: 'White rice', grams: 158, portion: 'About 158 g', calories: 205, protein: 4, carbs: 45, fat: 0 });
+    expect(items[0]).toEqual({ id: 'i0', name: 'White rice', grams: 158, portion: 'About 158 g', calories: 205, protein: 4, carbs: 45, fat: 0, fiber: null, sugar: null, satFat: null, sodium: null });
     expect(items[1]).toMatchObject({ name: 'Butter', note: expect.stringContaining('Not visible') });
   });
 });

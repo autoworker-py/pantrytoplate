@@ -52,6 +52,8 @@ model User {
   dietTags        String?
   /// daily reminder about food about to expire
   notifyExpiry    Boolean   @default(true)
+  /// a day's water, in millilitres
+  waterGoalMl     Int       @default(2500)
 
   /// ---- body data, used only to work out a calorie target ----
   /// All optional: the app is fully usable without any of it, and the target
@@ -96,6 +98,7 @@ model User {
   packSizes         UserPackSize[]
   emailCodes        EmailCode[]
   planSkips         PlanShoppingSkip[]
+  waterLogs         WaterLog[]
 }
 
 /// The shared dictionary of foods. Both packaged barcode products and raw
@@ -120,6 +123,11 @@ model FoodReference {
   proteinPerUnit      Float?
   fatPerUnit          Float?
   carbsPerUnit        Float?
+  /// grams per defaultUnit, except sodium: milligrams
+  fiberPerUnit        Float?
+  sugarPerUnit        Float?
+  satFatPerUnit       Float?
+  sodiumPerUnit       Float?
   /// grams in ONE defaultUnit. Bridges count/serving units to mass units.
   servingSizeGrams    Float?
   /// the pack size the product database gave when the barcode was scanned: the
@@ -303,6 +311,24 @@ model ConsumptionLog {
   proteinGrams     Float?
   carbsGrams       Float?
   fatGrams         Float?
+  /// fiber, sugar and saturated fat in grams and sodium in milligrams, the same
+  /// way; null where the food's figures don't say
+  fiberGrams       Float?
+  sugarGrams       Float?
+  satFatGrams      Float?
+  sodiumMg         Float?
+  /// a meal eaten out and logged as separate items (a snapped plate): every
+  /// item carries its name, and they share a cookEventId
+  mealName         String?
+  /// how much of this line was eaten, once the person says "not all of it"
+  eatenShare       Float?
+  /// where the rest went, "pantry" | "bin", and the pantry item or waste record
+  /// that made, so a change of mind can take it back
+  restTo           String?
+  restRef          String?
+  /// the line as first logged (amount and nutrition, as JSON), kept from the
+  /// first time the person says they ate less of it
+  asLogged         String?
   consumedAt       DateTime @default(now())
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -497,4 +523,16 @@ model PlanShoppingSkip {
   foodReference FoodReference @relation(fields: [foodReferenceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, foodReferenceId])
+}
+
+/// Water drunk, a glass or a bottle at a time, so the last one can be taken back.
+model WaterLog {
+  id       String   @id @default(cuid())
+  userId   String
+  ml       Int
+  loggedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, loggedAt])
 }

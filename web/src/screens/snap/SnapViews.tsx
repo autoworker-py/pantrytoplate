@@ -25,6 +25,11 @@ export interface SnapItem {
   protein: number;
   carbs: number;
   fat: number;
+  /** grams, sodium in milligrams; null when the reader didn't say */
+  fiber?: number | null;
+  sugar?: number | null;
+  satFat?: number | null;
+  sodium?: number | null;
   /** said when the model is unsure: hidden fats, sauces */
   note?: string;
 }
