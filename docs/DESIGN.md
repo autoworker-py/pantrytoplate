@@ -170,6 +170,34 @@ ticket icon in Recipes' header.
 - **Toasts rise above the pinned button** on these screens rather than landing
   on it.
 
+### Pantry2Plate Pro
+
+- **Gold is Pro** (`--gold`, with `--gold-fill` and `--gold-line`), kept apart
+  from the lamp's warm light. Recipes names its Pro features in gold pills at the
+  top left: Make me something and Plan my week.
+- **Someone without Pro sees the feature at work, not a lock.** A preview opens
+  with PANTRY2PLATE PRO ruled in gold, then a small looping demo drawn with the
+  feature's own paper (the order ticket typing itself and three tickets printing
+  onto the rail; dinners inked onto the week and the shopping counting up), then
+  what it does and the offer. The demos are pictures (hidden from screen
+  readers; the words say the same) and hold one still frame for reduced motion.
+- **The offer** is shared with Snap's (`ProOffer`): plans, a disabled button
+  until payments are switched on, and a code. The iPhone app shows a plain note
+  instead, as it sells nothing yet. Make me something is never in a free trial.
+- **The server decides** (`requirePlus`): every Pro route answers 403
+  `plus_required` without Pro, whatever the app shows.
+
+### Plan my week
+
+- **The week on one strip of receipt paper**, a dotted line a day: tap a day for
+  its dinner, other meals tuck in under it, today is marked in the stamp's red,
+  cooked meals are struck through. Four weeks ahead at most.
+- **The shopping list follows the plan.** What the planned meals need and the
+  pantry can't cover goes on the list marked as the plan's, sharing the pantry
+  out in date order; taking a meal off takes its shopping off; cooking it
+  crosses it off. Anything the person ticked, added, or took off themselves is
+  left alone.
+
 ## Components (`web/src/ui`)
 
 - `Page`: a three-slot header (left, centre, right) over a scrolling column or

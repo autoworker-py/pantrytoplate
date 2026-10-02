@@ -21,6 +21,7 @@ import Settings from './screens/Settings';
 import ConfirmEmail from './screens/ConfirmEmail';
 import { PrivacyPage, SupportPage } from './screens/PublicPages';
 import MakeMeSomething from './screens/order/MakeMeSomething';
+import PlanWeek from './screens/plan/PlanWeek';
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -90,6 +91,7 @@ export default function App() {
             <Route path="/" element={<Cook />} />
             <Route path="/pantry" element={<Pantry />} />
             <Route path="/make" element={<MakeMeSomething />} />
+            <Route path="/plan" element={<PlanWeek />} />
             <Route path="/recipes" element={<Recipes />} />
             <Route path="/recipes/new" element={<RecipeNew />} />
             <Route path="/recipes/:id" element={<RecipeDetail />} />

@@ -1,7 +1,7 @@
 /**
  * Leftovers, substitutions, forecasting, planning and the rest.
  */
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app.js';
 import { prisma } from '../src/db.js';
@@ -226,7 +226,12 @@ describe('running out', () => {
 });
 
 describe('meal planning', () => {
-  beforeEach(reset);
+  // the planner is Pro
+  beforeEach(async () => {
+    await reset();
+    await prisma.user.update({ where: { id: userId }, data: { plusSince: new Date() } });
+  });
+  afterEach(() => prisma.user.update({ where: { id: userId }, data: { plusSince: null } }));
 
   it('adds up what the week needs across meals', async () => {
     const omelette = await prisma.recipe.findFirstOrThrow({ where: { name: 'Classic French Omelette' } });

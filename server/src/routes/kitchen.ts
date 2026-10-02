@@ -1,8 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { prisma } from '../db.js';
-import { HttpError } from '../errors.js';
 import { limit } from '../limits.js';
+import { requirePlus } from '../services/plus.js';
 import { IdeaSchema, OrderSchema, SaveSchema, kitchenIdeas, kitchenRecipe, saveKitchenRecipe } from '../services/kitchen.js';
 
 /**
@@ -12,10 +11,7 @@ import { IdeaSchema, OrderSchema, SaveSchema, kitchenIdeas, kitchenRecipe, saveK
  */
 const routes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', app.authenticate);
-  app.addHook('preHandler', async (request) => {
-    const user = await prisma.user.findUnique({ where: { id: request.userId }, select: { plusSince: true } });
-    if (!user?.plusSince) throw new HttpError(403, 'Make me something is part of Pantry2Plate Pro.', 'plus_required');
-  });
+  app.addHook('preHandler', (request) => requirePlus(request.userId, 'Make me something is part of Pantry2Plate Pro.'));
 
   /** An order in, three short ideas out. */
   app.post('/ideas', limit(12, '10 minutes'), async (request) => {

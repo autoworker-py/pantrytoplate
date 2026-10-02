@@ -1,6 +1,6 @@
 import { adsOnThisDevice } from '../../lib/ads';
 import { proOnOffer } from '../../lib/native';
-import { useState } from 'react';
+import { ProOffer } from '../pro/ProOffer';
 import type { MealSlot } from '../../lib/types';
 import { FoodThumb } from '../../fridge/Fridge';
 import { Icon } from '../../ui/Icon';
@@ -251,9 +251,6 @@ export function Paywall({
   /** only where ads can play: the iPhone app */
   onWatchAd?: () => void;
 }) {
-  const [plan, setPlan] = useState<'year' | 'month'>('year');
-  const [redeeming, setRedeeming] = useState(false);
-  const [code, setCode] = useState('');
   const adOffer = onWatchAd ? <AdOffer adPhotosLeft={adPhotosLeft} busy={busy} watching={watching} adNote={adNote} onWatchAd={onWatchAd} alone={!proOnOffer} /> : null;
 
   // the iPhone app sells nothing yet: the free photos are used, and an ad earns another
@@ -284,36 +281,9 @@ export function Paywall({
         <li><Icon name="check" size={17} stroke={2.2} /> Logged straight into your day, alongside what you cook</li>
       </ul>
 
-      <div className="plans" role="radiogroup" aria-label="Plan">
-        <button type="button" role="radio" aria-checked={plan === 'year'} className={`plan${plan === 'year' ? ' on' : ''}`} onClick={() => setPlan('year')}>
-          <span className="plan-tag">Best value</span>
-          <span className="t">Yearly</span>
-          <span className="price num">$29.99<small> / year</small></span>
-          <span className="s">$2.50 a month</span>
-        </button>
-        <button type="button" role="radio" aria-checked={plan === 'month'} className={`plan${plan === 'month' ? ' on' : ''}`} onClick={() => setPlan('month')}>
-          <span className="t">Monthly</span>
-          <span className="price num">$4.99<small> / month</small></span>
-          <span className="s">Cancel any time</span>
-        </button>
-      </div>
-      <button type="button" className="btn block" style={{ marginTop: 16 }} disabled>Start 7-day free trial</button>
-      <p className="fine" style={{ textAlign: 'center', marginTop: 8 }}>Not available until payments are switched on.</p>
-
-      {adOffer}
-
-      {redeeming ? (
-        <div className="redeem">
-          <div className="field">
-            <label htmlFor="pw-code">Code</label>
-            <input id="pw-code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="XXXX-XXXX" autoCapitalize="characters" autoComplete="off" />
-          </div>
-          {error ? <div className="banner error" style={{ marginTop: 12 }}>{error}</div> : null}
-          <button type="button" className="btn block" style={{ marginTop: 12 }} disabled={busy || code.trim().length < 4} onClick={() => onRedeem(code.trim())}>{busy ? 'Checking…' : 'Unlock Pro'}</button>
-        </div>
-      ) : (
-        <button type="button" className="btn ghost block" style={{ marginTop: 10 }} onClick={() => setRedeeming(true)}>Have a code? Redeem it</button>
-      )}
+      <ProOffer cta="Start 7-day free trial" busy={busy} error={error} onRedeem={onRedeem}>
+        {adOffer}
+      </ProOffer>
     </div>
   );
 }

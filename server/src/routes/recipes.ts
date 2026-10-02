@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { limit } from '../limits.js';
+import { markPlanCooked, syncPlanShopping } from '../services/mealPlan.js';
 import { z } from 'zod';
 import { prisma } from '../db.js';
 import { notFound } from '../errors.js';
@@ -229,18 +230,19 @@ const routes: FastifyPluginAsync = async (app) => {
         swaps: z.record(z.string()).optional(),
       })
       .parse(request.body ?? {});
-    return {
-      result: await cookRecipe(
-        request.userId,
-        id,
-        body.servings ?? null,
-        body.mealSlot,
-        body.choices ?? {},
-        new Set(body.exclude ?? []),
-        body.keepServings ?? 0,
-        body.swaps ?? {},
-      ),
-    };
+    const result = await cookRecipe(
+      request.userId,
+      id,
+      body.servings ?? null,
+      body.mealSlot,
+      body.choices ?? {},
+      new Set(body.exclude ?? []),
+      body.keepServings ?? 0,
+      body.swaps ?? {},
+    );
+    // a planned meal, cooked: crossed off the plan, and what it needed off the list
+    if (await markPlanCooked(request.userId, id).catch(() => false)) await syncPlanShopping(request.userId).catch(() => undefined);
+    return { result };
   });
 
   /** User-created recipes; ingredients link to (or create) catalog entries. */

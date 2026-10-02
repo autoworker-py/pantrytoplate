@@ -38,6 +38,10 @@
   --blue: #9cc3e6;
   --on-light: #141517;
   --btn: #f3ede3;
+  /* Pantry2Plate Pro: gold, kept apart from the lamp's warm light */
+  --gold: #f2c45a;
+  --gold-fill: rgba(242, 196, 90, .09);
+  --gold-line: rgba(242, 196, 90, .42);
 
   /* type */
   --display: 'Red Hat Display Variable', 'Red Hat Display', system-ui, -apple-system, sans-serif;

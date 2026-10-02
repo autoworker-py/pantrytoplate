@@ -36,7 +36,7 @@ export interface AddShoppingItemInput {
   quantityNeeded: number;
   unit: string;
   foodReferenceId?: string | null;
-  addedFrom?: 'manual' | 'recipe_gap';
+  addedFrom?: 'manual' | 'recipe_gap' | 'meal_plan';
 }
 
 export async function addShoppingItem(userId: string, input: AddShoppingItemInput, db: Tx = prisma) {
@@ -115,6 +115,14 @@ export async function removeShoppingItem(userId: string, itemId: string, db: Tx 
   const existing = await db.shoppingListItem.findFirst({ where: { id: itemId, userId } });
   if (!existing) throw notFound('Shopping list item not found.');
   await db.shoppingListItem.delete({ where: { id: itemId } });
+  // the meal plan put it there and the person took it off: the plan keeps it off
+  if (existing.addedFrom === 'meal_plan' && existing.foodReferenceId) {
+    await db.planShoppingSkip.upsert({
+      where: { userId_foodReferenceId: { userId, foodReferenceId: existing.foodReferenceId } },
+      create: { userId, foodReferenceId: existing.foodReferenceId },
+      update: {},
+    });
+  }
 }
 
 export async function clearChecked(userId: string, db: Tx = prisma) {

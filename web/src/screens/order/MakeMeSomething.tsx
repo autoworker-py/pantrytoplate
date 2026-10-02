@@ -18,7 +18,7 @@
  * provenance
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { done } from '../../lib/native';
@@ -29,6 +29,8 @@ import { blankOrder, isBlank, type Order } from './options';
 import { askIdeas, askRecipe, place, saveRecipe, type KitchenRecipe, type Ticket as KitchenTicket } from './kitchen';
 import { Ticket } from './Ticket';
 import { Ideas, Ordered, Printing } from './Pass';
+import { ProPreview } from '../pro/ProPreview';
+import { KitchenDemo } from '../pro/demos';
 import './order.css';
 
 type Stage = 'order' | 'printing' | 'ideas' | 'recipe';
@@ -159,8 +161,22 @@ export default function MakeMeSomething() {
     </button>
   );
   const left = stage === 'order' ? <BackButton /> : stage === 'recipe' ? back('ideas') : back('order');
-  // Pro only, and the server holds to it too
-  if (user?.plus === false) return <Navigate to="/recipes" replace />;
+  // Pro only, with no free tries; the server holds to it too
+  if (user?.plus === false) {
+    return (
+      <Page left={<BackButton />} title="Make me something" className="make-page">
+        <ProPreview
+          name="Make me something"
+          demo={<KitchenDemo />}
+          title="Say what you’re hungry for."
+          lead="Get three recipes made from what you have, and pick one."
+          points={['Uses food before it goes off', 'Fits your diet and your calories', 'Save it, or shop for what’s missing']}
+          cta="Get Pro"
+          note="Not part of the free trial."
+        />
+      </Page>
+    );
+  }
 
   return (
     <Page left={left} title="Make me something" className="make-page">

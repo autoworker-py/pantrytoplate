@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import { useAuth } from '../lib/auth';
 import type { RecipeSummary } from '../lib/types';
 import { FoodThumb } from '../fridge/Fridge';
 import { Icon } from '../ui/Icon';
 import { BackButton, Empty, Page, Sheet, errorText, useToast } from '../ui/kit';
+import './pro/pro.css';
 
 type Filter = 'all' | 'ready' | 'quick' | 'light' | 'mine';
 const FILTERS: Array<[Filter, string]> = [['all', 'Everything'], ['ready', 'Can make now'], ['quick', 'Under 20 min'], ['light', 'Under 400 kcal'], ['mine', 'Yours']];
@@ -14,7 +14,6 @@ interface ListResponse { recipes: RecipeSummary[]; dietHidden: number; dietTags:
 
 export default function Recipes() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const toast = useToast();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
@@ -85,12 +84,15 @@ export default function Recipes() {
       title="Recipes"
       right={
         <span className="head-actions">
-          {user?.plus ? <Link to="/make" className="icon-btn" aria-label="Make me something"><Icon name="ticket" size={20} /></Link> : null}
           <Link to="/recipes/new" className="icon-btn" aria-label="Write your own recipe"><Icon name="plus" size={20} /></Link>
           <button type="button" className="icon-btn" aria-label="Import a recipe from a link" onClick={() => setImporting(true)}><Icon name="link" size={20} /></button>
         </span>
       }
     >
+      <nav className="pro-links" aria-label="Pro">
+        <Link to="/make" className="pro-link"><Icon name="ticket" size={16} stroke={2} /> Make me something</Link>
+        <Link to="/plan" className="pro-link"><Icon name="week" size={16} stroke={2} /> Plan my week</Link>
+      </nav>
       <div className="search">
         <Icon name="search" size={19} />
         <input className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search recipes, or an ingredient" aria-label="Search recipes" />

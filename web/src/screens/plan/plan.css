@@ -1,0 +1,33 @@
+/* ---------- Plan my week: the week on one strip of receipt paper ---------- */
+
+.plan-stage { padding-bottom: 6px; }
+.plan-receipt { padding-bottom: 30px; }
+.plan-receipt .t-line { width: 100%; text-align: left; }
+.plan-receipt .t-line:disabled { opacity: 1; }
+.plan-receipt .t-line .v { max-width: 70%; }
+.plan-receipt .t-line .v.unset { color: var(--print-3); font-weight: 600; }
+.plan-receipt .t-line .v.cooked .vt { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--stamp); }
+.plan-receipt .t-line:active .v .vt { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+
+/* today, marked in the stamp's red */
+.plan-day.today > .t-line:first-child .k { color: #8f2f1f; }
+.plan-day.today > .t-line:first-child .k::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: var(--stamp); transform: translateY(-1px); }
+
+/* other meals, tucked in under their day */
+.plan-extra { min-height: 40px; padding-top: 10px; padding-left: 16px; }
+.plan-extra .k { font-size: 11px; font-weight: 600; }
+
+.plan-buy .v { font-size: 15px; }
+.plan-error { margin-top: 16px; color: #8f2f1f; }
+
+.plan-weeks { margin-top: 12px; }
+.plan-weeks .btn { gap: 6px; }
+
+.plan-pick { margin-top: 8px; }
+.plan-pick .list-row { width: 100%; text-align: left; }
+.plan-open { text-align: left; }
+.plan-open .s, .plan-pick .s { display: block; margin-top: 2px; font-size: 13.5px; color: var(--ink-3); }
+
+/* a tapped line keeps focus: ring it only for the keyboard */
+.plan-receipt .t-line:focus-within { outline: none; }
+.plan-receipt .t-line:focus-visible { outline: 2px solid rgba(30, 28, 26, .85); outline-offset: 2px; }

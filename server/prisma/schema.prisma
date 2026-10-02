@@ -83,7 +83,7 @@ model User {
   /// true from signing up until the six-digit code emailed to the address has
   /// been typed in. Accounts made before email codes were switched on were
   /// never asked, so for them it stays false.
-  emailUnconfirmed  Boolean   @default(false)
+  emailUnconfirmed Boolean @default(false)
 
   inventoryItems    InventoryItem[]
   consumptionLogs   ConsumptionLog[]
@@ -95,6 +95,7 @@ model User {
   ownedFoods        FoodReference[]    @relation("OwnedFoods")
   packSizes         UserPackSize[]
   emailCodes        EmailCode[]
+  planSkips         PlanShoppingSkip[]
 }
 
 /// The shared dictionary of foods. Both packaged barcode products and raw
@@ -172,6 +173,7 @@ model FoodReference {
   inventoryRemovals InventoryRemoval[]
   substituteFor     Substitution[]     @relation("SubstituteIngredient")
   substitutes       Substitution[]     @relation("SubstituteReplacement")
+  planSkips         PlanShoppingSkip[]
   packSizes         UserPackSize[]
 
   @@index([nameNorm])
@@ -480,4 +482,19 @@ model EmailCode {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, purpose])
+}
+
+/// A food the person took off their shopping list after the meal plan put it
+/// there: they have it, or don't want it, so the plan does not put it back.
+/// Removed once no planned meal needs that food.
+model PlanShoppingSkip {
+  id              String   @id @default(cuid())
+  userId          String
+  foodReferenceId String
+  createdAt       DateTime @default(now())
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foodReference FoodReference @relation(fields: [foodReferenceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, foodReferenceId])
 }

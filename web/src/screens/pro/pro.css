@@ -1,0 +1,91 @@
+/* ---------- Pantry2Plate Pro: gold, and the previews of what it unlocks ---------- */
+
+/* Recipes: the Pro features, named, in gold */
+.pro-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 14px; }
+.pro-link {
+  min-height: 44px; padding: 0 14px 0 12px; border-radius: 22px; display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--display); font-size: 14px; font-weight: 700; white-space: nowrap; color: var(--gold);
+  background: var(--gold-fill); box-shadow: inset 0 0 0 1px var(--gold-line);
+  transition: background var(--fast) ease, transform var(--fast) ease;
+}
+.pro-link:active { transform: scale(.97); background: rgba(242, 196, 90, .16); }
+.pro-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* the preview: the name in gold, ruled like a receipt heading */
+.pro-preview { padding-bottom: 12px; }
+.pro-mark {
+  display: flex; align-items: center; gap: 12px; margin-top: 6px;
+  font-family: var(--display); font-size: 12px; font-weight: 800; letter-spacing: .26em; text-transform: uppercase; color: var(--gold);
+}
+.pro-mark::before, .pro-mark::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(242, 196, 90, 0), var(--gold-line)); }
+.pro-mark::after { background: linear-gradient(90deg, var(--gold-line), rgba(242, 196, 90, 0)); }
+.pro-preview .plus-list svg { color: var(--gold); }
+.pro-later { margin-top: 22px; padding: 14px 16px; border-radius: var(--r); background: var(--bg-2); color: var(--ink-2); font-size: 14.5px; line-height: 1.45; }
+
+/* the demo's stage: under the printer's light, as the real ticket is */
+.pro-demo {
+  position: relative; height: 304px; margin: 12px calc(-1 * var(--gutter)) 0; overflow: hidden;
+  background: radial-gradient(70% 240px at 50% 0%, rgba(255, 222, 170, .14), rgba(255, 222, 170, 0) 76%);
+}
+.pro-demo::before {
+  content: ''; position: absolute; top: 0; left: 32%; right: 32%; height: 7px; z-index: 3; border-radius: 0 0 7px 7px;
+  background: linear-gradient(180deg, #fff4e0, #f1d39e); box-shadow: 0 6px 22px rgba(243, 201, 139, .38);
+}
+.demo { position: absolute; inset: 0; animation: demo-in .5s var(--ease) both; }
+.demo.fading { opacity: 0; transition: opacity .45s ease; }
+@keyframes demo-in { from { opacity: 0; } }
+
+/* the paper, small */
+.ticket.mini { padding: 12px 12px 16px; font-size: 10px; box-shadow: 0 24px 34px -20px rgba(0, 0, 0, .85), 0 0 0 1px rgba(255, 255, 255, .2) inset; }
+.mini .t-head { padding-bottom: 6px; font-size: 8.5px; }
+.mini .t-head b { font-size: 12px; }
+.mini .t-label { margin: 10px 0 5px; font-size: 8.5px; }
+.mini .t-tags { gap: 4px; }
+.mini .t-tag { height: 22px; padding: 0 7px; border-radius: 4px; font-size: 9px; }
+.mini .t-tag::before { left: 3px; right: 3px; }
+.mini .t-line { min-height: 0; padding-top: 6px; font-size: 9.5px; }
+.mini .t-line .dots { transform: translateY(-3px); }
+.mini .t-rule { margin-top: 10px; font-size: 8.5px; }
+
+/* Make me something: written, sent, and three tickets back */
+/* order.css sets the paper to position: relative; the demo places it */
+.demo .demo-order { position: absolute; top: 12px; left: 34px; right: 34px; }
+.demo-order.sent { transform: translateY(-115%); opacity: 0; transition: transform .7s var(--ease-in-out), opacity .7s ease; }
+.demo-want { min-height: 2.7em; padding-bottom: 4px; border-bottom: 1.5px dashed var(--rule); font-family: var(--display); font-size: 15px; font-weight: 700; line-height: 1.3; letter-spacing: -.01em; color: #1d1c1a; }
+.demo-caret { display: inline-block; width: 2px; height: 1.05em; margin-left: 1px; vertical-align: -2px; background: var(--stamp); animation: demo-caret 1s steps(1) infinite; }
+@keyframes demo-caret { 50% { opacity: 0; } }
+.demo-send {
+  display: grid; place-items: center; height: 28px; margin-top: 12px; border-radius: 14px;
+  background: #1d1c1a; color: #f5f0e7; font-family: var(--text); font-size: 11px; font-weight: 700; letter-spacing: 0;
+  transition: transform .15s ease, background .15s ease;
+}
+.demo-send.pressed { transform: scale(.94); background: #000; }
+
+.demo-pass { position: absolute; top: 34px; left: 0; right: 0; }
+.demo-pass .rail { margin: 0; }
+.demo-row { display: flex; justify-content: center; gap: 10px; padding: 0 10px; margin-top: -2px; }
+.demo-row .hang { flex: 0 0 30%; }
+.slip.mini { padding: 12px 8px 16px; }
+.mini .slip-head { padding-bottom: 4px; font-size: 7.5px; letter-spacing: .08em; }
+.slip.mini h2 { margin-top: 6px; font-size: 14px; line-height: 1.15; }
+.mini .slip-note { margin-top: 5px; font-size: 9.5px; line-height: 1.35; }
+.mini .slip-meta { margin-top: 8px; font-size: 7.5px; }
+.mini .slip-stamps { margin-top: 7px; gap: 3px; }
+.mini .stamp { padding: 1px 4px; font-size: 7.5px; }
+
+/* Plan my week: dinners inked onto the week, the shopping counting up */
+.demo .demo-week { position: absolute; top: 12px; left: 40px; right: 40px; }
+.demo-week .v { position: relative; isolation: isolate; }
+.demo-week .v.unset { color: var(--print-3); font-weight: 600; }
+.demo-week .v.inked::before {
+  content: ''; position: absolute; z-index: -1; left: -3px; right: -3px; top: 18%; bottom: 10%;
+  border-radius: 3px 8px 4px 9px; background: var(--hl); transform-origin: left center;
+  animation: demo-ink .35s var(--ease) both;
+}
+@keyframes demo-ink { from { transform: scaleX(0) skewX(-6deg); } to { transform: scaleX(1) skewX(-6deg); } }
+.demo-listed { position: absolute; right: 14px; bottom: 30px; font-size: 9.5px; animation: demo-stamp .3s var(--ease) both; }
+@keyframes demo-stamp { from { opacity: 0; transform: scale(1.7) rotate(-9deg); } to { opacity: .86; transform: rotate(-4deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-caret { animation: none; }
+}
