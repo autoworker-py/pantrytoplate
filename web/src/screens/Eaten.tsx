@@ -11,6 +11,7 @@ import { Page, Sheet, errorText, useToast } from '../ui/kit';
 import { mealNow } from './ItemSheet';
 import { useUnitSystem } from '../lib/unitSystem';
 import { MealReceipt, NutrientLine, NutrientsSheet, WaterLine } from './eaten/DiaryParts';
+import { FastingBar, WeightCard } from './eaten/BodyParts';
 
 const BarcodeScanner = lazy(() => import('../components/BarcodeScanner').then((m) => ({ default: m.BarcodeScanner })));
 
@@ -99,6 +100,7 @@ export default function Eaten() {
         <button type="button" className="icon-btn plain" aria-label="Next day" onClick={() => shift(1)} disabled={isToday}><Icon name="chevron" size={20} /></button>
       </div>
       {error ? <div className="banner error">{error}</div> : null}
+      {isToday ? <FastingBar /> : null}
 
       {!diary ? (
         <div className="skeleton" style={{ height: 190, marginTop: 8 }} />
@@ -127,6 +129,7 @@ export default function Eaten() {
       )}
 
       <WaterLine day={isoDate(day)} today={isToday} system={system} />
+      {isToday ? <WeightCard system={system} /> : null}
       {isToday ? <LogActions status={snap} onSnap={() => void startSnap()} onOther={() => setEatingOut(true)} /> : null}
 
       {diary && diary.entryCount === 0 ? (

@@ -31,9 +31,13 @@ interface LiveActivityPlugin {
     stepLabel: string;
   }): Promise<{ started: boolean; reason?: string }>;
   end(): Promise<void>;
+  /** the fast, or the eating window, on the Lock Screen (see lib/fasting.ts) */
+  startFast(options: { phase: 'fasting' | 'eating'; since: number; until: number; plan: string }): Promise<{ started: boolean; reason?: string }>;
+  endFast(): Promise<void>;
 }
 
-const LiveActivity = registerPlugin<LiveActivityPlugin>('LiveActivity');
+/** One binding for the native plugin, shared by the cook timer and fasting. */
+export const LiveActivity = registerPlugin<LiveActivityPlugin>('LiveActivity');
 
 const STORAGE_KEY = 'pantry.cookTimer';
 const NOTIFICATION_ID = 8801;

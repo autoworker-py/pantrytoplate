@@ -24,6 +24,8 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "isSupported", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "start", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "end", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "startFast", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "endFast", returnType: CAPPluginReturnPromise),
     ]
 
     /// Live Activities need iOS 16.2 and the per-app switch in Settings.
@@ -95,7 +97,60 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve()
     }
 
+    /// The fast, or the eating window, on the Lock Screen. The same phase already showing is left as it is.
+    @objc func startFast(_ call: CAPPluginCall) {
+        #if canImport(ActivityKit)
+        if #available(iOS 16.2, *) {
+            guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+                call.resolve(["started": false, "reason": "disabled"])
+                return
+            }
+            let since = Date(timeIntervalSince1970: (call.getDouble("since") ?? 0) / 1000)
+            let until = Date(timeIntervalSince1970: (call.getDouble("until") ?? 0) / 1000)
+            guard until > Date() else {
+                call.resolve(["started": false, "reason": "already_past"])
+                return
+            }
+            let state = FastingAttributes.ContentState(fasting: call.getString("phase") != "eating", since: since, until: until)
+            if let showing = Activity<FastingAttributes>.activities.first, showing.content.state == state {
+                call.resolve(["started": true, "id": showing.id])
+                return
+            }
+            endFastingActivities()
+            do {
+                let activity = try Activity.request(
+                    attributes: FastingAttributes(plan: call.getString("plan") ?? ""),
+                    content: .init(state: state, staleDate: until),
+                    pushType: nil
+                )
+                call.resolve(["started": true, "id": activity.id])
+            } catch {
+                NSLog("[LiveActivity] could not start the fast: %@", String(describing: error))
+                call.resolve(["started": false, "reason": String(describing: error)])
+            }
+            return
+        }
+        #endif
+        call.resolve(["started": false, "reason": "unsupported"])
+    }
+
+    @objc func endFast(_ call: CAPPluginCall) {
+        #if canImport(ActivityKit)
+        if #available(iOS 16.2, *) {
+            endFastingActivities()
+        }
+        #endif
+        call.resolve()
+    }
+
     #if canImport(ActivityKit)
+    @available(iOS 16.2, *)
+    private func endFastingActivities() {
+        for activity in Activity<FastingAttributes>.activities {
+            Task { await activity.end(nil, dismissalPolicy: .immediate) }
+        }
+    }
+
     @available(iOS 16.2, *)
     private func endAllActivities() {
         for activity in Activity<CookTimerAttributes>.activities {

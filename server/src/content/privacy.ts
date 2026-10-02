@@ -11,7 +11,7 @@
  */
 import { env } from '../env.js';
 
-export const PRIVACY_VERSION = '2026-10-02';
+export const PRIVACY_VERSION = '2026-10-02.2';
 export const PRIVACY_EFFECTIVE = '2 October 2026';
 
 /** who runs the app and how to reach them: OPERATOR_NAME and SUPPORT_EMAIL on the server */
@@ -49,19 +49,24 @@ reported, or when the law requires it.
   What is stored is a bcrypt hash, which cannot be reversed into your password.
 - **Food and pantry**: the foods you add, quantities, units, storage locations,
   expiry dates, and low-stock thresholds.
-- **What you eat**: every consumption entry, with amounts, meal slot, timestamp,
-  and the calories and macronutrients calculated for it.
+- **What you eat and drink**: every consumption entry, with amounts, meal slot,
+  timestamp, and the calories and nutrients calculated for it (including fiber,
+  sugar, saturated fat and sodium); how much of a meal you left, and whether
+  the rest went to your pantry or the bin; and the water you log.
 - **Waste**: what you threw away, when, and the reason you gave.
 - **Recipes**: recipes you write, recipes you import from a link, ratings, meal
   plans, and per-cook decisions such as leaving an ingredient out.
 - **Shopping list**: items, quantities, and whether they are ticked.
 - **Settings**: your calorie and macronutrient targets, dietary tags, unit
-  system, and notification preferences.
+  system, notification preferences, your water goal, and any fasting plan
+  (which hours you eat in, and whether to be reminded).
 
 ### 2.2 Health-related information
 
 If you choose to use the calorie calculator, the app stores your **height,
-weight, year of birth, sex, activity level, and weight goal**.
+weigh-ins, year of birth, sex, activity level, and weight goal** (a goal
+weight and the date you want to reach it, if you set one). Weigh-ins are kept
+as a history, one a day, so the app can show your trend.
 
 This is health-related information, and it deserves naming separately for three
 reasons:
@@ -69,10 +74,12 @@ reasons:
 1. **It is entirely optional.** Every feature except the personalised calorie
    estimate works without it. You can use the app indefinitely and never enter
    any of it.
-2. **It is used for one purpose only** — calculating a suggested daily calorie
-   target and macronutrient split. It is not used for anything else, ever.
-3. **You can delete it at any time** without deleting your account, and the app
-   will fall back to a plain default target.
+2. **It is used for one purpose only** — working out a suggested daily calorie
+   target and macronutrient split, adjusted each week from your weight trend and
+   your diary, and showing you that trend. It is not used for anything else,
+   ever.
+3. **You can delete it at any time** without deleting your account, weigh-in by
+   weigh-in or all of it, and the app will fall back to a plain default target.
 
 Your diary is also health-related information by nature: what a person eats over
 months says a great deal about them. It is treated with the same care.
@@ -111,7 +118,7 @@ months says a great deal about them. It is treated with the same care.
 |---|---|---|
 | Running your account | Email, password hash | Contract |
 | Tracking your pantry and suggesting recipes | Food, inventory, recipe data | Contract |
-| Calculating a calorie target and macros | Height, weight, age, sex, activity | **Explicit consent** |
+| Calculating a calorie target and macros, and your weight trend | Height, weigh-ins, age, sex, activity, goal weight and date | **Explicit consent** |
 | Showing your diary and reports | Consumption and waste logs | Contract |
 | Looking up barcodes and nutrition | Barcode numbers, search terms | Legitimate interests |
 | Estimating a meal from a photo (Snap a meal) | The photo, and anything you type about it | Contract |

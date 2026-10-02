@@ -392,6 +392,36 @@ export interface Settings {
   notifyExpiry: boolean;
   /** a day's water, in millilitres */
   waterGoalMl?: number;
+  /** a goal weight by a date (the person's calendar day), when one is set */
+  goal?: { weightKg: number; date: string } | null;
+  /** "app" while the app works the target out and adjusts it each week; "person" once they set their own */
+  targetSetBy?: 'app' | 'person';
+  /** expenditure seen in the diary and weigh-ins, once there has been enough of both */
+  adaptedTdee?: number | null;
+  fasting?: { plan: FastingPlan | null; start: string | null; notify: boolean };
+}
+
+export type FastingPlan = '12:12' | '14:10' | '16:8' | '18:6' | '20:4';
+
+/** Weigh-ins and the smoothed trend through them, in kilograms. */
+export interface WeightHistory {
+  entries: Array<{ day: string; kg: number }>;
+  trend: Array<{ day: string; kg: number }>;
+  latest: { day: string; kg: number } | null;
+  trendKg: number | null;
+  weekChangeKg: number | null;
+}
+
+/** What a goal weight by a date would mean, or why the app won't plan for it. */
+export interface GoalPlan {
+  ok: boolean;
+  direction: 'lose' | 'maintain' | 'gain';
+  weeklyRateKg: number;
+  pace: 'gentle' | 'steady' | 'faster' | null;
+  days: number;
+  earliestSafeDate: string | null;
+  lowestGoalKg: number | null;
+  problem: 'too_soon' | 'too_fast' | 'below_healthy' | 'too_young' | null;
 }
 
 export interface Ad {

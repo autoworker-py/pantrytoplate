@@ -206,6 +206,28 @@ ticket icon in Recipes' header.
   round + that adds a glass, or a bottle when held. The card opens the day's
   glasses and the goal.
 
+### Settings, weight, goals and fasting
+
+- **Settings is a grouped list**: the account (and Pro) on top, then Goals,
+  Body & weight, Fasting, Diet, Water, each showing its current value, then
+  Pantry & reminders, Units (switched in place), Your data, About, Account.
+  Each opens a page of its own, so no page is long.
+- **Goals** shows the daily target and who set it, then Lose / Maintain / Gain.
+  A goal is a weight and a date: the page says the weekly pace (Gentle,
+  Steady, Faster) and the calories it means as it is typed. Faster than about
+  1% of body weight a week is refused in red with the earliest safe date and a
+  button to use it; a goal under a healthy weight, or a loss goal under 18, is
+  refused outright. The target then adjusts weekly from the weight trend and
+  the diary, unless the person sets their own.
+- **Weight** is a card under water on Eaten (the latest weigh-in, the week's
+  change, the trend as a small warm line) and a page with the chart: weigh-ins
+  as faint dots, the smoothed trend as the warm line through them.
+- **Fasting** is a slim bar above the day on Eaten, filling through the fast or
+  the eating window, and a page in Settings that explains it (including who
+  should ask a doctor first) and sets the plan, when the window opens, and the
+  two daily notifications. The same countdown runs on the Lock Screen and in
+  the Dynamic Island as a Live Activity, in the cook timer's colours.
+
 ### Plan my week
 
 - **The week on one strip of receipt paper**, a dotted line a day: tap a day for

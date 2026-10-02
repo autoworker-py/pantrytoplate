@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { localDay } from '../zone.js';
-import { planGoal } from '../services/energy.js';
+import { estimateEnergy, planGoal } from '../services/energy.js';
 import { clearGoal, deleteWeight, logWeight, setGoal, weightHistory } from '../services/body.js';
 import { prisma } from '../db.js';
 
@@ -30,9 +30,12 @@ const routes: FastifyPluginAsync = async (app) => {
   /** What a goal would mean, before it is set: the pace, or why not. */
   app.post('/goal/preview', async (request) => {
     const body = z.object({ weightKg: z.number().min(25).max(350), date: day }).parse(request.body);
-    const user = await prisma.user.findUniqueOrThrow({ where: { id: request.userId }, select: { weightKg: true, heightCm: true, birthYear: true } });
-    if (!user.weightKg) return { plan: null };
-    return { plan: planGoal({ weightKg: user.weightKg, goalWeightKg: body.weightKg, goalDate: body.date, today: localDay(new Date()), heightCm: user.heightCm, birthYear: user.birthYear }) };
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: request.userId } });
+    if (!user.weightKg) return { plan: null, target: null };
+    const plan = planGoal({ weightKg: user.weightKg, goalWeightKg: body.weightKg, goalDate: body.date, today: localDay(new Date()), heightCm: user.heightCm, birthYear: user.birthYear });
+    // the daily calories that pace means, as the target would be set
+    const estimate = plan.ok ? estimateEnergy({ ...user, weightGoal: plan.direction, weeklyRateKg: plan.weeklyRateKg, tdee: user.adaptedTdee }) : null;
+    return { plan, target: estimate?.target ?? null, flooredAt: estimate?.flooredAt ?? null };
   });
 
   app.put('/goal', async (request) => {

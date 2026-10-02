@@ -17,7 +17,9 @@ import AddFood from './screens/AddFood';
 import Shopping from './screens/Shopping';
 import Eaten from './screens/Eaten';
 import SnapFlow from './screens/snap/SnapFlow';
-import Settings from './screens/Settings';
+import SettingsHome from './screens/settings/SettingsHome';
+import SettingsSection from './screens/settings/SettingsSection';
+import WeightPage from './screens/weight/WeightPage';
 import ConfirmEmail from './screens/ConfirmEmail';
 import { PrivacyPage, SupportPage } from './screens/PublicPages';
 import MakeMeSomething from './screens/order/MakeMeSomething';
@@ -99,7 +101,9 @@ export default function App() {
             <Route path="/shopping" element={<Shopping />} />
             <Route path="/eaten" element={<Eaten />} />
             <Route path="/snap" element={<SnapFlow />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings" element={<SettingsHome />} />
+            <Route path="/settings/:section" element={<SettingsSection />} />
+            <Route path="/weight" element={<WeightPage />} />
             <Route path="/inventory" element={<Navigate to="/pantry" replace />} />
             <Route path="/diary" element={<Navigate to="/eaten" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />

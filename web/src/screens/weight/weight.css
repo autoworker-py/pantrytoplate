@@ -1,0 +1,18 @@
+/* ---------- Weight: the day's number, and the trend through the weigh-ins ---------- */
+
+.weight-hero { display: flex; flex-direction: column; gap: 4px; padding: 20px; border-radius: var(--r-lg); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line); }
+.weight-hero .big { font-size: 44px; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
+.weight-hero .big small { font-size: 18px; font-weight: 600; color: var(--ink-3); letter-spacing: 0; }
+.weight-hero .t { font-weight: 600; font-size: 18px; }
+.weight-hero .s { color: var(--ink-2); font-size: 14.5px; }
+
+.weight-chart { display: block; width: 100%; height: auto; margin-top: 12px; }
+.weight-chart .grid { stroke: var(--line-2); stroke-width: 1; }
+.weight-chart .label { fill: var(--ink-3); font-size: 10px; font-family: var(--text); }
+.weight-chart .dot { fill: var(--ink-4); }
+.weight-chart .trend { fill: none; stroke: var(--warm); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* a number with its unit beside it, for weights typed in */
+.input-unit { position: relative; }
+.input-unit input { padding-right: 44px; }
+.input-unit span { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-3); font-weight: 600; pointer-events: none; }
