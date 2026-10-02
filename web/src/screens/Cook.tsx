@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import type { CookPreview, InventoryItem, RecipeSummary, StorageLocation } from '../lib/types';
 import { formatAmount } from '../lib/format';
 import { Fridge } from '../fridge/Fridge';
@@ -38,6 +39,7 @@ function whyLine(r: RecipeSummary, inventory: InventoryItem[]): { text: string; 
 
 export default function Cook() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const toast = useToast();
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null);
   const [inventory, setInventory] = useState<InventoryItem[] | null>(null);
@@ -187,9 +189,11 @@ export default function Cook() {
               )}
               <button type="button" className="btn secondary" style={{ flex: '0 0 116px' }} onClick={() => setIndex((i) => i + 1)} disabled={recipes.length < 2}>Another</button>
             </div>
-            <button type="button" className="tonight-alt" onClick={() => navigate('/make')}>
-              Not feeling it? <b>Make me something</b>
-            </button>
+            {user?.plus ? (
+              <button type="button" className="tonight-alt" onClick={() => navigate('/make')}>
+                Not feeling it? <b>Make me something</b>
+              </button>
+            ) : null}
           </div>
         )}
       </section>

@@ -34,6 +34,7 @@ beforeAll(async () => {
   app = await buildApp();
   cook = await register('cook');
   other = await register('other');
+  await prisma.user.update({ where: { id: cook.id }, data: { plusSince: new Date() } });
   for (const [key, name, expiry] of [['milk', 'Whole Milk', 1], ['rice', 'White Rice', 200], ['flour', 'All-Purpose Flour', -2]] as const) {
     const food = await catalogue(name);
     const added = await call(cook, 'POST', '/api/inventory', { foodReferenceId: food.id, quantity: 1, unit: food.defaultUnit, storageLocation: 'pantry', expirationDate: days(expiry) });
@@ -54,9 +55,17 @@ const order = (extra: Record<string, unknown> = {}) => OrderSchema.parse({ want:
 const kitchenOf = (names: string[]): KitchenFood[] =>
   names.map((name, i) => ({ n: i + 1, item: { id: `item-${i + 1}`, food: { name } } as unknown as KitchenFood['item'] }));
 
-describe('the kitchen is only for signed-in people', () => {
+describe('the kitchen is only for signed-in Pro accounts', () => {
   it('refuses an order without an account', async () => {
     expect((await call(null, 'POST', '/api/kitchen/ideas', {})).status).toBe(401);
+  });
+
+  it('gives an account without Pro no free tries', async () => {
+    for (const url of ['/api/kitchen/ideas', '/api/kitchen/recipe', '/api/kitchen/save']) {
+      const answer = await call(other, 'POST', url, { want: 'anything' });
+      expect(answer.status).toBe(403);
+      expect(answer.body.error).toBe('plus_required');
+    }
   });
 });
 

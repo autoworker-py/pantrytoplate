@@ -18,8 +18,9 @@
  * provenance
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { useAuth } from '../../lib/auth';
 import { done } from '../../lib/native';
 import type { DayDiary, InventoryItem, Settings } from '../../lib/types';
 import { BackButton, Page, errorText, useToast } from '../../ui/kit';
@@ -50,6 +51,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export default function MakeMeSomething() {
   const toast = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [order, setOrder] = useState<Order>(blankOrder);
   const [stage, setStage] = useState<Stage>('order');
   const [tickets, setTickets] = useState<KitchenTicket[]>([]);
@@ -157,6 +159,8 @@ export default function MakeMeSomething() {
     </button>
   );
   const left = stage === 'order' ? <BackButton /> : stage === 'recipe' ? back('ideas') : back('order');
+  // Pro only, and the server holds to it too
+  if (user?.plus === false) return <Navigate to="/recipes" replace />;
 
   return (
     <Page left={left} title="Make me something" className="make-page">

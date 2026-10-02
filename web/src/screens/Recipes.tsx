@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import type { RecipeSummary } from '../lib/types';
 import { FoodThumb } from '../fridge/Fridge';
 import { Icon } from '../ui/Icon';
@@ -13,6 +14,7 @@ interface ListResponse { recipes: RecipeSummary[]; dietHidden: number; dietTags:
 
 export default function Recipes() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const toast = useToast();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
@@ -83,7 +85,7 @@ export default function Recipes() {
       title="Recipes"
       right={
         <span className="head-actions">
-          <Link to="/make" className="icon-btn" aria-label="Make me something"><Icon name="ticket" size={20} /></Link>
+          {user?.plus ? <Link to="/make" className="icon-btn" aria-label="Make me something"><Icon name="ticket" size={20} /></Link> : null}
           <Link to="/recipes/new" className="icon-btn" aria-label="Write your own recipe"><Icon name="plus" size={20} /></Link>
           <button type="button" className="icon-btn" aria-label="Import a recipe from a link" onClick={() => setImporting(true)}><Icon name="link" size={20} /></button>
         </span>
