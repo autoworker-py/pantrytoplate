@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { useAuth } from '../lib/auth';
+import { proOnOffer } from '../lib/native';
+import { photographRecipe } from '../lib/recipeScan';
 import type { RecipeSummary } from '../lib/types';
 import { FoodThumb } from '../fridge/Fridge';
 import { Icon } from '../ui/Icon';
@@ -14,6 +17,8 @@ interface ListResponse { recipes: RecipeSummary[]; dietHidden: number; dietTags:
 
 export default function Recipes() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [scanning, setScanning] = useState<'about' | 'reading' | null>(null);
   const toast = useToast();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
@@ -78,12 +83,33 @@ export default function Recipes() {
   const open = (r: RecipeSummary) =>
     navigate(`/recipes/${r.id}`, r.swaps?.length && !r.canMakeNow ? { state: { swaps: Object.fromEntries(r.swaps.map((s) => [s.foodReferenceId, s.substituteId])) } } : undefined);
 
+  /** A photo of a recipe card or page, typed out by the AI and saved: Pro. */
+  async function scan() {
+    if (!user?.plus) {
+      setScanning('about');
+      return;
+    }
+    const photo = await photographRecipe();
+    if (!photo) return;
+    setScanning('reading');
+    try {
+      const { recipe } = await api.post<{ recipe: { id: string; name: string } }>('/api/recipes/scan', { image: photo.base64, mediaType: photo.mediaType }, { timeoutMs: 60_000 });
+      toast(`${recipe.name} is in your recipes.`);
+      navigate(`/recipes/${recipe.id}`);
+    } catch (e) {
+      toast(errorText(e, 'That photo could not be read. Try a closer, brighter one.'));
+    } finally {
+      setScanning(null);
+    }
+  }
+
   return (
     <Page
       left={<BackButton />}
       title="Recipes"
       right={
         <span className="head-actions">
+          <button type="button" className="icon-btn pro-icon" aria-label="Scan a recipe from a photo (Pro)" onClick={() => void scan()}><Icon name="camera" size={20} /></button>
           <Link to="/recipes/new" className="icon-btn" aria-label="Write your own recipe"><Icon name="plus" size={20} /></Link>
           <button type="button" className="icon-btn" aria-label="Import a recipe from a link" onClick={() => setImporting(true)}><Icon name="link" size={20} /></button>
         </span>
@@ -138,6 +164,19 @@ export default function Recipes() {
       )}
 
       {importing ? <ImportSheet onClose={() => setImporting(false)} onDone={(id, message) => { setImporting(false); toast(message); navigate(`/recipes/${id}`); }} /> : null}
+      {scanning === 'about' ? (
+        <Sheet title="Scan a recipe" sub="Photograph a handwritten card or a cookbook page and it’s typed into your recipes." onClose={() => setScanning(null)}>
+          <p className="fine" style={{ marginTop: 6 }}>
+            {proOnOffer ? 'Scanning is part of Pantry2Plate Pro.' : 'Scanning is part of Pantry2Plate Pro, which the iPhone app doesn’t sell yet.'}
+          </p>
+          <button type="button" className="btn secondary block" style={{ marginTop: 16 }} onClick={() => setScanning(null)}>OK</button>
+        </Sheet>
+      ) : scanning === 'reading' ? (
+        <Sheet title="Reading the recipe" sub="Typing it out from your photo." onClose={() => undefined}>
+          <div className="skeleton" style={{ height: 64, marginTop: 10 }} />
+          <div className="skeleton" style={{ height: 64, marginTop: 8 }} />
+        </Sheet>
+      ) : null}
     </Page>
   );
 }

@@ -18,7 +18,7 @@ import { findOrCreateFoodByName, matchLocalFood } from './foodRef.js';
 import { normalizeUnit } from './units.js';
 import { sanitizeImportedText } from './text.js';
 import { BlockedAddressError, PageTooLargeError, fetchPublicPage } from '../external/safeFetch.js';
-import { isSocial, recipeFromPost } from './socialRecipe.js';
+import { isSocial, recipeFromPost, type PostRecipe } from './socialRecipe.js';
 
 interface JsonLdRecipe {
   '@type'?: string | string[];
@@ -186,7 +186,7 @@ export interface ImportPreview {
   cuisine: string | null;
   tags: string[];
   instructions: string;
-  sourceUrl: string;
+  sourceUrl: string | null;
   ingredients: Array<{
     raw: string;
     quantity: number;
@@ -271,6 +271,12 @@ export async function previewImport(url: string, db: Tx = prisma, userId?: strin
     );
   }
 
+  return previewOf({ ...recipe, name: recipe.name }, parsed.toString(), db);
+}
+
+
+/** A recipe as found (on a page, in a post, in a photo), its lines matched to the catalog, ready to save. */
+async function previewOf(recipe: JsonLdRecipe & { name: string }, sourceUrl: string | null, db: Tx): Promise<ImportPreview> {
   // a recipe has dozens of ingredients, not thousands; a page that claims more is cut short
   const lines = (recipe.recipeIngredient ?? recipe.ingredients ?? []).slice(0, 100);
   const ingredients = [];
@@ -307,9 +313,24 @@ export async function previewImport(url: string, db: Tx = prisma, userId?: strin
     cuisine: Array.isArray(recipe.recipeCuisine) ? recipe.recipeCuisine[0] ?? null : recipe.recipeCuisine ?? null,
     tags: usefulTags(keywords, recipe.name),
     instructions: steps.map((step, i) => `${i + 1}. ${step}`).join('\n'),
-    sourceUrl: parsed.toString(),
+    sourceUrl,
     ingredients,
   };
+}
+
+/** A recipe read by the AI from a post or a photo, as a preview like any other. */
+export function previewOfText(read: PostRecipe, sourceUrl: string | null, db: Tx = prisma): Promise<ImportPreview> {
+  return previewOf(
+    {
+      name: read.name,
+      recipeIngredient: read.ingredients,
+      recipeInstructions: read.steps,
+      ...(read.servings ? { recipeYield: read.servings } : {}),
+      ...(read.minutes ? { totalTime: `PT${read.minutes}M` } : {}),
+    },
+    sourceUrl,
+    db,
+  );
 }
 
 /**

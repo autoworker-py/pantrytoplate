@@ -87,3 +87,24 @@ describe('a recipe from a post', () => {
     expect(asked).toBe(false);
   });
 });
+
+describe('a recipe from a photo', () => {
+  const photo = 'A'.repeat(400);
+
+  it('is typed out by the AI and saved to the person’s own recipes', async () => {
+    useFakeKitchen(() => ({ ok: true, n: 'Gran’s flapjacks', s: 12, m: 35, i: ['250 g oats', '125 g butter', '3 tbsp golden syrup'], t: ['Melt, stir, bake.'] }));
+    const scanned = await call(cook, 'POST', '/api/recipes/scan', { image: photo, mediaType: 'image/jpeg' });
+    expect(scanned.status).toBe(201);
+    const recipe = await prisma.recipe.findUniqueOrThrow({ where: { id: scanned.body.recipe.id }, include: { ingredients: true } });
+    expect(recipe).toMatchObject({ name: 'Gran’s flapjacks', ownerId: cook.id, servings: 12 });
+    expect(recipe.ingredients).toHaveLength(3);
+  });
+
+  it('says so when there is no recipe in it, and is Pro', async () => {
+    useFakeKitchen(() => ({ ok: false }));
+    expect((await call(cook, 'POST', '/api/recipes/scan', { image: photo })).body.error).toBe('no_recipe_found');
+    const theirs = await call(free, 'POST', '/api/recipes/scan', { image: photo });
+    expect(theirs.status).toBe(403);
+    expect(theirs.body.error).toBe('plus_required');
+  });
+});

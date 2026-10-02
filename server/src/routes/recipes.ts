@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { limit } from '../limits.js';
 import { markPlanCooked, syncPlanShopping } from '../services/mealPlan.js';
+import { scanRecipe } from '../services/recipeScan.js';
 import { z } from 'zod';
 import { prisma } from '../db.js';
 import { notFound } from '../errors.js';
@@ -113,6 +114,12 @@ const routes: FastifyPluginAsync = async (app) => {
   });
 
   /** Paste a link: read the page's structured recipe data, change nothing yet. */
+  /** A photo of a recipe (handwritten, printed), typed out by the AI and saved: Pro. */
+  app.post('/scan', { bodyLimit: 8 * 1024 * 1024, ...limit(10, '10 minutes') }, async (request, reply) => {
+    const body = z.object({ image: z.string().min(100).max(8_000_000), mediaType: z.enum(['image/jpeg', 'image/png']).default('image/jpeg') }).parse(request.body);
+    return reply.code(201).send(await scanRecipe(request.userId, body.image, body.mediaType));
+  });
+
   app.post('/import/preview', limit(20, '10 minutes'), async (request) => {
     const { url } = z.object({ url: z.string().min(4) }).parse(request.body);
     return { preview: await previewImport(url, undefined, request.userId) };

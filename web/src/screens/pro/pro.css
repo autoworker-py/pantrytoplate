@@ -89,3 +89,6 @@
 @media (prefers-reduced-motion: reduce) {
   .demo-caret { animation: none; }
 }
+
+/* a Pro feature as a header icon: the same gold as the Pro links */
+.icon-btn.pro-icon { color: var(--gold); background: var(--gold-fill); box-shadow: inset 0 0 0 1px var(--gold-line); }

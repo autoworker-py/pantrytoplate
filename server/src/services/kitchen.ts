@@ -253,12 +253,18 @@ const RECIPE_SCHEMA = {
   required: ['g', 't', 'k'],
 };
 
-async function askGemini(prompt: string, schema: object, maxTokens: number, temperature: number, model: string): Promise<unknown> {
+/** A photo sent with the words: base64 and its type. */
+export interface ModelImage {
+  data: string;
+  mediaType: string;
+}
+
+async function askGemini(prompt: string, schema: object, maxTokens: number, temperature: number, model: string, image?: ModelImage): Promise<unknown> {
   const response = await post(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-goog-api-key': env.geminiApiKey },
     body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      contents: [{ role: 'user', parts: image ? [{ inline_data: { mime_type: image.mediaType, data: image.data } }, { text: prompt }] : [{ text: prompt }] }],
       generationConfig: { temperature, maxOutputTokens: maxTokens, responseMimeType: 'application/json', responseSchema: schema },
     }),
   });
@@ -269,14 +275,20 @@ async function askGemini(prompt: string, schema: object, maxTokens: number, temp
   return parseJson(text || '{}');
 }
 
-async function askClaude(prompt: string, example: string, maxTokens: number): Promise<unknown> {
+async function askClaude(prompt: string, example: string, maxTokens: number, image?: ModelImage): Promise<unknown> {
+  const text = `${prompt} Reply with only JSON like ${example}`;
   const response = await post('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': env.anthropicApiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
       model: env.anthropicModel,
       max_tokens: maxTokens,
-      messages: [{ role: 'user', content: `${prompt} Reply with only JSON like ${example}` }],
+      messages: [
+        {
+          role: 'user',
+          content: image ? [{ type: 'image', source: { type: 'base64', media_type: image.mediaType, data: image.data } }, { type: 'text', text }] : text,
+        },
+      ],
     }),
   });
   if (RETRYABLE.has(response.status)) throw new RetryableError(response.status);
@@ -307,7 +319,7 @@ export interface ModelShape {
  * with the last tries going to a steadier model when the newest one stays
  * overloaded. Shared by the kitchen and by reading recipes out of posts.
  */
-export async function askModel(prompt: string, shape: ModelShape): Promise<unknown> {
+export async function askModel(prompt: string, shape: ModelShape, image?: ModelImage): Promise<unknown> {
   if (fakeModel) return fakeModel(prompt);
   const provider = snapProvider();
   if (!provider) throw new HttpError(503, shape.off, 'kitchen_off');
@@ -316,7 +328,7 @@ export async function askModel(prompt: string, shape: ModelShape): Promise<unkno
   const model = (n: number) => (n >= 3 && env.geminiFallbackModel ? env.geminiFallbackModel : env.geminiModel);
   try {
     return await withRetries((n) =>
-      provider === 'gemini' ? askGemini(prompt, shape.schema, shape.maxTokens, shape.temperature, model(n)) : askClaude(prompt, shape.example, shape.maxTokens),
+      provider === 'gemini' ? askGemini(prompt, shape.schema, shape.maxTokens, shape.temperature, model(n), image) : askClaude(prompt, shape.example, shape.maxTokens, image),
     );
   } catch (error) {
     if (error instanceof RetryableError) {
