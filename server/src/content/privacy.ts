@@ -11,8 +11,8 @@
  */
 import { env } from '../env.js';
 
-export const PRIVACY_VERSION = '2026-10-01';
-export const PRIVACY_EFFECTIVE = '1 October 2026';
+export const PRIVACY_VERSION = '2026-10-02';
+export const PRIVACY_EFFECTIVE = '2 October 2026';
 
 /** who runs the app and how to reach them: OPERATOR_NAME and SUPPORT_EMAIL on the server */
 const WHO = env.operatorName || 'its developer';
@@ -115,6 +115,7 @@ months says a great deal about them. It is treated with the same care.
 | Showing your diary and reports | Consumption and waste logs | Contract |
 | Looking up barcodes and nutrition | Barcode numbers, search terms | Legitimate interests |
 | Estimating a meal from a photo (Snap a meal) | The photo, and anything you type about it | Contract |
+| Writing recipes to order (Make me something) | What you write and mark on the order, your diet setting, and the foods in your kitchen | Contract |
 | Confirming your email and resetting a forgotten password | Your email address and the codes sent to it | Contract |
 | Refusing a password already leaked elsewhere | The first five characters of a one-way hash of the new password | Legitimate interests |
 | Keeping the service working and secure | Server logs | Legitimate interests |
@@ -159,7 +160,7 @@ you. Results are cached locally so the same lookup is not repeated.
 If you import a recipe from a link, the server fetches that page. The site you
 linked to will see the server's IP address, not yours.
 
-### 4.3 Meal photos, only if you use Snap a meal
+### 4.3 The AI service: meal photos and recipe orders
 
 If you photograph a meal with Snap a meal, the photo is sent to an outside AI
 service so it can estimate what is on the plate: Google's Gemini (or, if that is
@@ -173,6 +174,13 @@ Google's paid service, under which Google does not use what it receives to
 improve its products or train its models, and keeps it only for a limited time
 to detect abuse. Nothing is sent unless you take or choose a photo in Snap a
 meal.
+
+If you use Make me something, your order goes to the same service so it can
+write recipes: what you typed (which may say how you feel), the tags you
+marked, your diet setting, and a list of the foods in your kitchen with their
+amounts and dates. It is sent without your name or email, and this app does
+not keep the order or the replies; a recipe is only stored if you save it to
+your recipes. Nothing is sent unless you send an order.
 
 ### 4.4 Hosting
 
@@ -348,8 +356,10 @@ Pantry2Plate that is the body data in section 2.2 and your food diary.
 
 - **Collected** only from what you type in: the diary to keep your diary, and
   the body data, only if you choose to enter it, to work out your calorie target.
-- **Shared with nobody.** It is not sold, not given to advertisers, and never
-  passed to Google's advertising SDK, which receives nothing you enter.
+- **Shared with nobody** but the AI service that writes your recipes, and
+  only when you send an order (section 4.3). It is not sold, not given to
+  advertisers, and never passed to Google's advertising SDK, which receives
+  nothing you enter.
 - **Yours to see, export and delete** at any time in Settings. For anything
   else, ${REACH}.
 

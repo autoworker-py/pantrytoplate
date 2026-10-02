@@ -18,12 +18,14 @@
  * provenance
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { done } from '../../lib/native';
 import type { DayDiary, InventoryItem, Settings } from '../../lib/types';
-import { BackButton, Page, useToast } from '../../ui/kit';
+import { BackButton, Page, errorText, useToast } from '../../ui/kit';
 import { Icon } from '../../ui/Icon';
 import { blankOrder, isBlank, type Order } from './options';
-import { pickIdeas, remaining, type Placed } from './samples';
+import { askIdeas, askRecipe, place, saveRecipe, type KitchenRecipe, type Ticket as KitchenTicket } from './kitchen';
 import { Ticket } from './Ticket';
 import { Ideas, Ordered, Printing } from './Pass';
 import './order.css';
@@ -36,23 +38,33 @@ function today(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** the tickets take this long to print however quickly the kitchen answers */
+const PRINT_MS = 1600;
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
- * Make me something: write an order, the kitchen sends back three tickets,
- * pick one. The kitchen is an AI model once it is connected; until then the
- * tickets come from a small set of real sample recipes and say so.
+ * Make me something: write an order, the kitchen (an AI model, on the server)
+ * sends back three tickets, pick one and it is written up in full, ready to
+ * save to your recipes or shop for.
  */
 export default function MakeMeSomething() {
   const toast = useToast();
+  const navigate = useNavigate();
   const [order, setOrder] = useState<Order>(blankOrder);
   const [stage, setStage] = useState<Stage>('order');
-  const [ideas, setIdeas] = useState<Placed[]>([]);
+  const [tickets, setTickets] = useState<KitchenTicket[]>([]);
   const [shown, setShown] = useState<string[]>([]);
-  const [chosen, setChosen] = useState<Placed | null>(null);
+  const [sample, setSample] = useState(false);
+  const [chosen, setChosen] = useState<KitchenTicket | null>(null);
+  const [recipe, setRecipe] = useState<KitchenRecipe | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [pantry, setPantry] = useState<InventoryItem[] | null>(null);
   const [caloriesLeft, setCaloriesLeft] = useState<number | null>(null);
   const [dietTags, setDietTags] = useState<string[]>([]);
   const printedAt = useMemo(() => new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), []);
-  const kitchen = useRef<number | undefined>(undefined);
+  // each request is numbered: an answer that arrives after the person moved on is dropped
+  const asking = useRef(0);
 
   useEffect(() => {
     let live = true;
@@ -61,7 +73,7 @@ export default function MakeMeSomething() {
     api.get<{ settings: Settings }>('/api/settings').then((d) => live && setDietTags(d.settings.dietTags ?? [])).catch(() => undefined);
     return () => {
       live = false;
-      window.clearTimeout(kitchen.current);
+      asking.current++;
     };
   }, []);
 
@@ -70,23 +82,77 @@ export default function MakeMeSomething() {
     document.querySelector('.make-page .page-scroll')?.scrollTo({ top: 0 });
   }, [stage, chosen]);
 
-  function send(next: Order = order, fresh = true) {
-    const already = fresh ? [] : shown;
+  async function send(next: Order = order, more = false) {
+    const ask = ++asking.current;
+    const avoid = more ? shown.slice(-9) : [];
     setOrder(next);
     setStage('printing');
-    window.clearTimeout(kitchen.current);
-    kitchen.current = window.setTimeout(() => {
-      const picked = pickIdeas(next, pantry ?? [], already);
-      setIdeas(picked);
-      setShown([...already, ...picked.map((p) => p.id)]);
+    const started = Date.now();
+    try {
+      const answer = await askIdeas({ ...next, caloriesLeft, avoid });
+      await wait(Math.max(0, PRINT_MS - (Date.now() - started)));
+      if (ask !== asking.current) return;
+      setTickets(answer.ideas.map((idea) => place(idea, pantry ?? [])));
+      setShown([...avoid, ...answer.ideas.map((idea) => idea.name)]);
+      setSample(answer.sample);
       setStage('ideas');
-    }, 2400);
+    } catch (cause) {
+      if (ask !== asking.current) return;
+      setStage(more ? 'ideas' : 'order');
+      toast(errorText(cause, 'The kitchen did not answer. Try again.'));
+    }
   }
 
-  const sample = () => toast('This is a sample ticket. Saving and lists work once the kitchen is connected.');
+  async function pick(ticket: KitchenTicket) {
+    const ask = ++asking.current;
+    setChosen(ticket);
+    setRecipe(null);
+    setSavedId(null);
+    setStage('recipe');
+    try {
+      const answer = await askRecipe({ ...order, caloriesLeft }, ticket);
+      if (ask === asking.current) setRecipe(answer.recipe);
+    } catch (cause) {
+      if (ask !== asking.current) return;
+      setStage('ideas');
+      toast(errorText(cause, 'That one could not be written up. Try another.'));
+    }
+  }
+
+  async function save() {
+    if (!chosen || !recipe || savedId) return;
+    setBusy(true);
+    try {
+      const { recipe: saved } = await saveRecipe(chosen, recipe);
+      setSavedId(saved.id);
+      done();
+      toast('Saved to your recipes.', { label: 'Open', run: () => navigate(`/recipes/${saved.id}`) });
+    } catch (cause) {
+      toast(errorText(cause, 'It could not be saved. Try again.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function list(names: string[]) {
+    setBusy(true);
+    let added = 0;
+    try {
+      for (const name of names) {
+        await api.post('/api/shopping-list', { name: name.charAt(0).toUpperCase() + name.slice(1) });
+        added++;
+      }
+      done();
+      toast(`Added ${added} to your shopping list.`, { label: 'Open', run: () => navigate('/shopping') });
+    } catch (cause) {
+      toast(errorText(cause, added ? `Added ${added}, then something went wrong.` : 'The list could not be changed. Try again.'));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const back = (to: Stage) => (
-    <button type="button" className="icon-btn" aria-label="Back" onClick={() => { window.clearTimeout(kitchen.current); setStage(to); }}>
+    <button type="button" className="icon-btn" aria-label="Back" onClick={() => { asking.current++; setStage(to); }}>
       <Icon name="back" size={20} />
     </button>
   );
@@ -101,7 +167,7 @@ export default function MakeMeSomething() {
           </div>
           <div className="order-send">
             {/* keyed by its label: iOS WebKit does not always repaint a pinned button whose text changes */}
-            <button key={isBlank(order) ? 'surprise' : 'send'} type="button" className="btn block" onClick={() => send()}>
+            <button key={isBlank(order) ? 'surprise' : 'send'} type="button" className="btn block" onClick={() => void send()}>
               {isBlank(order) ? 'Surprise me' : 'Send to the kitchen'}
             </button>
           </div>
@@ -109,15 +175,20 @@ export default function MakeMeSomething() {
       ) : stage === 'printing' ? (
         <Printing />
       ) : stage === 'ideas' ? (
-        <Ideas
-          ideas={ideas}
-          more={remaining(shown) > 0}
-          onPick={(idea) => { setChosen(idea); setStage('recipe'); }}
-          onAgain={() => send(order, false)}
-          onChange={() => setStage('order')}
-        />
+        <Ideas tickets={tickets} sample={sample} onPick={(ticket) => void pick(ticket)} onAgain={() => void send(order, true)} onChange={() => setStage('order')} />
       ) : chosen ? (
-        <Ordered idea={chosen} order={order} onTweak={(next) => send(next)} onSave={sample} onList={sample} />
+        <Ordered
+          ticket={chosen}
+          recipe={recipe}
+          pantry={pantry ?? []}
+          sample={sample}
+          order={order}
+          saved={Boolean(savedId)}
+          busy={busy}
+          onTweak={(next) => void send(next)}
+          onSave={() => void save()}
+          onList={(names) => void list(names)}
+        />
       ) : null}
     </Page>
   );

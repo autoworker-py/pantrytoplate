@@ -274,10 +274,12 @@ const routes: FastifyPluginAsync = async (app) => {
     for (const ingredient of body.ingredients) {
       let foodReferenceId = ingredient.foodReferenceId;
       if (!foodReferenceId) {
-        const resolved = await findOrCreateFoodByName({
-          name: ingredient.name ?? 'Unnamed ingredient',
-          defaultUnit: ingredient.unitRequired,
-        });
+        // an ingredient nobody has typed before becomes this person's own food, not a shared catalogue entry
+        const resolved = await findOrCreateFoodByName(
+          { name: ingredient.name ?? 'Unnamed ingredient', defaultUnit: ingredient.unitRequired },
+          prisma,
+          request.userId,
+        );
         foodReferenceId = resolved.food.id;
       }
       ingredients.push({

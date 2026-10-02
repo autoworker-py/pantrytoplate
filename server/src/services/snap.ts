@@ -140,7 +140,7 @@ export class RetryableError extends Error {
   }
 }
 
-const RETRYABLE = new Set([429, 500, 502, 503, 504, 529]);
+export const RETRYABLE = new Set([429, 500, 502, 503, 504, 529]);
 /** Google's advice for a 503: wait 1, 2, 4, then 8 seconds between attempts. */
 export const RETRY_DELAYS_MS = [1000, 2000, 4000, 8000];
 /** each attempt's own limit, so five of them and the waits fit inside the phone's 100 seconds */
@@ -192,13 +192,13 @@ export function tidy(raw: unknown[]): PlateItem[] {
 }
 
 /** A reply the model wrapped in a code fence is still a reply. */
-function parseJson(text: string): unknown {
+export function parseJson(text: string): unknown {
   const bare = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
   return JSON.parse(bare);
 }
 
 /** A timed-out or dropped request is as retryable as a busy answer. */
-async function post(url: string, init: RequestInit): Promise<Response> {
+export async function post(url: string, init: RequestInit): Promise<Response> {
   try {
     return await fetch(url, { ...init, signal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS) });
   } catch {

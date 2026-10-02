@@ -162,9 +162,13 @@ ticket icon in Recipes' header.
   mask, and the long order ticket has a plain shadow, not a filter. Both of
   those make WebKit paint a tall element as one oversized image, and it then
   stops updating it.
-- **Until the kitchen (the AI) is connected**, tickets come from a small set of
-  real recipes chosen by the order and the pantry, every one stamped SAMPLE in
-  blue ink, with a note under the rail saying so.
+- **The kitchen is the AI** (Gemini, the same key as Snap), asked for three short
+  ideas first and the full recipe only for the one picked. The app, not the
+  model, holds the person's leave-out list and diet, and says a food is close to
+  its date in its own words. A server with no key answers with fixed sample
+  tickets, each stamped SAMPLE in blue ink, with a note under the rail saying so.
+- **Toasts rise above the pinned button** on these screens rather than landing
+  on it.
 
 ## Components (`web/src/ui`)
 

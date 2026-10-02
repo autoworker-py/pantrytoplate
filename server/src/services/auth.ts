@@ -112,3 +112,45 @@ export async function changeUnconfirmedEmail(userId: string, email: string) {
     throw error;
   }
 }
+
+/**
+ * Delete an account and everything in it.
+ *
+ * Most of it goes by cascade with the user row, but foods the person added
+ * themselves are named by their own pantry, diary, waste log, shopping list
+ * and recipes, and the database will not drop a food something still points
+ * at: deleting the account failed for anyone who had ever added their own
+ * food. So their own rows go first, then their foods, then the account. A
+ * product they taught by barcode describes a product, not them, and other
+ * people may have it in their pantry, so it stays as a shared product; so does
+ * any food of theirs that someone else's records still name.
+ */
+export async function deleteAccount(userId: string): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    await tx.foodReference.updateMany({ where: { ownerId: userId, barcode: { not: null } }, data: { ownerId: null } });
+    await tx.recipe.deleteMany({ where: { ownerId: userId } });
+    await tx.consumptionLog.deleteMany({ where: { userId } });
+    await tx.inventoryRemoval.deleteMany({ where: { userId } });
+    await tx.shoppingListItem.deleteMany({ where: { userId } });
+    await tx.inventoryItem.deleteMany({ where: { userId } });
+
+    const ids = (await tx.foodReference.findMany({ where: { ownerId: userId }, select: { id: true } })).map((f) => f.id);
+    if (ids.length) {
+      const named = { foodReferenceId: { in: ids } };
+      const stillNamed = new Set(
+        [
+          ...(await tx.inventoryItem.findMany({ where: named, select: { foodReferenceId: true } })),
+          ...(await tx.recipeIngredient.findMany({ where: named, select: { foodReferenceId: true } })),
+          ...(await tx.consumptionLog.findMany({ where: named, select: { foodReferenceId: true } })),
+          ...(await tx.inventoryRemoval.findMany({ where: named, select: { foodReferenceId: true } })),
+          ...(await tx.shoppingListItem.findMany({ where: named, select: { foodReferenceId: true } })),
+        ]
+          .map((row) => row.foodReferenceId)
+          .filter((id): id is string => Boolean(id)),
+      );
+      if (stillNamed.size) await tx.foodReference.updateMany({ where: { id: { in: [...stillNamed] } }, data: { ownerId: null } });
+      await tx.foodReference.deleteMany({ where: { id: { in: ids.filter((id) => !stillNamed.has(id)) } } });
+    }
+    await tx.user.delete({ where: { id: userId } });
+  });
+}

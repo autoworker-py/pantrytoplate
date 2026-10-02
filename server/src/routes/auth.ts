@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { z } from 'zod';
-import { accountByEmail, changePassword, changeUnconfirmedEmail, registerUser, resetPassword, verifyCredentials } from '../services/auth.js';
+import { accountByEmail, changePassword, changeUnconfirmedEmail, deleteAccount, registerUser, resetPassword, verifyCredentials } from '../services/auth.js';
 import { checkCode, sendCode, type Check, type Sending } from '../services/emailCodes.js';
 import { emailCodesOn } from '../services/mail.js';
 import { env } from '../env.js';
@@ -296,7 +296,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
     // deleting an account is irreversible; proving identity first is the point
     await verifyCredentials(user.email, password);
-    await prisma.user.delete({ where: { id: request.userId } });
+    await deleteAccount(request.userId);
     return reply.code(200).send({ deleted: true });
   });
 };
