@@ -12,6 +12,7 @@ import { mealNow } from './ItemSheet';
 import { useUnitSystem } from '../lib/unitSystem';
 import { MealReceipt, NutrientLine, NutrientsSheet, WaterLine } from './eaten/DiaryParts';
 import { FastingBar, WeightCard } from './eaten/BodyParts';
+import { FitsCard } from './eaten/FitsCard';
 import { GradeBadge } from '../ui/Grade';
 import { dayActivity } from '../lib/health';
 
@@ -150,6 +151,7 @@ export default function Eaten() {
         </section>
       )}
 
+      {isToday && diary ? <FitsCard day={isoDate(day)} extra={added} onLogged={() => void load()} /> : null}
       <WaterLine day={isoDate(day)} today={isToday} system={system} />
       {isToday ? <WeightCard system={system} /> : null}
       {isToday ? <LogActions status={snap} onSnap={() => void startSnap()} onOther={() => setEatingOut(true)} /> : null}

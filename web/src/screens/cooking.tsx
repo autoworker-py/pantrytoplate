@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import type { CookPreview, MealSlot } from '../lib/types';
 import { formatAmount, formatServings } from '../lib/format';
@@ -8,6 +8,8 @@ import { Overlay } from '../components/Overlay';
 import { Icon } from '../ui/Icon';
 import { Sheet, Stepper, errorText, useToast } from '../ui/kit';
 import { mealNow } from './ItemSheet';
+import { listen, say, voiceOnThisDevice, type Command } from '../lib/voice';
+import { tick } from '../lib/native';
 
 export interface Adjustments {
   servings: number | null;
@@ -198,6 +200,49 @@ export function CookMode({ name, steps, onClose }: { name: string; steps: string
   const step = steps[index] ?? '';
   const seconds = parseDuration(step);
 
+  // hands-free: the mic, once switched on, moves through the steps by voice
+  const [listening, setListening] = useState(false);
+  const voice = useRef<{ stop: () => Promise<void> } | null>(null);
+  const latest = useRef({ step, seconds, steps: steps.length });
+  latest.current = { step, seconds, steps: steps.length };
+  const beginTimer = useCallback(
+    (secs: number, label: string) => {
+      void startTimer(secs, label, name).then((r) => {
+        setTimer(r.timer);
+        if (!r.liveActivity && !r.notification) {
+          toast(r.problem === 'notifications_denied' ? 'Timer started. Allow notifications to be alerted with the app closed.' : 'Timer started. It can only run while the app is open.');
+        }
+      });
+    },
+    [name, toast],
+  );
+  const hear = useCallback(
+    (command: Command) => {
+      tick();
+      if (command === 'next') setIndex((i) => Math.min(latest.current.steps - 1, i + 1));
+      else if (command === 'back') setIndex((i) => Math.max(0, i - 1));
+      else if (command === 'repeat') say(latest.current.step);
+      else if (command === 'timer' && latest.current.seconds) beginTimer(latest.current.seconds, latest.current.step);
+    },
+    [beginTimer],
+  );
+  async function toggleVoice() {
+    if (voice.current) {
+      await voice.current.stop();
+      voice.current = null;
+      setListening(false);
+      return;
+    }
+    const started = await listen(hear);
+    if (!started.ok) {
+      toast(started.reason === 'microphone_denied' || started.reason === 'speech_denied' ? 'Allow the microphone and speech recognition for Pantry2Plate in Settings to cook hands-free.' : 'Hands-free isn’t available on this phone.');
+      return;
+    }
+    voice.current = started;
+    setListening(true);
+  }
+  useEffect(() => () => { void voice.current?.stop(); }, []);
+
   return (
     <Overlay>
       <div className="cook-mode" role="dialog" aria-modal="true" aria-label={`Cooking ${name}`}>
@@ -206,8 +251,14 @@ export function CookMode({ name, steps, onClose }: { name: string; steps: string
             <div className="cm-name">{name}</div>
             <div className="fine">Step {index + 1} of {steps.length}</div>
           </div>
+          {voiceOnThisDevice() ? (
+            <button type="button" className={`icon-btn cm-mic${listening ? ' on' : ''}`} aria-pressed={listening} aria-label={listening ? 'Stop listening' : 'Cook hands-free'} onClick={() => void toggleVoice()}>
+              <Icon name="mic" size={18} />
+            </button>
+          ) : null}
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Leave cook mode"><Icon name="close" size={18} /></button>
         </div>
+        {listening ? <p className="cm-listening" aria-live="polite"><i aria-hidden="true" /> Listening: say “next”, “back”, “repeat” or “timer”</p> : null}
         <div className="cm-progress"><span style={{ width: `${((index + 1) / Math.max(1, steps.length)) * 100}%` }} /></div>
 
         <p className="cm-step" key={index}>{step}</p>
@@ -221,14 +272,7 @@ export function CookMode({ name, steps, onClose }: { name: string; steps: string
           <button
             type="button"
             className="btn secondary cm-start"
-            onClick={() => {
-              void startTimer(seconds, step, name).then((r) => {
-                setTimer(r.timer);
-                if (!r.liveActivity && !r.notification) {
-                  toast(r.problem === 'notifications_denied' ? 'Timer started. Allow notifications to be alerted with the app closed.' : 'Timer started. It can only run while the app is open.');
-                }
-              });
-            }}
+            onClick={() => beginTimer(seconds, step)}
           >
             <Icon name="timer" size={20} /> Start {describeDuration(seconds)} timer
           </button>

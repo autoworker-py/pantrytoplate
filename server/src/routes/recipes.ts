@@ -115,7 +115,7 @@ const routes: FastifyPluginAsync = async (app) => {
   /** Paste a link: read the page's structured recipe data, change nothing yet. */
   app.post('/import/preview', limit(20, '10 minutes'), async (request) => {
     const { url } = z.object({ url: z.string().min(4) }).parse(request.body);
-    return { preview: await previewImport(url) };
+    return { preview: await previewImport(url, undefined, request.userId) };
   });
 
   /**
@@ -125,7 +125,7 @@ const routes: FastifyPluginAsync = async (app) => {
    */
   app.post('/import', limit(20, '10 minutes'), async (request, reply) => {
     const { url } = z.object({ url: z.string().min(4) }).parse(request.body);
-    const preview = await previewImport(url);
+    const preview = await previewImport(url, undefined, request.userId);
     const saved = await saveImport(preview, request.userId);
     return reply.code(201).send({
       recipe: { id: saved.recipe.id, name: saved.recipe.name },

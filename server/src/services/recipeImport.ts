@@ -18,6 +18,7 @@ import { findOrCreateFoodByName, matchLocalFood } from './foodRef.js';
 import { normalizeUnit } from './units.js';
 import { sanitizeImportedText } from './text.js';
 import { BlockedAddressError, PageTooLargeError, fetchPublicPage } from '../external/safeFetch.js';
+import { isSocial, recipeFromPost } from './socialRecipe.js';
 
 interface JsonLdRecipe {
   '@type'?: string | string[];
@@ -199,7 +200,11 @@ export interface ImportPreview {
 }
 
 /** Fetch and parse, without writing anything — the user confirms first. */
-export async function previewImport(url: string, db: Tx = prisma): Promise<ImportPreview> {
+/**
+ * `userId` lets a page without a published recipe be read by the AI instead,
+ * for Pro (a TikTok caption, a YouTube description): see socialRecipe.ts.
+ */
+export async function previewImport(url: string, db: Tx = prisma, userId?: string): Promise<ImportPreview> {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -244,8 +249,24 @@ export async function previewImport(url: string, db: Tx = prisma): Promise<Impor
   }
 
   if (!recipe?.name) {
+    // no recipe published on the page: its own words, read by the AI, for Pro
+    const read = await recipeFromPost(parsed, html, userId);
+    if (read) {
+      recipe = {
+        name: read.name,
+        recipeIngredient: read.ingredients,
+        recipeInstructions: read.steps,
+        ...(read.servings ? { recipeYield: read.servings } : {}),
+        ...(read.minutes ? { totalTime: `PT${read.minutes}M` } : {}),
+      };
+    }
+  }
+
+  if (!recipe?.name) {
     throw badRequest(
-      'That page does not publish a recipe we can read. Try another link, or add it by hand.',
+      isSocial(parsed)
+        ? 'That post doesn’t have a recipe written in it. Try another link, or add it by hand.'
+        : 'That page does not publish a recipe we can read. Try another link, or add it by hand.',
       'no_recipe_found',
     );
   }

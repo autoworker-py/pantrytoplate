@@ -289,29 +289,53 @@ async function askClaude(prompt: string, example: string, maxTokens: number): Pr
 let fakeModel: ((prompt: string) => unknown) | null = null;
 export const useFakeKitchen = (answer: ((prompt: string) => unknown) | null) => { fakeModel = answer; };
 
-async function ask(prompt: string, kind: 'ideas' | 'recipe'): Promise<unknown> {
+export interface ModelShape {
+  /** Gemini's response schema, so nothing else can come back */
+  schema: object;
+  /** a reply in the same shape, for a model without schemas */
+  example: string;
+  maxTokens: number;
+  temperature: number;
+  /** what a development server with no key answers with */
+  sample: unknown;
+  /** said when this server has no model at all */
+  off: string;
+}
+
+/**
+ * One JSON answer from whichever model this server has, retried while busy,
+ * with the last tries going to a steadier model when the newest one stays
+ * overloaded. Shared by the kitchen and by reading recipes out of posts.
+ */
+export async function askModel(prompt: string, shape: ModelShape): Promise<unknown> {
   if (fakeModel) return fakeModel(prompt);
   const provider = snapProvider();
-  if (!provider) throw new HttpError(503, 'Make me something is not set up on this server yet.', 'kitchen_off');
-  if (provider === 'sample') return kind === 'ideas' ? SAMPLE_IDEAS : SAMPLE_RECIPE;
+  if (!provider) throw new HttpError(503, shape.off, 'kitchen_off');
+  if (provider === 'sample') return shape.sample;
 
-  // the last two tries go to a steadier model when the newest one stays overloaded
   const model = (n: number) => (n >= 3 && env.geminiFallbackModel ? env.geminiFallbackModel : env.geminiModel);
-  const [schema, example, maxTokens, temperature] =
-    kind === 'ideas'
-      ? [IDEAS_SCHEMA, '{"r":[{"n":"Miso Butter Noodles","c":"Japanese","f":["Cozy"],"m":15,"k":560,"w":"Fast and uses the eggs first","u":[2],"b":["miso"]}]}', 900, 0.9]
-      : [RECIPE_SCHEMA, '{"g":[{"n":"eggs","a":"2","p":2}],"t":["Boil the noodles for 4 minutes."],"k":560}', 1400, 0.4];
   try {
-    return await withRetries((n) => (provider === 'gemini' ? askGemini(prompt, schema, maxTokens, temperature, model(n)) : askClaude(prompt, example, maxTokens)));
+    return await withRetries((n) =>
+      provider === 'gemini' ? askGemini(prompt, shape.schema, shape.maxTokens, shape.temperature, model(n)) : askClaude(prompt, shape.example, shape.maxTokens),
+    );
   } catch (error) {
     if (error instanceof RetryableError) {
       throw error.status === 429
-        ? new HttpError(429, 'Too many orders just now. Try again in a minute.', 'kitchen_busy')
-        : new HttpError(503, 'The kitchen is busy right now. Try again in a minute.', 'kitchen_busy');
+        ? new HttpError(429, 'Too many requests just now. Try again in a minute.', 'kitchen_busy')
+        : new HttpError(503, 'The AI is busy right now. Try again in a minute.', 'kitchen_busy');
     }
     if (error instanceof HttpError) throw error;
-    throw new HttpError(502, 'The kitchen could not write that. Try again.', 'kitchen_failed');
+    throw new HttpError(502, 'The AI could not answer that. Try again.', 'kitchen_failed');
   }
+}
+
+function ask(prompt: string, kind: 'ideas' | 'recipe'): Promise<unknown> {
+  return askModel(
+    prompt,
+    kind === 'ideas'
+      ? { schema: IDEAS_SCHEMA, example: '{"r":[{"n":"Miso Butter Noodles","c":"Japanese","f":["Cozy"],"m":15,"k":560,"w":"Fast and uses the eggs first","u":[2],"b":["miso"]}]}', maxTokens: 900, temperature: 0.9, sample: SAMPLE_IDEAS, off: 'Make me something is not set up on this server yet.' }
+      : { schema: RECIPE_SCHEMA, example: '{"g":[{"n":"eggs","a":"2","p":2}],"t":["Boil the noodles for 4 minutes."],"k":560}', maxTokens: 1400, temperature: 0.4, sample: SAMPLE_RECIPE, off: 'Make me something is not set up on this server yet.' },
+  );
 }
 
 /* ---------- shaping the replies ---------- */

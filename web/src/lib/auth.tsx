@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, tokenStore } from './api';
+import { shareSession } from './shareBridge';
 import { sessionStore, shouldEndSession } from './session';
 
 interface User {
@@ -46,6 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const data = await api.getFresh<{ user: User }>('/api/auth/me');
     setUser(data.user);
+    // a session from before the share sheet existed reaches it too
+    shareSession(tokenStore.get());
     sessionStore.set(data.user);
   }, []);
 

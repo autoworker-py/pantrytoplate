@@ -328,3 +328,9 @@ form .row button[type='submit'] { flex: none; padding: 0 16px; border-radius: va
 .budget-top .grade { margin-left: auto; align-self: center; }
 .budget .moved { margin-top: 6px; }
 .list-row .grade.small { margin-right: 2px; }
+
+/* hands-free cooking: the mic, lit while it listens, and the line that says so */
+.cm-mic.on { color: var(--on-light); background: var(--warm); }
+.cm-listening { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13.5px; color: var(--ink-2); }
+.cm-listening i { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: cm-listening 1.4s ease-in-out infinite; }
+@keyframes cm-listening { 50% { opacity: .35; } }

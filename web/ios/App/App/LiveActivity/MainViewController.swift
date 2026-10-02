@@ -22,6 +22,8 @@ class MainViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(ReceiptTextPlugin())
         bridge?.registerPluginInstance(SwipeBackPlugin())
         bridge?.registerPluginInstance(HealthPlugin())
+        bridge?.registerPluginInstance(VoicePlugin())
+        bridge?.registerPluginInstance(ShareBridgePlugin())
     }
 }
 

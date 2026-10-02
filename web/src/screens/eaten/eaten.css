@@ -76,3 +76,14 @@
 .fasting-bar .s { font-size: 13px; color: var(--ink-3); white-space: nowrap; }
 .fasting-bar .meter { display: block; margin-top: 8px; }
 .fasting-bar.fasting .meter span { background: linear-gradient(90deg, #7f8fb0, #a9b6d6); }
+
+/* what fits what's left: two or three to tap */
+.fits-card { margin-top: 12px; padding: 12px 8px 6px 18px; border-radius: var(--r-lg); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line); }
+.fits-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-right: 10px; }
+.fits-head .t { font-weight: 600; }
+.fits-head .s { font-size: 13px; color: var(--ink-3); }
+.fits-row { width: 100%; min-height: 54px; display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 0; text-align: left; border-top: 1px solid var(--line); }
+.fits-row:first-of-type { border-top: 0; }
+.fits-row .grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fits-row .t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fits-row .s { font-size: 13px; color: var(--ink-3); }

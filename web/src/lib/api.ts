@@ -6,6 +6,8 @@
  * lives inside the app bundle and there is no origin to fall back on, so
  * VITE_API_URL is baked in at build time — see web/.env.production.
  */
+import { shareSession } from './shareBridge';
+
 const BASE = import.meta.env.VITE_API_URL ?? '';
 const TOKEN_KEY = 'pantry.token';
 
@@ -26,10 +28,12 @@ export const tokenStore = {
   set: (token: string) => {
     localStorage.setItem(TOKEN_KEY, token);
     invalidateCache();
+    shareSession(token);
   },
   clear: () => {
     localStorage.removeItem(TOKEN_KEY);
     invalidateCache();
+    shareSession(null);
   },
 };
 

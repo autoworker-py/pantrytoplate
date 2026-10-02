@@ -244,6 +244,23 @@ ticket icon in Recipes' header.
   sugar, saturated fat and salt has no grade rather than a guessed one, and
   alcohol has none at all.
 
+### Kitchen helpers
+
+- **Fits what's left** is a card under the day on Eaten: the calories (and
+  protein, when short) left, then two pantry foods and a ready recipe that fit,
+  best at protein when protein is short and sooner-to-go-off first. A food logs
+  in one tap at a sensible portion; a recipe opens. Salt and the like are never
+  offered, and the card stays away when the gap is too small to matter.
+- **Hands-free cooking** is a mic in cook mode's header. On, it lights warm and
+  a line under the header says what to say: "next", "back", "repeat" (reads the
+  step aloud), "timer" (starts the step's timer). Recognition stays on the
+  phone; nothing heard is kept.
+- **Recipes from posts**: Pantry2Plate is in the share sheet in TikTok,
+  Instagram, YouTube and Safari, and saves the recipe without leaving the app it
+  was shared from (a small dark card says what happened). The link import in
+  Recipes does the same. A recipe page is read for anyone; a post's caption is
+  read by the AI for Pro, and without Pro the app says so before fetching it.
+
 ### Plan my week
 
 - **The week on one strip of receipt paper**, a dotted line a day: tap a day for
