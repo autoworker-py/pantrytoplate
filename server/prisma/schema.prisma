@@ -54,6 +54,12 @@ model User {
   notifyExpiry    Boolean   @default(true)
   /// a day's water, in millilitres
   waterGoalMl     Int       @default(2500)
+  /// intermittent fasting: the plan ("16:8": hours fasting:eating) or null for
+  /// none, when the eating window opens ("12:00", the person's clock), and
+  /// whether to be told when it opens and closes
+  fastingPlan     String?
+  fastingStart    String?
+  fastingNotify   Boolean   @default(true)
 
   /// ---- body data, used only to work out a calorie target ----
   /// All optional: the app is fully usable without any of it, and the target
@@ -69,6 +75,17 @@ model User {
   activityLevel String?
   /// how much per week to lose or gain, in kg; null means the goal's default
   weeklyRateKg  Float?
+  /// a goal weight and the day to reach it (the person's calendar day); the
+  /// weekly rate and the target follow from them, never faster than is safe
+  goalWeightKg  Float?
+  goalDate      String?
+  /// "app" while the calorie target is the app's to work out and adjust each
+  /// week; "person" once they set their own, which the app then leaves alone
+  targetSetBy   String    @default("app")
+  /// the daily expenditure last worked out from the diary and the weight
+  /// trend, and when: the weekly adjustment of the target
+  adaptedTdee   Int?
+  adaptedAt     DateTime?
   /// set once the first-run questions are done or deliberately skipped
   onboardedAt   DateTime?
 
@@ -99,6 +116,7 @@ model User {
   emailCodes        EmailCode[]
   planSkips         PlanShoppingSkip[]
   waterLogs         WaterLog[]
+  weightLogs        WeightLog[]
 }
 
 /// The shared dictionary of foods. Both packaged barcode products and raw
@@ -535,4 +553,17 @@ model WaterLog {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, loggedAt])
+}
+
+/// A weigh-in: one a day (the person's calendar day), the latest that day kept.
+model WeightLog {
+  id       String   @id @default(cuid())
+  userId   String
+  day      String
+  kg       Float
+  loggedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, day])
 }

@@ -68,6 +68,8 @@ export interface BodyInput {
   activityLevel?: string | null;
   weightGoal?: string | null;
   weeklyRateKg?: number | null;
+  /** daily expenditure seen in the diary and the weight trend, used in place of the formula's */
+  tdee?: number | null;
 }
 
 export interface EnergyEstimate {
@@ -137,7 +139,7 @@ export function estimateEnergy(input: BodyInput): EnergyEstimate | null {
 
   const notes: string[] = [];
   const bmr = basalRate(height, weight, age, sex);
-  const tdee = bmr * ACTIVITY_FACTORS[activity];
+  const tdee = input.tdee ?? bmr * ACTIVITY_FACTORS[activity];
 
   const requested = input.weeklyRateKg ?? DEFAULT_WEEKLY_RATE_KG;
   const weeklyRate = goal === 'maintain' ? 0 : clamp(Math.abs(requested), 0.1, MAX_WEEKLY_RATE_KG);
@@ -191,4 +193,72 @@ export function estimateEnergy(input: BodyInput): EnergyEstimate | null {
     flooredAt,
     notes,
   };
+}
+
+/* ---------- a goal weight by a date ---------- */
+
+/**
+ * The fastest the app will plan for: about 1% of body weight a week down
+ * (and never over the 1 kg cap above), half that up. Faster loss comes off
+ * muscle and is hard to keep; faster gain is mostly fat.
+ */
+const MAX_LOSS_SHARE = 0.01;
+const MAX_GAIN_SHARE = 0.005;
+/** the lowest healthy body mass index, below which no goal is set */
+const LOWEST_HEALTHY_BMI = 18.5;
+
+export type Pace = 'gentle' | 'steady' | 'faster';
+export type GoalProblem = 'too_soon' | 'too_fast' | 'below_healthy' | 'too_young';
+
+export interface GoalPlan {
+  ok: boolean;
+  direction: Goal;
+  /** kilograms a week the date asks for */
+  weeklyRateKg: number;
+  pace: Pace | null;
+  days: number;
+  /** the earliest date that is safe, when the one asked for is not */
+  earliestSafeDate: string | null;
+  /** the lowest goal weight the app will set for this height */
+  lowestGoalKg: number | null;
+  problem: GoalProblem | null;
+}
+
+const dayNumber = (day: string) => Math.round(Date.parse(`${day}T00:00:00Z`) / 86_400_000);
+const dayString = (n: number) => new Date(n * 86_400_000).toISOString().slice(0, 10);
+
+/**
+ * Whether a goal weight by a date is safe to plan for, and at what pace. Too
+ * fast is refused with the earliest safe date instead; a goal under a healthy
+ * weight for the person's height, or weight loss for someone under 18, is
+ * refused outright.
+ */
+export function planGoal(input: { weightKg: number; goalWeightKg: number; goalDate: string; today: string; heightCm?: number | null; birthYear?: number | null }): GoalPlan {
+  const days = dayNumber(input.goalDate) - dayNumber(input.today);
+  const change = input.goalWeightKg - input.weightKg;
+  const direction: Goal = Math.abs(change) < 0.5 ? 'maintain' : change < 0 ? 'lose' : 'gain';
+  const lowestGoalKg = input.heightCm ? Math.ceil(LOWEST_HEALTHY_BMI * (input.heightCm / 100) ** 2 * 10) / 10 : null;
+  const base = { direction, days, earliestSafeDate: null, lowestGoalKg };
+
+  if (direction === 'maintain') return { ok: true, ...base, weeklyRateKg: 0, pace: null, problem: null };
+  if (days < 7) return { ok: false, ...base, weeklyRateKg: 0, pace: null, problem: 'too_soon' };
+
+  const age = input.birthYear ? new Date().getFullYear() - input.birthYear : null;
+  if (direction === 'lose' && age !== null && age < 18) return { ok: false, ...base, weeklyRateKg: 0, pace: null, problem: 'too_young' };
+  if (direction === 'lose' && lowestGoalKg !== null && input.goalWeightKg < lowestGoalKg) {
+    return { ok: false, ...base, weeklyRateKg: 0, pace: null, problem: 'below_healthy' };
+  }
+
+  const weeklyRateKg = Math.abs(change) / (days / 7);
+  const maxRate = direction === 'lose' ? Math.min(MAX_WEEKLY_RATE_KG, input.weightKg * MAX_LOSS_SHARE) : input.weightKg * MAX_GAIN_SHARE;
+  const rounded = Math.round(weeklyRateKg * 100) / 100;
+  if (weeklyRateKg > maxRate + 1e-9) {
+    const safeDays = Math.ceil((Math.abs(change) / maxRate) * 7);
+    return { ok: false, ...base, weeklyRateKg: rounded, pace: null, earliestSafeDate: dayString(dayNumber(input.today) + safeDays), problem: 'too_fast' };
+  }
+
+  const share = weeklyRateKg / input.weightKg;
+  const pace: Pace =
+    direction === 'lose' ? (share <= 0.005 ? 'gentle' : share <= 0.0075 ? 'steady' : 'faster') : share <= 0.0025 ? 'gentle' : share <= 0.004 ? 'steady' : 'faster';
+  return { ok: true, ...base, weeklyRateKg: rounded, pace, problem: null };
 }

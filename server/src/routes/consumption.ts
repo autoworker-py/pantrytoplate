@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { calorieHistory, dailySummary, eatLess, entryDetail, saveRest, undoEntry, undoSaveRest } from '../services/diary.js';
 import { logEatOutMeal, logEatingOut, recentEatingOut, searchEatOutFoods } from '../services/eatingOut.js';
 import { localDay } from '../zone.js';
+import { maybeAdapt } from '../services/body.js';
 
 /**
  * The day asked for, on the person's calendar. A bare "2026-08-21" is that day
@@ -20,6 +21,8 @@ const routes: FastifyPluginAsync = async (app) => {
   /** Today's diary: entries by meal, calories, macros, targets. */
   app.get('/today', async (request) => {
     const { date } = request.query as { date?: string };
+    // once a week, a goal's target is worked out again from the diary and the weigh-ins
+    await maybeAdapt(request.userId).catch((error) => request.log.warn({ err: error }, 'adapting the target failed'));
     return dailySummary(request.userId, parseDayParam(date));
   });
 
