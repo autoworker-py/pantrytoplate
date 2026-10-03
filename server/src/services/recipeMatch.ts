@@ -106,6 +106,16 @@ async function loadRecipes(where: object, take: number, db: Tx) {
  * ingredient they are a version of. Without this the app tells you that you are
  * missing an ingredient you are holding.
  */
+/**
+ * The ingredient a recipe line stands for, as the pantry is grouped. Pantry
+ * lots are filed under the generic food a product is a version of, so a line
+ * saved against a product itself (Make me something links what it used, a
+ * scanned carton of eggs) has to be looked up the same way, or the eggs on the
+ * shelf don't count.
+ */
+export const ingredientKey = (line: { foodReferenceId: string; foodReference: { canonicalId?: string | null } }) =>
+  line.foodReference.canonicalId ?? line.foodReferenceId;
+
 async function loadInventoryByFood(userId: string, db: Tx) {
   const lots = await db.inventoryItem.findMany({
     where: { userId: await pantryOf(userId, db), quantity: { gt: 0 } },
@@ -212,7 +222,7 @@ export async function evaluateRecipes(
     const kept = recipe.ingredients.filter((i) => !excluded.has(i.foodReferenceId));
 
     const ingredients: IngredientMatch[] = kept.map((ingredient) => {
-      const lots = inventory.get(ingredient.foodReferenceId) ?? [];
+      const lots = inventory.get(ingredientKey(ingredient)) ?? [];
       const required = ingredient.quantityRequired * scale;
       const plan = planDeduction(
         lots,
@@ -255,9 +265,9 @@ export async function evaluateRecipes(
     });
 
     const canMakeNow = ingredients.length > 0 && ingredients.every((i) => i.status === 'ok');
-    const usesExpiring = ingredients
-      .filter((i) => expiring.has(i.foodReferenceId))
-      .map((i) => i.name);
+    const usesExpiring = kept
+      .filter((i) => expiring.has(ingredientKey(i)))
+      .map((i) => i.foodReference.name);
 
     const reasons: string[] = [];
     if (usesExpiring.length > 0) reasons.push(`Uses ${usesExpiring.join(', ')} before it goes off`);
@@ -461,14 +471,14 @@ async function shortlistRecipeIds(
     ownedIds.length > 0
       ? db.recipeIngredient.groupBy({
           by: ['recipeId'],
-          where: { recipeId: { in: candidateIds }, foodReferenceId: { in: ownedIds } },
+          where: { recipeId: { in: candidateIds }, OR: [{ foodReferenceId: { in: ownedIds } }, { foodReference: { canonicalId: { in: ownedIds } } }] },
           _count: { _all: true },
         })
       : Promise.resolve([]),
     expiringIds.length > 0
       ? db.recipeIngredient.groupBy({
           by: ['recipeId'],
-          where: { recipeId: { in: candidateIds }, foodReferenceId: { in: expiringIds } },
+          where: { recipeId: { in: candidateIds }, OR: [{ foodReferenceId: { in: expiringIds } }, { foodReference: { canonicalId: { in: expiringIds } } }] },
           _count: { _all: true },
         })
       : Promise.resolve([]),
@@ -809,7 +819,7 @@ export async function recipesUsingFood(
       : (await db.foodReference.findUnique({ where: { id: ingredientId } }))?.name ?? food.name;
 
   const rows = await db.recipeIngredient.findMany({
-    where: { foodReferenceId: ingredientId, recipe: visibleToUser(userId) },
+    where: { OR: [{ foodReferenceId: ingredientId }, { foodReference: { canonicalId: ingredientId } }], recipe: visibleToUser(userId) },
     select: { recipeId: true, quantityRequired: true, unitRequired: true },
   });
   if (rows.length === 0) {

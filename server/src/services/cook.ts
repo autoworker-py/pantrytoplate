@@ -14,7 +14,7 @@ import { loadConvertContexts } from './conversions.js';
 import { planDeduction } from './deduction.js';
 import { nutritionColumns, nutritionFor, scaleColumns } from './nutrition.js';
 import { clampZero, isNegligible, roundQuantity } from './units.js';
-import { attachSubstitutes, evaluateRecipes, type RecipeMatch } from './recipeMatch.js';
+import { attachSubstitutes, evaluateRecipes, ingredientKey, type RecipeMatch } from './recipeMatch.js';
 import { checkLowStock } from './lowStock.js';
 import { storeLeftovers, type StoredLeftovers } from './leftovers.js';
 import { applySwaps } from './substitutions.js';
@@ -194,8 +194,9 @@ export async function cookRecipe(
     const scale = servings ? servings / Math.max(1, recipe.servings) : 1;
 
     // Match lots either directly or through the generic ingredient they are a
-    // version of, so a scanned bottle of olive oil satisfies "olive oil".
-    const ingredientIds = recipe.ingredients.map((i) => i.foodReferenceId);
+    // version of, so a scanned bottle of olive oil satisfies "olive oil", and a
+    // line saved against the bottle itself takes any bottle on the shelf.
+    const ingredientIds = [...new Set(recipe.ingredients.map(ingredientKey))];
     const lots = await tx.inventoryItem.findMany({
       where: {
         userId: await pantryOf(userId, tx),
@@ -233,7 +234,7 @@ export async function cookRecipe(
     const plans = recipe.ingredients.map((ingredient) => ({
       ingredient,
       plan: planDeduction(
-        byFood.get(ingredient.foodReferenceId) ?? [],
+        byFood.get(ingredientKey(ingredient)) ?? [],
         ingredient.quantityRequired * scale,
         ingredient.unitRequired,
         (lot) => lotContext(lot, ingredient.foodReferenceId),

@@ -142,6 +142,15 @@ describe('the full recipe', () => {
     expect(sameFood('black beans', 'Black Pepper')).toBe(false);
   });
 
+  it('finds a line the model forgot to number among what the idea uses', () => {
+    const reply = { g: [{ n: 'eggs', a: '3' }, { n: 'cherry tomatoes', a: '6', p: 9 }, { n: 'olive oil', a: '1 tbsp' }], t: ['Cook it.'], k: 300 };
+    const recipe = shapeRecipe(reply, kitchenOf(['Large Eggs', 'Cherry Tomato', 'Coconut Oil']), order(), [], ['item-1', 'item-2']);
+    expect(recipe.ingredients[0]!.inventoryItemId).toBe('item-1');
+    expect(recipe.ingredients[1]!.inventoryItemId).toBe('item-2');
+    // only what the idea set out to use: the coconut oil was never part of it
+    expect(recipe.ingredients[2]!.inventoryItemId).toBeUndefined();
+  });
+
   it('is refused when it breaks the person’s rules', () => {
     const reply = { g: [{ n: 'bacon', a: '4 rashers' }], t: ['Fry it.'], k: 400 };
     expect(() => shapeRecipe(reply, [], order(), ['vegetarian'])).toThrow(/leave out or your diet/);
@@ -173,5 +182,36 @@ describe('saving a recipe from the kitchen', () => {
     expect(recipe.ingredients[1]!.foodReference.ownerId).toBe(cook.id);
     // someone else's shelf is not this person's to link to; the name still finds the shared food
     expect(recipe.ingredients[2]!.foodReferenceId).toBe(milk.id);
+  });
+
+  it('counts a scanned product on the shelf as had, and cooking takes from it', async () => {
+    // a barcode-scanned carton: its own food, filed as a version of the shared "Egg"
+    const egg = await catalogue('Egg');
+    const carton = await prisma.foodReference.create({
+      data: { name: `Farm Fresh Large Eggs ${stamp}`, nameNorm: `farm fresh large eggs ${stamp}`, barcode: `0${stamp}`, source: 'openfoodfacts', ownerId: cook.id, defaultUnit: 'count', canonicalId: egg.id, canonicalSource: 'auto', caloriesPerUnit: 72, proteinPerUnit: 6.3 },
+    });
+    const stocked = await call(cook, 'POST', '/api/inventory', { foodReferenceId: carton.id, quantity: 12, unit: 'count', storageLocation: 'fridge', expirationDate: days(10) });
+    expect(stocked.status).toBe(201);
+
+    const saved = await call(cook, 'POST', '/api/kitchen/save', {
+      name: 'Soft Scrambled Eggs',
+      minutes: 10,
+      serves: 1,
+      why: 'uses the eggs',
+      ingredients: [{ name: 'eggs', amount: '3', inventoryItemId: stocked.body.item.id }],
+      steps: ['Stir the eggs over a low heat until just set.'],
+    });
+    expect(saved.status).toBe(201);
+
+    const shown = await call(cook, 'GET', `/api/recipes/${saved.body.recipe.id}`);
+    expect(shown.status).toBe(200);
+    const line = shown.body.recipe.ingredients[0];
+    expect(line.status).toBe('ok');
+    expect(line.available).toBe(12);
+
+    const cooked = await call(cook, 'POST', `/api/recipes/${saved.body.recipe.id}/cook`, { servings: 1, mealSlot: 'breakfast' });
+    expect(cooked.status).toBe(200);
+    const left = await prisma.inventoryItem.findUniqueOrThrow({ where: { id: stocked.body.item.id } });
+    expect(left.quantity).toBe(9);
   });
 });

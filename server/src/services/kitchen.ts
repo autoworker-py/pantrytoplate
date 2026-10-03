@@ -415,13 +415,15 @@ export function sameFood(ingredient: string, food: string): boolean {
 }
 
 /** The full recipe: kitchen numbers become item ids; a recipe that breaks the person's rules is refused, not shown. */
-export function shapeRecipe(reply: unknown, kitchen: KitchenFood[], order: Order, diet: string[]): KitchenRecipe {
+export function shapeRecipe(reply: unknown, kitchen: KitchenFood[], order: Order, diet: string[], uses: string[] = []): KitchenRecipe {
   const parsed = RecipeReply.safeParse(reply);
   if (!parsed.success) throw new HttpError(502, 'The kitchen could not write that one up. Try again.', 'kitchen_failed');
   const byNumber = new Map(kitchen.map(({ n, item }) => [n, item]));
+  // what the idea said it would use, for a line the model forgot to number
+  const promised = kitchen.filter(({ item }) => uses.includes(item.id)).map(({ item }) => item);
   const ingredients = parsed.data.g.slice(0, 30).map((g) => {
     const item = g.p !== undefined ? byNumber.get(g.p) : undefined;
-    const linked = item && sameFood(g.n, item.food.name) ? item : undefined;
+    const linked = item && sameFood(g.n, item.food.name) ? item : promised.find((own) => sameFood(g.n, own.food.name));
     return { name: g.n.slice(0, 80), amount: g.a.slice(0, 60), ...(linked ? { inventoryItemId: linked.id } : {}) };
   });
   if (ingredients.some((i) => forbidden(i.name, order, diet))) {
@@ -449,7 +451,7 @@ export async function kitchenRecipe(userId: string, order: Order, idea: IdeaInpu
   const [kitchen, { tags, unitSystem }] = await Promise.all([kitchenFor(userId), context(userId)]);
   const diet = dietFor(order, tags);
   const reply = await ask(recipePrompt(order, idea, kitchen, diet, unitSystem), 'recipe');
-  return shapeRecipe(reply, kitchen, order, diet);
+  return shapeRecipe(reply, kitchen, order, diet, idea.uses);
 }
 
 export const SaveSchema = z.object({

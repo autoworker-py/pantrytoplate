@@ -76,7 +76,7 @@ export async function nutritionForRecipes(
        * nutrition we actually know. A held lot with no nutrition data is worse
        * than the generic entry, not better, so it does not displace it.
        */
-      const held = owned?.get(ingredient.foodReferenceId) ?? [];
+      const held = owned?.get(ingredient.foodReference.canonicalId ?? ingredient.foodReferenceId) ?? [];
       const substitute = held.find((food) => food.caloriesPerUnit !== null);
       const source = substitute ?? ingredient.foodReference;
 

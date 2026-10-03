@@ -13,6 +13,7 @@ import { prisma, type Tx } from '../db.js';
 import { roundQuantity } from './units.js';
 import { visibleToUser } from './recipeMatch.js';
 import { pantryOf } from './household.js';
+import { ingredientKey } from './recipeMatch.js';
 
 export interface IngredientUse {
   recipeId: string;
@@ -50,8 +51,8 @@ export async function ingredientUses(
   const ingredientId = food.canonicalId ?? food.id;
 
   const rows = await db.recipeIngredient.findMany({
-    where: { foodReferenceId: ingredientId, recipe: visibleToUser(userId) },
-    include: { recipe: { include: { ingredients: true } } },
+    where: { OR: [{ foodReferenceId: ingredientId }, { foodReference: { canonicalId: ingredientId } }], recipe: visibleToUser(userId) },
+    include: { recipe: { include: { ingredients: { include: { foodReference: { select: { canonicalId: true } } } } } } },
     take: 60,
   });
   if (rows.length === 0) {
@@ -68,7 +69,7 @@ export async function ingredientUses(
   owned.add(ingredientId);
 
   const uses: IngredientUse[] = rows.map((row) => {
-    const otherGaps = row.recipe.ingredients.filter((i) => !owned.has(i.foodReferenceId)).length;
+    const otherGaps = row.recipe.ingredients.filter((i) => !owned.has(ingredientKey(i))).length;
     const total =
       row.recipe.prepMinutes === null && row.recipe.cookMinutes === null
         ? null
