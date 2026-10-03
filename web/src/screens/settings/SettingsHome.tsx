@@ -40,7 +40,7 @@ export default function SettingsHome() {
             <NavRow to="/settings/body" title="Body & weight" value={s.body.weightKg ? describeBody(s.unitSystem, null, s.body.weightKg) : 'Not set'} />
             <NavRow to="/settings/fasting" title="Fasting" value={s.fasting?.plan ?? 'Off'} />
             <NavRow to="/settings/diet" title="Diet" value={diet} />
-            <NavRow to="/settings/water" title="Water" value={formatWater(s.waterGoalMl ?? 2500, s.unitSystem)} />
+            <NavRow to="/settings/water" title="Water" value={s.trackWater ? formatWater(s.waterGoalMl ?? 2500, s.unitSystem) : 'Off'} />
             {healthOnThisDevice() ? <NavRow to="/settings/health" title="Apple Health" value={activityConnected() ? 'On' : 'Off'} /> : null}
           </div>
 

@@ -1,13 +1,16 @@
 /* ---------- Pantry2Plate Pro: gold, and the previews of what it unlocks ---------- */
 
-/* Recipes: the Pro features, named, in gold */
-.pro-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 14px; }
+/* Recipes: the two Pro features, side by side across the full width, in gold */
+.pro-links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 2px 0 14px; }
 .pro-link {
-  min-height: 44px; padding: 0 14px 0 12px; border-radius: 22px; display: inline-flex; align-items: center; gap: 6px;
+  min-height: 46px; padding: 0 8px; border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center;
   font-family: var(--display); font-size: 14px; font-weight: 700; white-space: nowrap; color: var(--gold);
-  background: var(--gold-fill); box-shadow: inset 0 0 0 1px var(--gold-line);
+  box-shadow: inset 0 0 0 1px var(--gold-line);
   transition: background var(--fast) ease, transform var(--fast) ease;
 }
+/* the + sheet: three ways in */
+.add-ways .way-icon { flex: none; width: 40px; height: 40px; border-radius: var(--r-sm); display: grid; place-items: center; background: var(--bg-2); color: var(--ink-2); }
+.pro-tag { flex: none; padding: 3px 8px; border-radius: 6px; font-family: var(--display); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold-line); }
 .pro-link:active { transform: scale(.97); background: rgba(242, 196, 90, .16); }
 .pro-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
@@ -17,19 +20,13 @@
   display: flex; align-items: center; gap: 12px; margin-top: 6px;
   font-family: var(--display); font-size: 12px; font-weight: 800; letter-spacing: .26em; text-transform: uppercase; color: var(--gold);
 }
-.pro-mark::before, .pro-mark::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(242, 196, 90, 0), var(--gold-line)); }
-.pro-mark::after { background: linear-gradient(90deg, var(--gold-line), rgba(242, 196, 90, 0)); }
+.pro-mark::before, .pro-mark::after { content: ''; flex: 1; height: 1px; background: var(--gold-line); }
 .pro-preview .plus-list svg { color: var(--gold); }
 .pro-later { margin-top: 22px; padding: 14px 16px; border-radius: var(--r); background: var(--bg-2); color: var(--ink-2); font-size: 14.5px; line-height: 1.45; }
 
-/* the demo's stage: under the printer's light, as the real ticket is */
+/* the demo's stage */
 .pro-demo {
   position: relative; height: 304px; margin: 12px calc(-1 * var(--gutter)) 0; overflow: hidden;
-  background: radial-gradient(70% 240px at 50% 0%, rgba(255, 222, 170, .14), rgba(255, 222, 170, 0) 76%);
-}
-.pro-demo::before {
-  content: ''; position: absolute; top: 0; left: 32%; right: 32%; height: 7px; z-index: 3; border-radius: 0 0 7px 7px;
-  background: linear-gradient(180deg, #fff4e0, #f1d39e); box-shadow: 0 6px 22px rgba(243, 201, 139, .38);
 }
 .demo { position: absolute; inset: 0; animation: demo-in .5s var(--ease) both; }
 .demo.fading { opacity: 0; transition: opacity .45s ease; }
@@ -91,4 +88,3 @@
 }
 
 /* a Pro feature as a header icon: the same gold as the Pro links */
-.icon-btn.pro-icon { color: var(--gold); background: var(--gold-fill); box-shadow: inset 0 0 0 1px var(--gold-line); }

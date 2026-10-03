@@ -3,17 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { handPhoto, photographMeal, snapStatus, type SnapStatus } from '../lib/snap';
 import { LogActions } from './snap/SnapViews';
-import type { DayDiary, DiaryEntry, EntryDetail, MealSlot } from '../lib/types';
+import type { DayDiary, DiaryEntry, EntryDetail, Grade, MealSlot } from '../lib/types';
 import { formatAmount, formatServings } from '../lib/format';
 import { FoodThumb } from '../fridge/Fridge';
 import { Icon } from '../ui/Icon';
 import { Page, Sheet, errorText, useToast } from '../ui/kit';
 import { mealNow } from './ItemSheet';
 import { useUnitSystem } from '../lib/unitSystem';
-import { MealReceipt, NutrientLine, NutrientsSheet, WaterLine } from './eaten/DiaryParts';
-import { FastingBar, WeightCard } from './eaten/BodyParts';
-import { FitsCard } from './eaten/FitsCard';
-import { GradeBadge } from '../ui/Grade';
+import { MealReceipt, WaterLine } from './eaten/DiaryParts';
+import { FastingBar } from './eaten/BodyParts';
+import { GradeBadge, QuietGrade } from '../ui/Grade';
 import { dayActivity } from '../lib/health';
 
 const BarcodeScanner = lazy(() => import('../components/BarcodeScanner').then((m) => ({ default: m.BarcodeScanner })));
@@ -25,7 +24,6 @@ function isoDate(d: Date) {
   return `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, '0')}-${`${d.getDate()}`.padStart(2, '0')}`;
 }
 
-interface Waste { wastedItems: number; perWeek: number; topWasted: Array<{ name: string; times: number }> }
 
 export default function Eaten() {
   const [snap, setSnap] = useState<SnapStatus | null>(null);
@@ -61,9 +59,7 @@ export default function Eaten() {
   const [day, setDay] = useState(() => new Date());
   const [diary, setDiary] = useState<DayDiary | null>(null);
   const [week, setWeek] = useState<Array<{ date: string; totalCalories: number }>>([]);
-  const [waste, setWaste] = useState<Waste | null>(null);
   const [open, setOpen] = useState<string | null>(null);
-  const [nutrientsOpen, setNutrientsOpen] = useState(false);
   const system = useUnitSystem();
   const [eatingOut, setEatingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,18 +81,23 @@ export default function Eaten() {
   useEffect(() => { void load(); }, [load]);
   // exercise from Apple Health, read on this phone, and how much of it the person eats back
   const [exercise, setExercise] = useState<'all' | 'half' | 'none'>('all');
+  // water is only for the people who switch it on in Settings
+  const [trackWater, setTrackWater] = useState(false);
   const [moved, setMoved] = useState<{ activeKcal: number; steps: number } | null>(null);
   useEffect(() => {
-    api.get<{ settings: { exerciseCalories?: 'all' | 'half' | 'none' } }>('/api/settings').then((d) => setExercise(d.settings.exerciseCalories ?? 'all')).catch(() => undefined);
+    api
+      .get<{ settings: { exerciseCalories?: 'all' | 'half' | 'none'; trackWater?: boolean } }>('/api/settings')
+      .then((d) => {
+        setExercise(d.settings.exerciseCalories ?? 'all');
+        setTrackWater(d.settings.trackWater ?? false);
+      })
+      .catch(() => undefined);
   }, []);
   useEffect(() => {
     let live = true;
     void dayActivity(isoDate(day)).then((a) => { if (live) setMoved(a); });
     return () => { live = false; };
   }, [day]);
-  useEffect(() => {
-    api.get<Waste>('/api/reports/waste?days=30').then(setWaste).catch(() => setWaste(null));
-  }, []);
 
   const isToday = isoDate(day) === isoDate(new Date());
   const shift = (n: number) => setDay((d) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; });
@@ -126,7 +127,7 @@ export default function Eaten() {
           <div className="budget-top">
             <span className="big num">{eaten.toLocaleString()}</span>
             <span className="of">of {budget.toLocaleString()} kcal</span>
-            {diary.grade ? <GradeBadge grade={diary.grade} label="The day's food" /> : null}
+            {diary.grade ? <QuietGrade grade={diary.grade} label="The day's food" /> : null}
           </div>
           {moved && (moved.activeKcal > 0 || moved.steps > 0) ? (
             <p className="fine moved">
@@ -147,13 +148,10 @@ export default function Eaten() {
             ))}
           </div>
           {diary.unknownCalorieEntries > 0 ? <p className="fine" style={{ marginTop: 10 }}>{diary.unknownCalorieEntries} {diary.unknownCalorieEntries === 1 ? 'entry has' : 'entries have'} no nutrition data, so {diary.unknownCalorieEntries === 1 ? 'it is' : 'they are'} not counted.</p> : null}
-          <NutrientLine diary={diary} onOpen={() => setNutrientsOpen(true)} />
         </section>
       )}
 
-      {isToday && diary ? <FitsCard day={isoDate(day)} extra={added} onLogged={() => void load()} /> : null}
-      <WaterLine day={isoDate(day)} today={isToday} system={system} />
-      {isToday ? <WeightCard system={system} /> : null}
+      {trackWater ? <WaterLine day={isoDate(day)} today={isToday} system={system} /> : null}
       {isToday ? <LogActions status={snap} onSnap={() => void startSnap()} onOther={() => setEatingOut(true)} /> : null}
 
       {diary && diary.entryCount === 0 ? (
@@ -191,21 +189,7 @@ export default function Eaten() {
         </>
       ) : null}
 
-      {waste ? (
-        <>
-          <div className="section"><h2>Thrown away</h2><span className="aside">last 30 days</span></div>
-          <div className="waste">
-            <span className="big num">{waste.wastedItems}</span>
-            <span className="grow">
-              <span className="t">{waste.wastedItems === 0 ? 'Nothing wasted. Keep cooking what goes off first.' : `${waste.wastedItems === 1 ? 'thing' : 'things'} went in the bin, about ${waste.perWeek} a week.`}</span>
-              {waste.topWasted.length ? <span className="s">Most often: {waste.topWasted.slice(0, 3).map((w) => w.name).join(', ')}</span> : null}
-            </span>
-          </div>
-        </>
-      ) : null}
-
-      {open ? <EntrySheet id={open} onClose={() => setOpen(null)} onUndone={(m) => { setOpen(null); toast(m); void load(); }} onChanged={() => { setOpen(null); void load(); }} onUpdated={() => void load()} /> : null}
-      {nutrientsOpen && diary ? <NutrientsSheet diary={diary} system={system} title={isToday ? 'Today so far' : day.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} onClose={() => setNutrientsOpen(false)} /> : null}
+      {open ? <EntrySheet id={open} grade={diary?.meals.flatMap((m) => m.entries).find((e) => e.id === open)?.grade} onClose={() => setOpen(null)} onUndone={(m) => { setOpen(null); toast(m); void load(); }} onChanged={() => { setOpen(null); void load(); }} onUpdated={() => void load()} /> : null}
       {eatingOut ? <EatOutSheet onClose={() => setEatingOut(false)} onLogged={(m) => { setEatingOut(false); toast(m); void load(); }} /> : null}
     </Page>
   );
@@ -222,7 +206,7 @@ function EntryRow({ e, onOpen }: { e: DiaryEntry; onOpen: () => void }) {
           {e.source === 'eating_out' ? ' · not from pantry' : ''}
         </span>
       </span>
-      {e.grade ? <GradeBadge grade={e.grade} small /> : null}
+      {e.grade ? <QuietGrade grade={e.grade} /> : null}
       <span className="end num">{e.calories === null ? <span className="faint">–</span> : Math.round(e.calories)}</span>
     </button>
   );
@@ -230,7 +214,7 @@ function EntryRow({ e, onOpen }: { e: DiaryEntry; onOpen: () => void }) {
 
 const SHARES: Array<[number, string]> = [[0.25, 'A quarter'], [0.5, 'Half'], [0.75, 'Three quarters']];
 
-function EntrySheet({ id, onClose, onUndone, onChanged, onUpdated }: { id: string; onClose: () => void; onUndone: (message: string) => void; onChanged: () => void; onUpdated: () => void }) {
+function EntrySheet({ id, grade, onClose, onUndone, onChanged, onUpdated }: { id: string; grade?: Grade | null; onClose: () => void; onUndone: (message: string) => void; onChanged: () => void; onUpdated: () => void }) {
   const toast = useToast();
   const [entry, setEntry] = useState<EntryDetail | null>(null);
   const [busy, setBusy] = useState(false);
@@ -282,7 +266,6 @@ function EntrySheet({ id, onClose, onUndone, onChanged, onUpdated }: { id: strin
   }
 
   const lines = entry?.lines ?? null;
-  const more = entry?.nutrients;
   return (
     <Sheet title={entry?.name ?? ' '} sub={entry ? `${entry.kind === 'meal' ? (entry.source === 'eating_out' ? 'Eaten out' : 'Cooked') : formatAmount(entry.quantity, entry.unit)} · ${MEAL[entry.mealSlot].toLowerCase()}${entry.source === 'eating_out' && entry.kind !== 'meal' ? ' · not from your pantry' : ''}` : undefined} onClose={onClose}>
       {error ? <div className="banner error" style={{ marginTop: 10 }}>{error}</div> : null}
@@ -294,9 +277,9 @@ function EntrySheet({ id, onClose, onUndone, onChanged, onUpdated }: { id: strin
             <div><span className="num">{entry.macros.carbs === null ? '–' : `${Math.round(entry.macros.carbs)} g`}</span><span className="fine">carbs</span></div>
             <div><span className="num">{entry.macros.fat === null ? '–' : `${Math.round(entry.macros.fat)} g`}</span><span className="fine">fat</span></div>
           </div>
-          {more && (more.fiber !== null || more.sugar !== null) ? (
-            <p className="fine" style={{ marginTop: 8 }}>
-              {[more.fiber !== null ? `${Math.round(more.fiber)} g fiber` : null, more.sugar !== null ? `${Math.round(more.sugar)} g sugar` : null].filter(Boolean).join(' · ')}
+          {grade ? (
+            <p className="entry-grade">
+              <GradeBadge grade={grade} small /> <span className="fine">Health grade, from what&rsquo;s in it per 100 g</span>
             </p>
           ) : null}
           {entry.nutritionBasis ? <p className="fine" style={{ marginTop: 8 }}>Worked out from {entry.nutritionBasis.replace(/^worked out from /i, '')}.</p> : null}

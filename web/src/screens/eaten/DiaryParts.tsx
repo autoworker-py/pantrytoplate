@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api';
 import { done } from '../../lib/native';
-import type { DayDiary, EntryDetail, MealSlot, ReceiptLine, WaterDay } from '../../lib/types';
+import type { EntryDetail, MealSlot, ReceiptLine, WaterDay } from '../../lib/types';
 import type { UnitSystem } from '../../components/BodyInputs';
 import { Icon } from '../../ui/Icon';
 import { Sheet, errorText, useToast } from '../../ui/kit';
@@ -9,75 +9,12 @@ import '../order/order.css';
 import './eaten.css';
 
 /*
- * The Eaten screen's newer parts: fiber and sugar in small print under the
- * macros, a line for water, and a meal eaten out as a receipt whose lines can
- * each be eaten less of.
+ * The Eaten screen's newer parts: a line for water, for people who track it,
+ * and a meal eaten out as a receipt whose lines can each be eaten less of.
  */
 
 const MEAL: Record<MealSlot, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' };
-const grams = (value: number | null) => (value === null ? '–' : `${Math.round(value)}`);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-/** Salt where labels say salt, sodium where they say sodium. */
-function saltOrSodium(mg: number | null, system: UnitSystem) {
-  if (system === 'metric') {
-    return { label: 'Salt', value: mg === null ? '–' : `${((mg * 2.5) / 1000).toFixed(1)} g`, limit: '5.8 g' };
-  }
-  return { label: 'Sodium', value: mg === null ? '–' : `${Math.round(mg).toLocaleString()} mg`, limit: '2,300 mg' };
-}
-
-/** Fiber against its guide and sugar as it is, in one quiet line; the rest a tap away. */
-export function NutrientLine({ diary, onOpen }: { diary: DayDiary; onOpen: () => void }) {
-  // a day with nothing in it is nothing, not unknown
-  const known = (value: number | null) => (value === null && diary.entryCount === 0 ? 0 : value);
-  return (
-    <button type="button" className="nutrient-line" onClick={onOpen}>
-      <span>Fiber <b className="num">{grams(known(diary.nutrients.fiber))}</b> of {diary.nutrientGuides.fiber} g</span>
-      <span className="dot" aria-hidden="true">·</span>
-      <span>Sugar <b className="num">{grams(known(diary.nutrients.sugar))}</b> g</span>
-      <Icon name="chevron" size={15} className="faint" />
-    </button>
-  );
-}
-
-export function NutrientsSheet({ diary, system, title, onClose }: { diary: DayDiary; system: UnitSystem; title: string; onClose: () => void }) {
-  const n = diary.nutrients;
-  const g = diary.nutrientGuides;
-  const salt = saltOrSodium(n.sodium, system);
-  const rows: Array<{ label: string; value: string; guide: string | null; share: number; limit: boolean }> = [
-    { label: 'Fiber', value: `${grams(n.fiber)} g`, guide: `Aim for ${g.fiber} g`, share: (n.fiber ?? 0) / g.fiber, limit: false },
-    { label: 'Sugar', value: `${grams(n.sugar)} g`, guide: null, share: 0, limit: false },
-    { label: 'Saturated fat', value: `${grams(n.satFat)} g`, guide: `Under ${g.satFat} g`, share: (n.satFat ?? 0) / g.satFat, limit: true },
-    { label: salt.label, value: salt.value, guide: `Under ${salt.limit}`, share: (n.sodium ?? 0) / g.sodium, limit: true },
-  ];
-  return (
-    <Sheet title="Nutrients" sub={title} onClose={onClose}>
-      <div className="nutrients">
-        {rows.map((row) => (
-          <div key={row.label} className="nutrient">
-            <div className="nutrient-top">
-              <span className="t">{row.label}</span>
-              <span className={`v num${row.limit && row.share > 1 ? ' danger-ink' : ''}`}>{row.value}</span>
-            </div>
-            {row.guide ? (
-              <>
-                <div className={`meter thin${row.limit && row.share > 1 ? ' over' : ''}`}>
-                  <span style={{ width: `${Math.min(100, row.share * 100)}%` }} />
-                </div>
-                <span className="fine">{row.guide}</span>
-              </>
-            ) : (
-              <span className="fine">No daily line: the guideline is for added sugar, which a label’s total doesn’t separate out.</span>
-            )}
-          </div>
-        ))}
-      </div>
-      <p className="fine" style={{ marginTop: 16 }}>
-        Guides from the Dietary Guidelines for Americans, scaled to your calorie target. Not every food lists these, so a day can read low.
-      </p>
-    </Sheet>
-  );
-}
 
 /* ---------- water ---------- */
 

@@ -103,6 +103,7 @@ export async function getSettings(userId: string) {
     dietTags: user.dietTags ? user.dietTags.split(',').filter(Boolean) : [],
     notifyExpiry: user.notifyExpiry,
     waterGoalMl: user.waterGoalMl,
+    trackWater: user.trackWater,
     /** a goal weight by a date, when one is set */
     goal: user.goalWeightKg !== null && user.goalDate ? { weightKg: user.goalWeightKg, date: user.goalDate } : null,
     /** "app" while the app works the target out and adjusts it each week, "person" once they set their own */
@@ -137,6 +138,7 @@ export interface SettingsUpdate {
   dietTags?: string[];
   notifyExpiry?: boolean;
   waterGoalMl?: number;
+  trackWater?: boolean;
   /** give the target back to the app, after setting one's own */
   targetSetBy?: 'app';
   fastingPlan?: string | null;
@@ -230,6 +232,7 @@ export async function updateSettings(userId: string, update: SettingsUpdate) {
       ...(update.dietTags !== undefined ? { dietTags: update.dietTags.join(',') || null } : {}),
       ...(update.notifyExpiry !== undefined ? { notifyExpiry: update.notifyExpiry } : {}),
       ...(update.waterGoalMl !== undefined ? { waterGoalMl: Math.round(update.waterGoalMl) } : {}),
+      ...(update.trackWater !== undefined ? { trackWater: update.trackWater } : {}),
       // a number typed in is theirs: the weekly adjustment leaves it alone from now on
       ...(update.dailyCalorieTarget !== undefined ? { targetSetBy: 'person' } : update.targetSetBy === 'app' ? { targetSetBy: 'app' } : {}),
       ...(update.fastingPlan !== undefined ? { fastingPlan: update.fastingPlan } : {}),

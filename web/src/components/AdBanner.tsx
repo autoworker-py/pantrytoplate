@@ -2,11 +2,15 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { adsOnThisDevice, hideBanner, showBanner, useBannerCovered } from '../lib/ads';
 
-/** Lists you browse, not places you are in the middle of something: the only screens with a banner. */
-const BANNER_SCREENS = new Set(['/recipes', '/eaten']);
+/**
+ * Screens you browse, not places you are in the middle of something: the only
+ * screens with a banner, anchored at the bottom as Google recommends. Not the
+ * home screen, cooking, forms, sheets or anything you're typing into.
+ */
+const BANNER_SCREENS = new Set(['/recipes', '/eaten', '/pantry', '/shopping', '/settings/insights']);
 
 /**
- * The one banner, for accounts without Pro: up on Recipes and Eaten, gone
+ * The one banner, for accounts without Pro: up on the screens above, gone
  * everywhere else and whenever a sheet is open. An account whose Pro status is
  * not known yet gets none, so Pro never sees one flash by.
  */

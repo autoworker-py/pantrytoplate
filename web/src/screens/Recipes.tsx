@@ -27,6 +27,7 @@ export default function Recipes() {
   const [more, setMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [adding, setAdding] = useState(false);
 
   const params = useCallback((n: number) => {
     const p = new URLSearchParams();
@@ -107,17 +108,11 @@ export default function Recipes() {
     <Page
       left={<BackButton />}
       title="Recipes"
-      right={
-        <span className="head-actions">
-          <button type="button" className="icon-btn pro-icon" aria-label="Scan a recipe from a photo (Pro)" onClick={() => void scan()}><Icon name="camera" size={20} /></button>
-          <Link to="/recipes/new" className="icon-btn" aria-label="Write your own recipe"><Icon name="plus" size={20} /></Link>
-          <button type="button" className="icon-btn" aria-label="Import a recipe from a link" onClick={() => setImporting(true)}><Icon name="link" size={20} /></button>
-        </span>
-      }
+      right={<button type="button" className="icon-btn" aria-label="Add a recipe" onClick={() => setAdding(true)}><Icon name="plus" size={20} /></button>}
     >
       <nav className="pro-links" aria-label="Pro">
-        <Link to="/make" className="pro-link"><Icon name="ticket" size={16} stroke={2} /> Make me something</Link>
-        <Link to="/plan" className="pro-link"><Icon name="week" size={16} stroke={2} /> Plan my week</Link>
+        <Link to="/make" className="pro-link">Make me something</Link>
+        <Link to="/plan" className="pro-link">Plan my week</Link>
       </nav>
       <div className="search">
         <Icon name="search" size={19} />
@@ -163,6 +158,25 @@ export default function Recipes() {
         </>
       )}
 
+      {adding ? (
+        <Sheet title="Add a recipe" onClose={() => setAdding(false)}>
+          <div className="list add-ways">
+            <button type="button" className="list-row" onClick={() => { setAdding(false); void scan(); }}>
+              <span className="way-icon"><Icon name="camera" size={20} /></span>
+              <span className="grow"><span className="t">Take a photo</span><span className="s">A recipe card, a cookbook page, or handwriting</span></span>
+              <span className="pro-tag">Pro</span>
+            </button>
+            <button type="button" className="list-row" onClick={() => { setAdding(false); navigate('/recipes/new'); }}>
+              <span className="way-icon"><Icon name="edit" size={20} /></span>
+              <span className="grow"><span className="t">Type your own</span><span className="s">Ingredients and steps, as you make it</span></span>
+            </button>
+            <button type="button" className="list-row" onClick={() => { setAdding(false); setImporting(true); }}>
+              <span className="way-icon"><Icon name="link" size={20} /></span>
+              <span className="grow"><span className="t">From a link</span><span className="s">A recipe site, or a post from TikTok, Instagram or YouTube</span></span>
+            </button>
+          </div>
+        </Sheet>
+      ) : null}
       {importing ? <ImportSheet onClose={() => setImporting(false)} onDone={(id, message) => { setImporting(false); toast(message); navigate(`/recipes/${id}`); }} /> : null}
       {scanning === 'about' ? (
         <Sheet title="Scan a recipe" sub="Photograph a handwritten card or a cookbook page and it’s typed into your recipes." onClose={() => setScanning(null)}>

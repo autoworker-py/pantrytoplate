@@ -1,13 +1,8 @@
 /* ---------- Make me something: an order ticket, and the pass it comes back to ---------- */
 
-/* the printer's lit slot, and the light the ticket feeds out under */
+/* where the ticket feeds out */
 .ticket-stage {
   position: relative; margin: 2px calc(-1 * var(--gutter)) 0; padding: 22px var(--gutter) 4px;
-  background: radial-gradient(72% 260px at 50% 0%, rgba(255, 222, 170, .15), rgba(255, 222, 170, 0) 76%);
-}
-.ticket-stage::before {
-  content: ''; position: absolute; top: 0; left: 30%; right: 30%; height: 8px; z-index: 2; border-radius: 0 0 8px 8px;
-  background: linear-gradient(180deg, #fff4e0, #f1d39e); box-shadow: 0 6px 26px rgba(243, 201, 139, .4);
 }
 /* a short shadow: a longer one falls across the next ticket on the rail */
 .hang { filter: drop-shadow(0 12px 10px rgba(0, 0, 0, .55)); }
@@ -23,7 +18,7 @@
   --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   position: relative; color: var(--print);
   font-family: var(--mono); font-size: 13px; line-height: 1.5; letter-spacing: .02em;
-  background: linear-gradient(180deg, #f5f0e7, #ede7dc 55%, #e4dccf);
+  background: #ece6db;
 }
 /* torn along the bottom, as it came off the roll: a strip of teeth under the paper rather than a
    mask over all of it, which makes WebKit paint a long ticket as one huge image and stop updating it */
@@ -135,10 +130,9 @@ html.kb-open:has(.order-send) .toast { bottom: 94px; }
 .pass { padding-top: 6px; }
 .rail {
   position: relative; height: 12px; margin: 0 calc(-1 * var(--gutter));
-  background: linear-gradient(180deg, #6b6f75, #3b3e43 45%, #1c1e21);
-  box-shadow: 0 8px 14px -8px rgba(0, 0, 0, .9), inset 0 1px 0 rgba(255, 255, 255, .24), inset 0 -1px 0 rgba(0, 0, 0, .6);
+  background: #2f3236;
+  box-shadow: 0 8px 14px -8px rgba(0, 0, 0, .9);
 }
-.rail::after { content: ''; position: absolute; left: 22%; right: 22%; top: 1px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, rgba(255, 244, 224, 0), rgba(255, 244, 224, .55), rgba(255, 244, 224, 0)); }
 
 .pass-row { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: -2px calc(-1 * var(--gutter)) 0; padding: 0 var(--gutter) 30px; }
 .pass-row::-webkit-scrollbar { display: none; }
@@ -156,7 +150,7 @@ html.kb-open:has(.order-send) .toast { bottom: 94px; }
 /* the clip that holds a ticket to the rail */
 .slip-clip {
   position: absolute; top: -9px; left: 50%; z-index: 2; width: 36px; height: 18px; transform: translateX(-50%); border-radius: 4px;
-  background: linear-gradient(180deg, #55585e, #26282b); box-shadow: 0 3px 5px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .22);
+  background: #3a3d42; box-shadow: 0 2px 4px rgba(0, 0, 0, .5);
 }
 
 .slip { display: flex; flex-direction: column; padding: 22px 18px 30px; }
@@ -182,7 +176,7 @@ html.kb-open:has(.order-send) .toast { bottom: 94px; }
 .slip.blank { min-height: 272px; gap: 0; }
 .slip.blank .bar { display: block; height: 9px; margin-top: 13px; border-radius: 3px; background: rgba(30, 28, 26, .12); }
 .slip.blank .bar.tall { height: 17px; }
-.slip.blank::after { content: ''; position: absolute; left: 0; right: 0; top: 20px; height: 2px; background: #f7d7a4; box-shadow: 0 0 14px 5px rgba(243, 201, 139, .55); animation: slip-sweep 1.5s var(--ease-in-out) infinite alternate; }
+.slip.blank::after { content: ''; position: absolute; left: 0; right: 0; top: 20px; height: 2px; background: #f7d7a4; animation: slip-sweep 1.5s var(--ease-in-out) infinite alternate; }
 @keyframes slip-sweep { to { top: calc(100% - 30px); } }
 .pass-status { margin-top: 2px; text-align: center; font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--ink-2); }
 .pass-note { max-width: 36ch; margin: 2px auto 0; text-align: center; font-size: 13.5px; color: var(--ink-2); }

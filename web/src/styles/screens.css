@@ -9,7 +9,7 @@
 .page-fixed > .frame, .page-fixed > .zone-pager { animation: frame-in .45s var(--ease) both; }
 /* what tonight's recipe uses in each room: a lit dot and how many */
 .seg .count.lit { color: var(--warm); }
-.seg .count.lit::before { content: ''; display: inline-block; width: 5px; height: 5px; margin: 0 4px 2px 0; border-radius: 50%; background: var(--warm); box-shadow: 0 0 6px rgba(243, 201, 139, .8); vertical-align: middle; }
+.seg .count.lit::before { content: ''; display: inline-block; width: 5px; height: 5px; margin: 0 4px 2px 0; border-radius: 50%; background: var(--warm); vertical-align: middle; }
 @keyframes frame-in { from { opacity: 0; transform: scale(.985); } }
 
 .move-list .list-row { width: 100%; text-align: left; }
@@ -20,7 +20,7 @@
 .thaw-row .grow { flex: 1; min-width: 0; }
 .thaw-row .t { display: block; font-weight: 600; }
 .thaw-row .s { display: block; font-size: 13.5px; color: var(--ink-3); margin-top: 2px; line-height: 1.35; }
-.item-hero { margin-top: 12px; display: flex; align-items: center; gap: 18px; padding: 16px; border-radius: var(--r-lg); background: radial-gradient(90% 90% at 50% 0%, rgba(255, 222, 170, .1), rgba(255, 222, 170, 0) 70%), var(--bg-2); }
+.item-hero { margin-top: 12px; display: flex; align-items: center; gap: 18px; padding: 16px; border-radius: var(--r-lg); background: var(--bg-2); }
 .item-hero .facts { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .action-grid { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .action { min-height: 84px; border-radius: var(--r); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; text-align: left; background: var(--bg-2); box-shadow: inset 0 0 0 1px var(--line); font-family: var(--display); font-weight: 650; font-size: 15px; transition: transform var(--fast) ease, background var(--fast) ease; }
@@ -160,7 +160,6 @@ form .row button[type='submit'] { flex: none; padding: 0 16px; border-radius: va
 
 /* ---------- recipe ---------- */
 .recipe-hero { padding: 6px 0 4px; position: relative; }
-.recipe-hero::before { content: ''; position: absolute; left: -40px; right: -40px; top: -90px; height: 220px; z-index: -1; pointer-events: none; background: radial-gradient(60% 55% at 50% 0%, rgba(255, 222, 170, .16), rgba(255, 222, 170, 0) 75%); }
 .recipe-hero .tag { margin-bottom: 10px; }
 .recipe-hero h1 { text-wrap: balance; }
 .recipe-hero p { margin-top: 8px; }
@@ -211,7 +210,7 @@ form .row button[type='submit'] { flex: none; padding: 0 16px; border-radius: va
 .new-food .t { color: var(--warm); }
 .put-away { margin-top: 22px; padding: 14px 16px; border-radius: var(--r); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line); }
 .put-away p { margin-top: 4px; font-weight: 600; }
-.new-preview { margin-top: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px; border-radius: var(--r-lg); background: radial-gradient(90% 90% at 50% 0%, rgba(255, 222, 170, .12), rgba(255, 222, 170, 0) 70%), var(--bg-2); }
+.new-preview { margin-top: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px; border-radius: var(--r-lg); background: var(--bg-2); }
 .new-preview svg { transition: transform var(--med) var(--ease); }
 .kinds { margin-top: 10px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .kind { min-height: 74px; padding: 8px 4px; border-radius: var(--r-sm); background: var(--bg-2); box-shadow: inset 0 0 0 1px var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 600; line-height: 1.15; text-align: center; color: var(--ink-2); transition: box-shadow var(--fast) ease, background var(--fast) ease; }
@@ -235,12 +234,12 @@ form .row button[type='submit'] { flex: none; padding: 0 16px; border-radius: va
 /* ---------- eaten ---------- */
 .daynav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .daynav .day { font-family: var(--display); font-weight: 650; font-size: 16px; }
-.budget { padding: 20px; border-radius: var(--r-lg); background: radial-gradient(90% 80% at 50% 0%, rgba(255, 222, 170, .1), rgba(255, 222, 170, 0) 70%), var(--bg-1); box-shadow: inset 0 0 0 1px var(--line); }
+.budget { padding: 20px; border-radius: var(--r-lg); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line); }
 .budget-top { display: flex; align-items: baseline; gap: 10px; }
 .budget .big { font-size: 44px; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
 .budget .of { color: var(--ink-3); font-weight: 600; }
 .meter { height: 10px; border-radius: 5px; background: var(--bg-3); overflow: hidden; margin-top: 14px; }
-.meter span { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--warm-2), var(--warm)); transition: width .8s var(--ease); }
+.meter span { display: block; height: 100%; border-radius: 5px; background: var(--warm); transition: width .8s var(--ease); }
 .meter.over span { background: var(--red); }
 .meter.thin { height: 5px; margin-top: 6px; }
 .budget .left { margin-top: 8px; font-weight: 600; color: var(--ink-2); }
@@ -254,15 +253,11 @@ form .row button[type='submit'] { flex: none; padding: 0 16px; border-radius: va
 .wk.on .track span { background: var(--warm); }
 .wk .track span.over { background: rgba(226, 85, 63, .7); }
 .wk .d { font-size: 12px; color: var(--ink-3); font-weight: 600; }
-.waste { display: flex; align-items: center; gap: 16px; padding: 16px 18px; border-radius: var(--r-lg); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line); }
-.waste .big { font-size: 36px; font-weight: 700; color: var(--warm); line-height: 1; }
-.waste .grow { display: flex; flex-direction: column; gap: 2px; }
-.waste .t { font-weight: 600; }
-.waste .s { font-size: 14px; color: var(--ink-3); }
 .entry-facts { margin-top: 14px; display: grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap: 8px; }
 .entry-facts > div { padding: 12px 10px; border-radius: var(--r-sm); background: var(--bg-2); display: flex; flex-direction: column; gap: 2px; }
 .entry-facts .num { font-size: 20px; font-weight: 700; white-space: nowrap; letter-spacing: -.02em; }
 .entry-facts .num.big { font-size: 26px; color: var(--warm); }
+.entry-grade { margin-top: 10px; display: flex; align-items: center; gap: 8px; }
 .manual { margin-top: 14px; }
 .list-row .end.num { font-size: 16px; font-weight: 700; }
 
@@ -328,6 +323,9 @@ form .row button[type='submit'] { flex: none; padding: 0 16px; border-radius: va
 .budget-top .grade { margin-left: auto; align-self: center; }
 .budget .moved { margin-top: 6px; }
 .list-row .grade.small { margin-right: 2px; }
+.grade-quiet { flex: none; font-family: var(--display); font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--ink-4); }
+.budget-top .grade-quiet { margin-left: auto; align-self: flex-start; margin-top: 6px; }
+.list-row .grade-quiet { margin-right: 4px; }
 
 /* hands-free cooking: the mic, lit while it listens, and the line that says so */
 .cm-mic.on { color: var(--on-light); background: var(--warm); }

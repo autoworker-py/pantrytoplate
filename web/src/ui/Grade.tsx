@@ -8,3 +8,12 @@ export function GradeBadge({ grade, label, small = false }: { grade: Grade; labe
     </span>
   );
 }
+
+/** The same grade as a small grey letter, for lists, where colour would shout. */
+export function QuietGrade({ grade, label }: { grade: Grade; label?: string }) {
+  return (
+    <span className="grade-quiet" role="img" aria-label={`${label ? `${label}: ` : ''}health grade ${grade}`}>
+      {grade}
+    </span>
+  );
+}

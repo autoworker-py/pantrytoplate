@@ -28,11 +28,15 @@ class MainViewController: CAPBridgeViewController {
 }
 
 /**
- The iPhone's back gesture: swipe in from the left edge to go back a screen.
+ The iPhone's back gesture: swipe in from the left edge to go back a screen,
+ with the screen you're going back to showing underneath.
 
- The web view has it built in but off. The app turns it on for screens that
- were opened from somewhere (a recipe, Settings, adding food) and off on the
- four tabs, where an iPhone app has nothing to go back to.
+ The web view has it built in, and keeps a picture of each screen to show
+ under the swipe, but only while the gesture is switched on. Switching it off
+ on the four tabs meant the tab you came from had no picture, so the swipe
+ back from a recipe or Settings showed white. So the gesture stays on, and
+ what the app turns off on the tabs, where an iPhone app has nothing to go
+ back to, is the edge swipe itself. There is no swipe forward.
  */
 @objc(SwipeBackPlugin)
 public class SwipeBackPlugin: CAPPlugin, CAPBridgedPlugin {
@@ -42,11 +46,26 @@ public class SwipeBackPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setEnabled", returnType: CAPPluginReturnPromise)
     ]
 
+    override public func load() {
+        DispatchQueue.main.async {
+            self.bridge?.webView?.allowsBackForwardNavigationGestures = true
+            self.allowSwipe(back: false)
+        }
+    }
+
     @objc func setEnabled(_ call: CAPPluginCall) {
         let enabled = call.getBool("enabled") ?? false
         DispatchQueue.main.async {
-            self.bridge?.webView?.allowsBackForwardNavigationGestures = enabled
+            self.bridge?.webView?.allowsBackForwardNavigationGestures = true
+            self.allowSwipe(back: enabled)
             call.resolve()
+        }
+    }
+
+    /// The swipes are the web view's edge pans: the left one goes back, the right one forward.
+    private func allowSwipe(back: Bool) {
+        for case let edge as UIScreenEdgePanGestureRecognizer in bridge?.webView?.gestureRecognizers ?? [] {
+            edge.isEnabled = edge.edges.contains(.left) ? back : false
         }
     }
 }

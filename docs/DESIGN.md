@@ -44,6 +44,15 @@ not a revisit of every screen.
 Status is never colour alone: every tag carries a word ("Tomorrow", "Ready",
 "Need 2", "Check units").
 
+### Flat, not glowing
+
+Surfaces are flat: no radial glows behind cards or headings, no gradient fills
+in bars or buttons, no glowing shadows. The warm light belongs to the fridge
+drawing alone; everywhere else a card is `--bg-1` or `--bg-2` with a hairline,
+a bar is one colour, and receipt paper is one paper colour. Gradients remain
+only where they draw something (a fade under a pinned button, a torn paper
+edge, a viewfinder's corners, a select's arrow).
+
 ## Type
 
 Red Hat Display for anything read at a glance (titles, figures, tabs, tags),
@@ -173,8 +182,10 @@ ticket icon in Recipes' header.
 ### Pantry2Plate Pro
 
 - **Gold is Pro** (`--gold`, with `--gold-fill` and `--gold-line`), kept apart
-  from the lamp's warm light. Recipes names its Pro features in gold pills at the
-  top left: Make me something and Plan my week.
+  from the lamp's warm light. Recipes names its Pro features in two gold-outlined
+  buttons that split the width under the title: Make me something and Plan my
+  week. Recipes has one + in its header; it opens a sheet with the three ways
+  to add a recipe: Take a photo (Pro), Type your own, From a link.
 - **Someone without Pro sees the feature at work, not a lock.** A preview opens
   with PANTRY2PLATE PRO ruled in gold, then a small looping demo drawn with the
   feature's own paper (the order ticket typing itself and three tickets printing
@@ -187,7 +198,12 @@ ticket icon in Recipes' header.
 - **The server decides** (`requirePlus`): every Pro route answers 403
   `plus_required` without Pro, whatever the app shows.
 
-### Eaten: what was left, fiber and sugar, water
+### Eaten: kept to the day
+
+Eaten holds the day and nothing else: the fasting bar (when a plan is set), the
+calorie card, water (only when it's switched on in Settings), Snap a meal and
+Not in pantry, the meals, and the week. Weight lives in Settings › Body &
+weight, what was thrown away in Insights, and the grades stay quiet.
 
 - **A meal eaten out is its receipt.** Snap logs a plate item by item under one
   name; the diary shows one row ("3 items"), and opening it shows the order
@@ -199,12 +215,10 @@ ticket icon in Recipes' header.
   logged, and takes back the leftover or the waste record.
 - **"I didn't finish it"** asks where the rest goes for every meal: the fridge
   (a cooked meal) or the pantry (a food), or the bin.
-- **Fiber and sugar** sit in one line of small print under the macro bars;
-  tapping it shows saturated fat and sodium (salt, for metric) against the
-  Dietary Guidelines, scaled to the calorie target. Sugar has no line.
-- **Water** is one card under the day: how much of the goal, a blue bar, and a
-  round + that adds a glass, or a bottle when held. The card opens the day's
-  glasses and the goal.
+- **Water**, for people who switch on Track water in Settings (it starts off),
+  is one card under the day: how much of the goal, a blue bar, and a round +
+  that adds a glass, or a bottle when held. The card opens the day's glasses and
+  the goal.
 
 ### Settings, weight, goals and fasting
 
@@ -219,9 +233,10 @@ ticket icon in Recipes' header.
   button to use it; a goal under a healthy weight, or a loss goal under 18, is
   refused outright. The target then adjusts weekly from the weight trend and
   the diary, unless the person sets their own.
-- **Weight** is a card under water on Eaten (the latest weigh-in, the week's
-  change, the trend as a small warm line) and a page with the chart: weigh-ins
-  as faint dots, the smoothed trend as the warm line through them.
+- **Weight** is a card at the top of Settings › Body & weight (the latest
+  weigh-in, the week's change, the trend as a small warm line) and a page with
+  the chart: weigh-ins as faint dots, the smoothed trend as the warm line
+  through them.
 - **Fasting** is a slim bar above the day on Eaten, filling through the fast or
   the eating window, and a page in Settings that explains it (including who
   should ask a doctor first) and sets the plan, when the window opens, and the
@@ -239,18 +254,14 @@ ticket icon in Recipes' header.
   this month and before and the pantry's, when each meal is eaten, late meals
   against sleep, what is eaten most, protein at each meal, what was thrown
   away, and steps. Each says when there isn't enough yet rather than guessing.
-- **Health grades** are Nutri-Score letters in Nutri-Score's own colours: on the
-  day (budget card), on each diary row, and in Insights. A food without its
+- **Health grades** are Nutri-Score letters. On Eaten they are quiet: a small
+  grey letter on the day's card and beside each row's calories. In Nutri-Score's
+  own colours only where you look for them: inside a meal and in Insights. A food without its
   sugar, saturated fat and salt has no grade rather than a guessed one, and
   alcohol has none at all.
 
 ### Kitchen helpers
 
-- **Fits what's left** is a card under the day on Eaten: the calories (and
-  protein, when short) left, then two pantry foods and a ready recipe that fit,
-  best at protein when protein is short and sooner-to-go-off first. A food logs
-  in one tap at a sensible portion; a recipe opens. Salt and the like are never
-  offered, and the card stays away when the gap is too small to matter.
 - **Hands-free cooking** is a mic in cook mode's header. On, it lights warm and
   a line under the header says what to say: "next", "back", "repeat" (reads the
   step aloud), "timer" (starts the step's timer). Recognition stays on the
@@ -312,6 +323,14 @@ One family of curves: `cubic-bezier(.16, 1, .3, 1)` for arrivals, no bounce.
 Screens settle in over 320ms; sheets rise over 420ms; the door takes 1.4s and
 the light fades up with it; lift and glow is 550ms. Everything honours
 `prefers-reduced-motion`, which also removes the door.
+
+## Ads
+
+Free accounts see one Google banner, anchored at the bottom above the tab bar
+with a clear gap on both sides, on screens you browse: Recipes, Eaten, Pantry,
+Shopping and Insights. Never on the home screen, in cooking, forms, sheets, or
+while typing, and never for Pro. Extra meal photos can be earned with an
+opt-in video. No full-screen ads.
 
 ## Layout
 

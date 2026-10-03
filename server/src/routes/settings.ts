@@ -38,6 +38,7 @@ const routes: FastifyPluginAsync = async (app) => {
         dietTags: z.array(z.string()).optional(),
         notifyExpiry: z.boolean().optional(),
         waterGoalMl: z.number().int().min(500).max(6000).optional(),
+        trackWater: z.boolean().optional(),
         targetSetBy: z.literal('app').optional(),
         fastingPlan: z.enum(['12:12', '14:10', '16:8', '18:6', '20:4']).nullable().optional(),
         fastingStart: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable().optional(),

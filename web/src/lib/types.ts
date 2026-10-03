@@ -381,6 +381,8 @@ export interface Settings {
   email: string;
   /** how many people share the pantry, the person included */
   householdSize: number;
+  /** water shows on Eaten only when this is on */
+  trackWater: boolean;
   weightGoal: WeightGoal;
   /** kept on file so a target can follow a weight that moved */
   body: BodyData;

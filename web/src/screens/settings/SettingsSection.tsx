@@ -12,7 +12,8 @@ import { describeBody } from '../../components/BodyInputs';
 import { Icon } from '../../ui/Icon';
 import { BackButton, Page, Sheet, Switch, errorText, useToast } from '../../ui/kit';
 import { formatWater } from '../eaten/DiaryParts';
-import { ACTIVITY, BodySheet, DIETS, DeleteSheet, NavRow, PasswordSheet, Row, TargetsSheet } from './sheets';
+import { WeightCard } from '../eaten/BodyParts';
+import { ACTIVITY, BodySheet, DIETS, DeleteSheet, PasswordSheet, Row, TargetsSheet } from './sheets';
 import { useSettings } from './useSettings';
 import './settings.css';
 
@@ -292,8 +293,8 @@ function BodySection({ s, save }: SectionProps) {
   const facts = [s.body.heightCm ? describeBody(s.unitSystem, s.body.heightCm, null) : null, s.body.birthYear ? `born ${s.body.birthYear}` : null, activity ? `${activity} active` : null].filter(Boolean);
   return (
     <>
+      <WeightCard system={s.unitSystem} />
       <div className="group settings-group">
-        <NavRow to="/weight" title="Weight" value={s.body.weightKg ? describeBody(s.unitSystem, null, s.body.weightKg) : 'Log a weigh-in'} />
         <Row title="Measurements" sub={facts.length ? facts.join(' · ') : 'Not set. Your target is a general default.'} onClick={() => setOpen(true)}>
           <Icon name="chevron" size={18} className="faint" />
         </Row>
@@ -425,6 +426,10 @@ function WaterSection({ s, save }: SectionProps) {
   return (
     <>
       <div className="group settings-group">
+        <Row title="Track water" sub="Adds a water line to Eaten, with + for a glass.">
+          <Switch on={s.trackWater} label="Track water" onChange={(v) => void save({ trackWater: v }, v ? 'Water is on Eaten now.' : 'Water is off Eaten.')} />
+        </Row>
+        {s.trackWater ? (
         <Row title="Daily goal" sub={formatWater(goal, s.unitSystem)}>
           <div className="stepper">
             <button type="button" className="icon-btn" aria-label="Lower the goal" disabled={goal <= 500} onClick={() => void save({ waterGoalMl: goal - 250 })}>
@@ -435,8 +440,9 @@ function WaterSection({ s, save }: SectionProps) {
             </button>
           </div>
         </Row>
+        ) : null}
       </div>
-      <p className="fine" style={{ marginTop: 10 }}>Most adults need about 2 to 3 litres a day from drinks, more in the heat or after exercise. Log glasses from the Eaten tab.</p>
+      {s.trackWater ? <p className="fine" style={{ marginTop: 10 }}>Most adults need about 2 to 3 litres a day from drinks, more in the heat or after exercise. Log glasses from the Eaten tab.</p> : null}
     </>
   );
 }

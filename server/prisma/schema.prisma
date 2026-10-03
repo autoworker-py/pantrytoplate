@@ -54,6 +54,8 @@ model User {
   notifyExpiry     Boolean   @default(true)
   /// a day's water, in millilitres
   waterGoalMl      Int       @default(2500)
+  /// water shows on Eaten only for people who track it
+  trackWater       Boolean   @default(false)
   /// intermittent fasting: the plan ("16:8": hours fasting:eating) or null for
   /// none, when the eating window opens ("12:00", the person's clock), and
   /// whether to be told when it opens and closes

@@ -4,7 +4,6 @@ import { calorieHistory, dailySummary, eatLess, entryDetail, saveRest, undoEntry
 import { logEatOutMeal, logEatingOut, recentEatingOut, searchEatOutFoods } from '../services/eatingOut.js';
 import { localDay } from '../zone.js';
 import { maybeAdapt } from '../services/body.js';
-import { suggestions } from '../services/suggest.js';
 
 /**
  * The day asked for, on the person's calendar. A bare "2026-08-21" is that day
@@ -25,12 +24,6 @@ const routes: FastifyPluginAsync = async (app) => {
     // once a week, a goal's target is worked out again from the diary and the weigh-ins
     await maybeAdapt(request.userId).catch((error) => request.log.warn({ err: error }, 'adapting the target failed'));
     return dailySummary(request.userId, parseDayParam(date));
-  });
-
-  /** What would fit what's left today; `extra` is exercise the phone read from Apple Health. */
-  app.get('/suggest', async (request) => {
-    const query = z.object({ date: z.string().optional(), extra: z.coerce.number().min(0).max(5000).default(0) }).parse(request.query ?? {});
-    return suggestions(request.userId, parseDayParam(query.date), query.extra);
   });
 
   app.get('/history', async (request) => {

@@ -337,7 +337,6 @@ button.list-row:active, a.list-row:active { background: rgba(255, 244, 228, .03)
 .disclaimer svg { flex: none; margin-top: 1.5px; }
 
 /* two small actions side by side in a header slot */
-.head-actions { display: flex; gap: 8px; }
 
 /* ---------- made for the iPhone ---------- */
 

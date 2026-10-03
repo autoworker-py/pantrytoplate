@@ -1,6 +1,5 @@
 /**
- * Kitchen helpers: what would fit what's left today, and a recipe read out of a
- * post's own words (Pro only).
+ * Kitchen helpers: a recipe read out of a post's own words, or a photo (Pro only).
  */
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
@@ -38,24 +37,6 @@ afterEach(() => useFakeKitchen(null));
 afterAll(async () => {
   for (const who of [cook, free]) await deleteAccount(who.id);
   await app.close();
-});
-
-describe('what fits what’s left', () => {
-  it('suggests pantry food that fits, best at protein when protein is short', async () => {
-    for (const [name, quantity, unit] of [['Plain Greek Yogurt', 500, 'g'], ['Banana', 3, 'count'], ['Table Salt', 500, 'g']] as const) {
-      const food = await catalogue(name);
-      await call(cook, 'POST', '/api/inventory', { foodReferenceId: food.id, quantity, unit, storageLocation: 'fridge' });
-    }
-    const answer = (await call(cook, 'GET', '/api/consumption/suggest')).body;
-    expect(answer.kcalLeft).toBeGreaterThan(150);
-    const names = answer.ideas.map((i: { name: string }) => i.name);
-    // yogurt is the protein; salt is never a snack
-    expect(names[0]).toBe('Plain Greek Yogurt');
-    expect(names).not.toContain('Table Salt');
-    const yogurt = answer.ideas[0];
-    expect(yogurt).toMatchObject({ kind: 'food', unit: 'g' });
-    expect(yogurt.kcal).toBeLessThanOrEqual(answer.kcalLeft);
-  });
 });
 
 describe('a recipe from a post', () => {
