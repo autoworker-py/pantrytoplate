@@ -33,12 +33,12 @@ export function ProOffer({
         <button type="button" role="radio" aria-checked={plan === 'year'} className={`plan${plan === 'year' ? ' on' : ''}`} onClick={() => setPlan('year')}>
           <span className="plan-tag">Best value</span>
           <span className="t">Yearly</span>
-          <span className="price num">$29.99<small> / year</small></span>
-          <span className="s">$2.50 a month</span>
+          <span className="price num">$79.99<small> / year</small></span>
+          <span className="s">$6.67 a month</span>
         </button>
         <button type="button" role="radio" aria-checked={plan === 'month'} className={`plan${plan === 'month' ? ' on' : ''}`} onClick={() => setPlan('month')}>
           <span className="t">Monthly</span>
-          <span className="price num">$4.99<small> / month</small></span>
+          <span className="price num">$9.99<small> / month</small></span>
           <span className="s">Cancel any time</span>
         </button>
       </div>
