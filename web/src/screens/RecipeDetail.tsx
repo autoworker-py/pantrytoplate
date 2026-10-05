@@ -248,13 +248,15 @@ export default function RecipeDetail() {
           ) : null}
 
           {/* last in the page, so it rides the bottom edge the whole way down instead of jumping as the list changes */}
+          {/* keyed buttons, and one string each: iOS repaints a changed label under the blurred bar only in part, leaving pieces of the old one */}
           <div className="cook-bar">
             {blocked ? (
-              <button type="button" className="btn" onClick={addGaps}>Add {gaps.length} to shopping list</button>
+              <button key="add" type="button" className="btn" onClick={addGaps}>{`Add ${gaps.length} to shopping list`}</button>
             ) : (
               <>
                 {/* tapped mid-update, the sheet opens as soon as the new plan is in */}
                 <button
+                  key="cook"
                   type="button"
                   className="btn"
                   onClick={() => {
@@ -264,7 +266,7 @@ export default function RecipeDetail() {
                 >
                   {confirming && stale ? 'Updating…' : 'Cook this'}
                 </button>
-                {gaps.length ? <button type="button" className="btn secondary" onClick={addGaps}>Add {gaps.length} to list</button> : null}
+                {gaps.length ? <button key="add-some" type="button" className="btn secondary" onClick={addGaps}>{`Add ${gaps.length} to list`}</button> : null}
               </>
             )}
           </div>
