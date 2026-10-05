@@ -10,6 +10,7 @@ import { Sheet, Stepper, errorText, useToast } from '../ui/kit';
 import { mealNow } from './ItemSheet';
 import { listen, say, voiceOnThisDevice, type Command } from '../lib/voice';
 import { tick } from '../lib/native';
+import { FastingReminder } from '../components/FastingReminder';
 
 export interface Adjustments {
   servings: number | null;
@@ -141,6 +142,7 @@ export function CookSheet({
         </div>
       ) : null}
 
+      <FastingReminder style={{ marginTop: 16 }} />
       <div className="label" style={{ marginTop: 18 }}>Log it as</div>
       <div className="chips" style={{ marginTop: 8 }}>
         {(['breakfast', 'lunch', 'dinner', 'snack'] as MealSlot[]).map((m) => (

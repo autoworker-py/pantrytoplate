@@ -14,6 +14,7 @@ import { MealReceipt, WaterLine } from './eaten/DiaryParts';
 import { FastingBar } from './eaten/BodyParts';
 import { GradeBadge, QuietGrade } from '../ui/Grade';
 import { dayActivity } from '../lib/health';
+import { FastingReminder } from '../components/FastingReminder';
 
 const BarcodeScanner = lazy(() => import('../components/BarcodeScanner').then((m) => ({ default: m.BarcodeScanner })));
 
@@ -174,17 +175,21 @@ export default function Eaten() {
       {week.length ? (
         <>
           <div className="section"><h2>This week</h2><span className="aside">target {target.toLocaleString()}</span></div>
-          <div className="week" role="img" aria-label="Calories for the last seven days">
-            <span className="target-line" style={{ bottom: `${(target / maxWeek) * 100}%` }} />
-            {week.map((w) => {
-              const d = new Date(`${w.date}T12:00:00`);
-              return (
+          <div className="week" role="img" aria-label={`Calories for the last seven days, against a target of ${target.toLocaleString()}`}>
+            <div className="week-plot">
+              {week.map((w) => (
                 <div key={w.date} className={`wk${w.date === isoDate(day) ? ' on' : ''}`}>
-                  <div className="track"><span className={w.totalCalories > target ? 'over' : ''} style={{ height: `${Math.max(2, (w.totalCalories / maxWeek) * 100)}%` }} /></div>
-                  <span className="d">{d.toLocaleDateString(undefined, { weekday: 'narrow' })}</span>
+                  <span className={w.totalCalories > target ? 'over' : ''} style={{ height: `${Math.max(2, (w.totalCalories / maxWeek) * 100)}%` }} />
                 </div>
-              );
-            })}
+              ))}
+              {/* drawn after the bars, so a day over target shows the line crossing it */}
+              <span className="target-line" style={{ bottom: `${(target / maxWeek) * 100}%` }} />
+            </div>
+            <div className="week-days">
+              {week.map((w) => (
+                <span key={w.date} className={`d${w.date === isoDate(day) ? ' on' : ''}`}>{new Date(`${w.date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'narrow' })}</span>
+              ))}
+            </div>
           </div>
         </>
       ) : null}
@@ -364,6 +369,8 @@ function EatOutSheet({ onClose, onLogged }: { onClose: () => void; onLogged: (m:
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
   const [scan, setScan] = useState(false);
+  // past logs wait behind their own tab, so the sheet opens on an empty search, not a wall of history
+  const [tab, setTab] = useState<'search' | 'recent'>('search');
   const grams = (v: string) => (v.trim() === '' ? null : Math.max(0, Number(v)));
   // macros alone are enough: four calories a gram of protein or carbohydrate, nine of fat
   const fromMacros = Math.round((grams(protein) ?? 0) * 4 + (grams(carbs) ?? 0) * 4 + (grams(fat) ?? 0) * 9);
@@ -407,11 +414,30 @@ function EatOutSheet({ onClose, onLogged }: { onClose: () => void; onLogged: (m:
 
   return (
     <Sheet title="Something not in your pantry" sub="It counts toward today. Nothing in your pantry changes." onClose={onClose}>
+      <FastingReminder style={{ marginTop: 16 }} />
       <div className="chips" style={{ marginTop: 12 }}>
         {(['breakfast', 'lunch', 'dinner', 'snack'] as MealSlot[]).map((m) => <button key={m} type="button" className={`chip${meal === m ? ' on' : ''}`} onClick={() => setMeal(m)}>{MEAL[m]}</button>)}
       </div>
       {error ? <div className="banner error" style={{ marginTop: 12 }}>{error}</div> : null}
-      {scan ? (
+      <div className="seg" role="tablist" style={{ marginTop: 14 }}>
+        <button type="button" role="tab" aria-selected={tab === 'search'} className={tab === 'search' ? 'on' : ''} onClick={() => setTab('search')}>Search</button>
+        <button type="button" role="tab" aria-selected={tab === 'recent'} className={tab === 'recent' ? 'on' : ''} onClick={() => { setTab('recent'); setScan(false); }}>
+          <span>Recent{recent.length ? <span className="count">{recent.length}</span> : null}</span>
+        </button>
+      </div>
+      {tab === 'recent' ? (
+        recent.length ? (
+          <div className="list" style={{ marginTop: 10 }}>
+            {recent.map((r) => (
+              <button key={r.foodReferenceId} type="button" className="list-row" disabled={busy} onClick={() => void log({ foodReferenceId: r.foodReferenceId, quantity: r.quantity, unit: r.unit }, r.name)}>
+                <span className="thumb"><FoodThumb name={r.name} category={null} size={30} /></span>
+                <span className="grow"><span className="t">{r.name}</span><span className="s">{formatAmount(r.quantity, r.unit)}{r.calories !== null ? ` · ${Math.round(r.calories)} kcal` : ''}</span></span>
+                <Icon name="plus" size={18} className="faint" />
+              </button>
+            ))}
+          </div>
+        ) : <p className="fine" style={{ marginTop: 14 }}>Nothing yet. What you log here shows up for one tap next time.</p>
+      ) : scan ? (
         <div style={{ marginTop: 14 }}>
           <Suspense fallback={<div className="skeleton" style={{ aspectRatio: '4 / 3' }} />}><BarcodeScanner onDetected={scanned} /></Suspense>
           <button type="button" className="btn ghost block" onClick={() => setScan(false)}>Search instead</button>
@@ -423,8 +449,7 @@ function EatOutSheet({ onClose, onLogged }: { onClose: () => void; onLogged: (m:
             <input className="input" autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Burrito, latte, slice of pizza…" aria-label="What did you eat?" />
           </div>
           <div className="list" style={{ marginTop: 10 }}>
-            {(q.trim().length < 2 ? recent.map((r) => ({ key: r.foodReferenceId, name: r.name, sub: `${formatAmount(r.quantity, r.unit)}${r.calories !== null ? ` · ${Math.round(r.calories)} kcal` : ''}`, run: () => log({ foodReferenceId: r.foodReferenceId, quantity: r.quantity, unit: r.unit }, r.name) }))
-              : hits.map((h) => ({ key: h.id, name: h.name, sub: [h.brand, h.caloriesPerUnit !== null ? `${Math.round(h.caloriesPerUnit * (h.defaultUnit === 'g' ? 100 : 1))} kcal per ${h.defaultUnit === 'g' ? '100 g' : h.defaultUnit}` : null].filter(Boolean).join(' · '), run: () => log({ foodReferenceId: h.id, quantity: 1 }, h.name) }))
+            {hits.map((h) => ({ key: h.id, name: h.name, sub: [h.brand, h.caloriesPerUnit !== null ? `${Math.round(h.caloriesPerUnit * (h.defaultUnit === 'g' ? 100 : 1))} kcal per ${h.defaultUnit === 'g' ? '100 g' : h.defaultUnit}` : null].filter(Boolean).join(' · '), run: () => log({ foodReferenceId: h.id, quantity: 1 }, h.name) })
             ).map((row) => (
               <button key={row.key} type="button" className="list-row" disabled={busy} onClick={() => void row.run()}>
                 <span className="thumb"><FoodThumb name={row.name} category={null} size={30} /></span>

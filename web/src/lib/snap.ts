@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { api } from './api';
+import type { Grade } from './types';
 
 /*
  * Snap a meal on the phone's side: the photo, taken or chosen and made into an
@@ -45,7 +46,27 @@ export interface ReadItem {
   sugar?: number | null;
   satFat?: number | null;
   sodium?: number | null;
+  /** Nutri-Score points per 100 g and the letter, from the server; null when it can't be graded */
+  points?: number | null;
+  grade?: Grade | null;
   note?: string;
+}
+
+/**
+ * The plate's grade: each item's points averaged by its calories, the way the
+ * diary grades a meal (server/src/services/healthScore.ts, mixedGrade).
+ */
+export function plateGrade(items: Array<{ points?: number | null; calories: number }>): Grade | null {
+  let sum = 0;
+  let total = 0;
+  for (const item of items) {
+    if (item.points == null || item.calories <= 0) continue;
+    sum += item.points * item.calories;
+    total += item.calories;
+  }
+  if (total === 0) return null;
+  const points = Math.round(sum / total);
+  return points <= -1 ? 'A' : points <= 2 ? 'B' : points <= 10 ? 'C' : points <= 18 ? 'D' : 'E';
 }
 
 let handed: MealPhoto | null = null;

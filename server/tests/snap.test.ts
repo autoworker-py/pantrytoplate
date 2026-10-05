@@ -120,8 +120,17 @@ describe('the photo and the reply', () => {
       'not an item',
     ]);
     expect(items).toHaveLength(2);
-    expect(items[0]).toEqual({ id: 'i0', name: 'White rice', grams: 158, portion: 'About 158 g', calories: 205, protein: 4, carbs: 45, fat: 0, fiber: null, sugar: null, satFat: null, sodium: null });
+    expect(items[0]).toEqual({ id: 'i0', name: 'White rice', grams: 158, portion: 'About 158 g', calories: 205, protein: 4, carbs: 45, fat: 0, fiber: null, sugar: null, satFat: null, sodium: null, points: null, grade: null });
     expect(items[1]).toMatchObject({ name: 'Butter', note: expect.stringContaining('Not visible') });
+  });
+
+  it('grades each item on the Nutri-Score scale when it has the nutrients to', () => {
+    const [broccoli, butter] = tidy([
+      { n: 'broccoli', g: 91, k: 31, p: 3, c: 6, f: 0, b: 2, s: 2, t: 0, d: 30 },
+      { n: 'butter', g: 14, k: 102, p: 0, c: 0, f: 12, b: 0, s: 0, t: 7, d: 90 },
+    ]);
+    expect(broccoli?.grade).toBe('A');
+    expect(butter?.grade).toBe('E');
   });
 });
 

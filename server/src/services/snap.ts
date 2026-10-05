@@ -16,6 +16,7 @@
 import { z } from 'zod';
 import { env } from '../env.js';
 import { HttpError } from '../errors.js';
+import { foodPoints, gradeOf, type Grade } from './healthScore.js';
 
 export interface PlateItem {
   id: string;
@@ -32,6 +33,9 @@ export interface PlateItem {
   satFat: number | null;
   /** milligrams */
   sodium: number | null;
+  /** Nutri-Score points per 100 g and the letter, worked out as the diary will once it's logged; null when it can't be graded */
+  points: number | null;
+  grade: Grade | null;
   note?: string;
 }
 
@@ -193,6 +197,20 @@ export function tidy(raw: unknown[]): PlateItem[] {
     const parsed = ItemSchema.safeParse(candidate);
     if (!parsed.success) continue;
     const it = parsed.data;
+    // graded as the diary grades it once logged: the person's own food, by the gram
+    const per = (value: number | undefined) => (value === undefined || it.g <= 0 ? null : value / it.g);
+    const points = foodPoints({
+      name: it.n,
+      category: 'Eating out',
+      defaultUnit: 'g',
+      servingSizeGrams: null,
+      caloriesPerUnit: it.g > 0 ? it.k / it.g : null,
+      proteinPerUnit: per(it.p),
+      fiberPerUnit: per(it.b),
+      sugarPerUnit: per(it.s),
+      satFatPerUnit: per(it.t),
+      sodiumPerUnit: per(it.d),
+    });
     items.push({
       id: `i${i}`,
       name: capitalise(it.n.trim()),
@@ -206,6 +224,8 @@ export function tidy(raw: unknown[]): PlateItem[] {
       sugar: it.s === undefined ? null : Math.round(it.s),
       satFat: it.t === undefined ? null : Math.round(it.t),
       sodium: it.d === undefined ? null : Math.round(it.d),
+      points,
+      grade: gradeOf(points),
       ...(it.e ? { note: INFERRED } : {}),
     });
   }

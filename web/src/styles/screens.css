@@ -245,14 +245,16 @@ form .row button[type='submit'] { flex: none; padding: 0 16px; border-radius: va
 .budget .left { margin-top: 8px; font-weight: 600; color: var(--ink-2); }
 .macros { margin-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .macro .v { display: block; margin-top: 6px; font-size: 15px; font-weight: 700; }
-.week { position: relative; height: 128px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; align-items: end; padding-top: 10px; }
-.week .target-line { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed rgba(243, 201, 139, .4); margin-bottom: 22px; pointer-events: none; }
-.wk { height: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.wk .track { flex: 1; width: 100%; display: flex; align-items: flex-end; }
-.wk .track span { display: block; width: 100%; border-radius: 6px 6px 3px 3px; background: var(--bg-3); transition: height .8s var(--ease); }
-.wk.on .track span { background: var(--warm); }
-.wk .track span.over { background: rgba(226, 85, 63, .7); }
-.wk .d { font-size: 12px; color: var(--ink-3); font-weight: 600; }
+.week { padding-top: 10px; }
+.week-plot { position: relative; height: 100px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; align-items: end; }
+.week .target-line { position: absolute; left: 0; right: 0; height: 0; border-top: 1.5px dashed rgba(239, 233, 223, .55); pointer-events: none; }
+.wk { height: 100%; display: flex; align-items: flex-end; }
+.wk span { display: block; width: 100%; border-radius: 6px 6px 3px 3px; background: var(--bg-3); transition: height .8s var(--ease); }
+.wk.on span { background: var(--warm); }
+.wk span.over { background: rgba(226, 85, 63, .7); }
+.week-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-top: 6px; text-align: center; }
+.week-days .d { font-size: 12px; color: var(--ink-3); font-weight: 600; }
+.week-days .d.on { color: var(--ink); }
 .entry-facts { margin-top: 14px; display: grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap: 8px; }
 .entry-facts > div { padding: 12px 10px; border-radius: var(--r-sm); background: var(--bg-2); display: flex; flex-direction: column; gap: 2px; }
 .entry-facts .num { font-size: 20px; font-weight: 700; white-space: nowrap; letter-spacing: -.02em; }

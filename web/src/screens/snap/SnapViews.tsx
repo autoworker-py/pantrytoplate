@@ -1,10 +1,13 @@
 import { adsOnThisDevice } from '../../lib/ads';
 import { proOnOffer } from '../../lib/native';
 import { ProOffer } from '../pro/ProOffer';
-import type { MealSlot } from '../../lib/types';
+import type { Grade, MealSlot } from '../../lib/types';
+import { plateGrade } from '../../lib/snap';
+import { GradeBadge, QuietGrade } from '../../ui/Grade';
 import { FoodThumb } from '../../fridge/Fridge';
 import { Icon } from '../../ui/Icon';
 import './snap.css';
+import { FastingReminder } from '../../components/FastingReminder';
 
 /*
  * Snap a meal: a photo of the plate, read by an AI model on the server, back
@@ -30,6 +33,8 @@ export interface SnapItem {
   sugar?: number | null;
   satFat?: number | null;
   sodium?: number | null;
+  points?: number | null;
+  grade?: Grade | null;
   /** said when the model is unsure: hidden fats, sauces */
   note?: string;
 }
@@ -176,6 +181,7 @@ export function SnapReview({
 }) {
   const on = items.filter((i) => kept.has(i.id));
   const sum = (k: 'calories' | 'protein' | 'carbs' | 'fat') => Math.round(on.reduce((s, i) => s + i[k], 0));
+  const grade = plateGrade(on);
   return (
     <div className="snap-review">
       <SnapStage photo={photo} />
@@ -183,6 +189,7 @@ export function SnapReview({
         <div className="budget-top">
           <span className="big num">{sum('calories')}</span>
           <span className="of">kcal, about</span>
+          {grade ? <GradeBadge grade={grade} label="This plate" /> : null}
         </div>
         <div className="snap-macros">
           <span><b className="num">{sum('protein')} g</b> protein</span>
@@ -202,6 +209,7 @@ export function SnapReview({
                 <span className="s">{item.portion}</span>
                 {item.note ? <span className="snap-note">{item.note}</span> : null}
               </span>
+              {item.grade ? <QuietGrade grade={item.grade} label={item.name} /> : null}
               <span className="snap-kcal num">{Math.round(item.calories)}</span>
             </button>
             <button type="button" className="icon-btn plain" aria-label={kept.has(item.id) ? `Leave out ${item.name}` : `Put ${item.name} back`} onClick={() => onToggle(item.id)}>
@@ -212,6 +220,7 @@ export function SnapReview({
       </div>
       <button type="button" className="link-btn" style={{ marginTop: 12 }} onClick={onAdd}>+ Add something it missed</button>
 
+      <FastingReminder style={{ marginTop: 16 }} />
       <div className="label" style={{ marginTop: 20 }}>Log it as</div>
       <div className="chips" style={{ marginTop: 8 }}>
         {MEALS.map(([m, label]) => <button key={m} type="button" className={`chip${meal === m ? ' on' : ''}`} onClick={() => onMeal(m)}>{label}</button>)}

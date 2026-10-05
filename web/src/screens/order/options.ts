@@ -85,7 +85,7 @@ export function blankOrder(): Order {
     from: 'mostly',
     meal: mealNow(),
     time: 'Any time',
-    serves: '2',
+    serves: '1',
     skill: 'Easy',
     kit: 'Any kit',
     heat: 'Medium',

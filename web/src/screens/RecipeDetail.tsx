@@ -36,6 +36,7 @@ export default function RecipeDetail() {
   const latest = useRef(path);
   latest.current = path;
   const [loadedPath, setLoadedPath] = useState<string | null>(null);
+  const [failedPath, setFailedPath] = useState<string | null>(null);
   const stale = loadedPath !== path;
 
   const load = useCallback(async (fresh = false) => {
@@ -45,10 +46,16 @@ export default function RecipeDetail() {
       if (latest.current !== asked) return; // a newer change is on its way
       setPreview(data.preview);
       setLoadedPath(asked);
+      setFailedPath(null);
       setError(null);
     } catch (cause) {
       if (latest.current !== asked) return;
-      setError(errorText(cause, 'Could not load this recipe.'));
+      setFailedPath(asked);
+      // with a recipe already on screen, a failed update is a toast and a retry, not a broken page
+      if (preview) {
+        setConfirming(false);
+        toast(errorText(cause, 'Could not update the plan. Tap Cook this to try again.'));
+      } else setError(errorText(cause, 'Could not load this recipe.'));
     }
   }, [id, adj]);
 
@@ -247,7 +254,16 @@ export default function RecipeDetail() {
             ) : (
               <>
                 {/* tapped mid-update, the sheet opens as soon as the new plan is in */}
-                <button type="button" className="btn" onClick={() => setConfirming(true)}>Cook this</button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    setConfirming(true);
+                    if (failedPath === path) { setFailedPath(null); void load(true); }
+                  }}
+                >
+                  {confirming && stale ? 'Updating…' : 'Cook this'}
+                </button>
                 {gaps.length ? <button type="button" className="btn secondary" onClick={addGaps}>Add {gaps.length} to list</button> : null}
               </>
             )}

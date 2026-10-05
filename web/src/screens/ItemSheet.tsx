@@ -9,6 +9,7 @@ import { CountsAs, needsLink } from '../components/CountsAs';
 import { UnitSelect } from '../components/UnitSelect';
 import { Icon, type IconName } from '../ui/Icon';
 import { Sheet, Switch, errorText, useToast } from '../ui/kit';
+import { FastingReminder } from '../components/FastingReminder';
 
 const WHERE = { fridge: 'the fridge', pantry: 'the cupboard', freezer: 'the freezer' } as const;
 const ZONE_ICON: Record<StorageLocation, IconName> = { fridge: 'pantry', pantry: 'box', freezer: 'snow' };
@@ -358,6 +359,7 @@ function AmountStep({
               </button>
             ))}
           </div>
+          <FastingReminder style={{ marginTop: 16 }} />
           <button type="button" className="btn block" style={{ marginTop: 20 }} onClick={onConsume} disabled={busy || !ok}>
             Log {formatAmount(quantity || 0, unit)}
           </button>

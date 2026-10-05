@@ -39,7 +39,8 @@
 .snap-macros { display: flex; gap: 18px; margin-top: 10px; font-size: 13.5px; color: var(--ink-3); }
 .snap-macros b { color: var(--ink); font-weight: 650; margin-right: 2px; }
 .snap-item .grow { flex: 1; min-width: 0; }
-.snap-item.off .thumb, .snap-item.off .grow, .snap-item.off .snap-kcal { opacity: .4; }
+.snap-item.off .thumb, .snap-item.off .grow, .snap-item.off .grade-quiet, .snap-item.off .snap-kcal { opacity: .4; }
+.snap-item .grade-quiet { flex: none; margin-right: 10px; }
 .snap-note { display: block; margin-top: 4px; font-size: 12.5px; line-height: 1.35; color: var(--warm); }
 .snap-kcal { flex: none; font-weight: 650; font-size: 15px; }
 

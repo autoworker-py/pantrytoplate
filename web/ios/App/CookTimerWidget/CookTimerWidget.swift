@@ -10,9 +10,10 @@ import WidgetKit
  * correct while the app is suspended or terminated and costs no updates.
  */
 
-private let brand = Color(red: 0.42, green: 0.10, blue: 0.07)   // the app's red
-private let ground = Color(red: 0.94, green: 0.93, blue: 0.91)  // the app's ground
-private let ink = Color(red: 0.16, green: 0.09, blue: 0.05)
+// the app's Night palette, as in the Shopping widget
+private let night = Color(red: 0.071, green: 0.078, blue: 0.086)   // --bg-1
+private let ink = Color(red: 0.937, green: 0.914, blue: 0.875)     // --ink
+private let warm = Color(red: 0.953, green: 0.788, blue: 0.545)    // --warm
 
 @available(iOS 16.2, *)
 struct CookTimerLiveActivity: Widget {
@@ -27,20 +28,20 @@ struct CookTimerLiveActivity: Widget {
                         .lineLimit(1)
                     Text(context.attributes.stepLabel)
                         .font(.caption)
-                        .foregroundColor(ink.opacity(0.65))
+                        .foregroundColor(ink.opacity(0.6))
                         .lineLimit(2)
                 }
                 Spacer(minLength: 8)
                 Text(timerInterval: context.state.startedAt...context.state.endsAt, countsDown: true)
                     .font(.system(.title, design: .rounded).weight(.bold))
                     .monospacedDigit()
-                    .foregroundColor(brand)
+                    .foregroundColor(warm)
                     .frame(maxWidth: 96, alignment: .trailing)
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 14)
-            .activityBackgroundTint(ground)
-            .activitySystemActionForegroundColor(brand)
+            .activityBackgroundTint(night)
+            .activitySystemActionForegroundColor(ink)
 
         } dynamicIsland: { context in
             DynamicIsland {
@@ -65,12 +66,14 @@ struct CookTimerLiveActivity: Widget {
                 }
             } compactLeading: {
                 Image(systemName: "timer")
+                    .foregroundColor(warm)
             } compactTrailing: {
                 Text(timerInterval: context.state.startedAt...context.state.endsAt, countsDown: true)
                     .monospacedDigit()
                     .frame(maxWidth: 44)
             } minimal: {
                 Image(systemName: "timer")
+                    .foregroundColor(warm)
             }
         }
     }
